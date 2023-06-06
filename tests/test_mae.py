@@ -124,7 +124,9 @@ def test_embedding():
     neighborhood, _ = group.forward(input_tensor)
 
     sampling_ratio = num_groups / num_points_per_batch
-    embedder = Embedder(sampling_ratio, k, embedding_size).to(device)
+    embedder = Embedder(sampling_ratio, k, embedding_size, random_start=False).to(
+        device
+    )
     torch.manual_seed(0)
     init_layers(embedder.conv.mlp_1.lins)
     init_layers(embedder.conv.mlp_2.lins)

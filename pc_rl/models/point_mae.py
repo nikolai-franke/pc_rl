@@ -7,11 +7,16 @@ from pc_rl.models.embedder import PointConv
 
 class Embedder(nn.Module):
     def __init__(
-        self, sampling_ratio: float, neighborhood_size: int, embedding_size: int
+        self,
+        sampling_ratio: float,
+        neighborhood_size: int,
+        embedding_size: int,
+        random_start: bool = True,  # setting this to False is useful for testing purposes
     ) -> None:
         super().__init__()
         self.sampling_ratio = sampling_ratio
         self.neighborhood_size = neighborhood_size
+        self.random_start = random_start
         mlp_1 = MLP([3, 128, 256])
         mlp_2 = MLP([512, 512, embedding_size])
         self.conv = PointConv(
@@ -20,7 +25,9 @@ class Embedder(nn.Module):
 
     def forward(self, x, pos, batch):
         # get indices of group center points via furthest point sampling
-        seed_idx = fps(pos, batch, ratio=self.sampling_ratio, random_start=False)
+        seed_idx = fps(
+            pos, batch, ratio=self.sampling_ratio, random_start=self.random_start
+        )
         seeds = pos[seed_idx]
         batch_y = batch[seed_idx]
         # calculate neighborhood via KNN
