@@ -35,6 +35,5 @@ class Embedder(nn.Module):
             pos, seeds, self.neighborhood_size, batch_x=batch, batch_y=batch_y
         )
         edges = torch.stack([to_idx, from_idx], dim=0)
-        print(edges)
         x = self.conv((None, None), (pos, pos[seed_idx]), edges)
         return x
