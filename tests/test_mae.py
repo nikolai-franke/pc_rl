@@ -15,7 +15,7 @@ def custom_fps(data, number):
     fps_idx = pointnet2_utils.furthest_point_sample(data, number)
     fps_data = (
         pointnet2_utils.gather_operation(data.transpose(1, 2).contiguous(), fps_idx)
-        .transpose(1, 2)
+        .transpose(1, 2)  # type: ignore
         .contiguous()
     )
     return fps_data
@@ -46,20 +46,13 @@ class Encoder(nn.Module):  ## Embedding module
         """
         bs, g, n, _ = point_groups.shape
         point_groups = point_groups.reshape(bs * g, n, 3)
-        # print("POINT GROUPS", point_groups.transpose(2, 1).shape)
-        # encoder
         feature = self.first_conv(point_groups.transpose(2, 1))  # BG 256 n
-        # print("FEATURE CONV 1", feature.shape)
         feature_global = torch.max(feature, dim=2, keepdim=True)[0]  # BG 256 1
-        # print("FEATURE GLOBAL 1", feature_global.shape)
         feature = torch.cat(
             [feature_global.expand(-1, -1, n), feature], dim=1
         )  # BG 512 n
-        # print("FEATURE CAT", feature.shape)
         feature = self.second_conv(feature)  # BG 1024 n
-        # print("FEATURE", feature.shape)
         feature_global = torch.max(feature, dim=2, keepdim=False)[0]  # BG 1024
-        # print("GLOBAL", feature_global.shape)
         return feature_global.reshape(bs, g, self.encoder_channel)
 
 
@@ -101,10 +94,10 @@ class Group(nn.Module):  # FPS + KNN
 def init_layers(layers):
     for layer in layers:
         if isinstance(layer, torch.nn.modules.conv.Conv1d) or isinstance(
-            layer, torch_geometric.nn.dense.linear.Linear
+            layer, torch_geometric.nn.dense.linear.Linear  # type: ignore
         ):
             torch.nn.init.uniform_(layer.weight)
-            torch.nn.init.uniform_(layer.bias)
+            torch.nn.init.uniform_(layer.bias)  # type: ignore
 
 
 def test_embedding():
