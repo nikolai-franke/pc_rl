@@ -10,6 +10,8 @@ from torch_geometric.typing import np
 from pc_rl.models.embedder import Embedder
 from pc_rl.models.transformer import Block as NewBlock
 from pc_rl.models.transformer import \
+    TransformerDecoder as NewTransformerDecoder
+from pc_rl.models.transformer import \
     TransformerEncoder as NewTransformerEncoder
 
 
@@ -185,7 +187,9 @@ class Block(nn.Module):
         self.norm1 = norm_layer(dim)
 
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
-        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        # TODO: Check if DropPath is useful (I think it isn't)
+        # self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        self.drop_path = nn.Identity()
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(
@@ -772,6 +776,32 @@ class TestPointMAE:
 
         old_out = old_encoder.forward(input_x, input_pos)
         new_out = new_encoder.forward(input_x, input_pos)
+
+        assert torch.allclose(old_out, new_out)
+
+    def test_transformer_decoder(self):
+        # TODO: find out what return_token_num is
+        return_token_num = 10
+        torch.manual_seed(self.seed)
+        old_decoder = TransformerDecoder(
+            self.transformer_dim, self.transformer_depth, self.num_heads, self.mlp_ratio
+        ).to(self.device)
+        init_layers(old_decoder.modules())
+        torch.manual_seed(self.seed)
+        new_decoder = NewTransformerDecoder(
+            self.transformer_dim, self.transformer_depth, self.num_heads, self.mlp_ratio
+        ).to(self.device)
+        init_layers(new_decoder.modules())
+
+        input_x = torch.rand(
+            self.num_batches, self.num_groups, self.transformer_dim
+        ).to(self.device)
+        input_pos = torch.rand(
+            self.num_batches, self.num_groups, self.transformer_dim
+        ).to(self.device)
+
+        old_out = old_decoder.forward(input_x, input_pos, return_token_num)
+        new_out = new_decoder.forward(input_x, input_pos, return_token_num)
 
         assert torch.allclose(old_out, new_out)
 

@@ -157,3 +157,106 @@ class TransformerDecoder(nn.Module):
 
         x = self.head(self.norm(x[:, -return_token_num:]))
         return x
+
+
+class MaskTransfromer(nn.Module):
+    def __init__(
+        self,
+        mask_ratio=0.6,
+        transformer_dim=384,
+        depth=12,
+        num_heads=6,
+        encoder_dim=384,
+        mask_type="rand",
+    ) -> None:
+        super().__init__()
+        self.mask_ratio = mask_ratio
+        self.transformer_dim = transformer_dim
+        self.depth = depth
+        self.num_heads = num_heads
+        self.encoder_dim = encoder_dim
+        self.mask_type = mask_type
+
+        self.encoder = Encoder
+
+        self.pos_embedding = nn.Sequential(
+            nn.Linear(3, 128),
+            nn.GELU(),
+            nn.Linear(128, self.transformer_dim),
+        )
+
+        self.blocks = TransformerEncoder(
+            embed_dim=self.transformer_dim,
+            depth=self.depth,
+            num_heads=self.num_heads,
+        )
+
+        self.norm = nn.LayerNorm(self.transformer_dim)
+        self.apply(self._init_weights)
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            trunc_normal_(m.weight, std=0.02)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
+        elif isinstance(m, nn.Conv1d):
+            trunc_normal_(m.weight, std=0.02)
+            if m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+
+    def _mask_center_block(self, center, noaug=False):
+        if noaug or self.mask_ratio == 0:
+            return torch.zeros(center.shape[:2].bool())
+        mask_idx = []
+        for points in center:
+            points = points.unsqueeze(0)
+            index = random.randint(0, points.size(1) - 1)
+            distance_matrix = torch.norm(
+                points[:, index].reshape(1, 1, 3) - points, p=2, dim=-1
+            )
+
+            idx = torch.argsort(distance_matrix, dim=-1, descending=False)[0]
+            mask_num = int(self.mask_ratio * len(idx))
+            mask = torch.zeros(len(idx))
+            mask[idx[:mask_num]] = 1
+            mask_idx.append(mask.bool())
+
+        bool_masked_pos = torch.stack(mask_idx.to(center.device))
+
+    def _mask_center_rand(self, center, noaug=False):
+        B, G, _ = center.shape
+        if noaug or self.mask_ratio == 0:
+            return torch.zeros(center.shape[:2]).bool()
+
+        self.num_masks = int(self.mask_ratio * G)
+
+        for i in range(B):
+            mask = np.hstack(
+                [
+                    np.zeros(G - self.num_mask),
+                    np.ones(self.num_mask),
+                ]
+            )
+            np.random.shuffle(mask)
+            overall_mask[i, :] = mask
+
+        overall_mask = torch.from_numpy(overall_mask).bool()
+
+        return overall_mask.to(center.device)
+
+    def forward(self, neighborhood, center, noaug=False):
+        if self.mask_type == "rand":
+            bool_masked_pos = self._mask_center_rand(center, noaug=noaug)
+        else:
+            bool_masked_pos = self._mask_center_block(center, noaug=noaug)
+
+        group_input_tokens = self.encoder(neighborhood)
+        batch_size, seq_len, C = group_input_tokens.size()
+        x_vis = group_input_tokens[~bool_masked_pos].reshape(batch_size, -1, 3)
+        pos = self.pos_embedding(masked_center)
+
+        x_vis = self.blocks(x_vis, pos)
+        x_vis = self.norm(x_vis)
