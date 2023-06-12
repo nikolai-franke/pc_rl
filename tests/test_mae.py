@@ -1,10 +1,16 @@
+import random
+
 import torch
 import torch.nn as nn
 import torch_geometric
 from knn_cuda import KNN
 from pointnet2_ops import pointnet2_utils
+from torch_geometric.typing import np
 
 from pc_rl.models.embedder import Embedder
+from pc_rl.models.transformer import Block as NewBlock
+from pc_rl.models.transformer import \
+    TransformerEncoder as NewTransformerEncoder
 
 
 def custom_fps(data, number):
@@ -428,49 +434,348 @@ class MaskTransformer(nn.Module):
         return x_vis, bool_masked_pos
 
 
+class Point_MAE(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        print_log(f"[Point_MAE] ", logger="Point_MAE")
+        self.config = config
+        self.trans_dim = config.transformer_config.trans_dim
+        self.MAE_encoder = MaskTransformer(config)
+        self.group_size = config.group_size
+        self.num_group = config.num_group
+        self.drop_path_rate = config.transformer_config.drop_path_rate
+        self.mask_token = nn.Parameter(torch.zeros(1, 1, self.trans_dim))
+        self.decoder_pos_embed = nn.Sequential(
+            nn.Linear(3, 128), nn.GELU(), nn.Linear(128, self.trans_dim)
+        )
+
+        self.decoder_depth = config.transformer_config.decoder_depth
+        self.decoder_num_heads = config.transformer_config.decoder_num_heads
+        dpr = [
+            x.item() for x in torch.linspace(0, self.drop_path_rate, self.decoder_depth)
+        ]
+        self.MAE_decoder = TransformerDecoder(
+            embed_dim=self.trans_dim,
+            depth=self.decoder_depth,
+            drop_path_rate=dpr,
+            num_heads=self.decoder_num_heads,
+        )
+
+        print_log(
+            f"[Point_MAE] divide point cloud into G{self.num_group} x S{self.group_size} points ...",
+            logger="Point_MAE",
+        )
+        self.group_divider = Group(num_group=self.num_group, group_size=self.group_size)
+
+        # prediction head
+        self.increase_dim = nn.Sequential(
+            # nn.Conv1d(self.trans_dim, 1024, 1),
+            # nn.BatchNorm1d(1024),
+            # nn.LeakyReLU(negative_slope=0.2),
+            nn.Conv1d(self.trans_dim, 3 * self.group_size, 1)
+        )
+
+        trunc_normal_(self.mask_token, std=0.02)
+        self.loss = config.loss
+        # loss
+        self.build_loss_func(self.loss)
+
+    def build_loss_func(self, loss_type):
+        if loss_type == "cdl1":
+            self.loss_func = ChamferDistanceL1().cuda()
+        elif loss_type == "cdl2":
+            self.loss_func = ChamferDistanceL2().cuda()
+        else:
+            raise NotImplementedError
+            # self.loss_func = emd().cuda()
+
+    def forward(self, pts, vis=False, **kwargs):
+        neighborhood, center = self.group_divider(pts)
+
+        x_vis, mask = self.MAE_encoder(neighborhood, center)
+        B, _, C = x_vis.shape  # B VIS C
+
+        pos_emd_vis = self.decoder_pos_embed(center[~mask]).reshape(B, -1, C)
+
+        pos_emd_mask = self.decoder_pos_embed(center[mask]).reshape(B, -1, C)
+
+        _, N, _ = pos_emd_mask.shape
+        mask_token = self.mask_token.expand(B, N, -1)
+        x_full = torch.cat([x_vis, mask_token], dim=1)
+        pos_full = torch.cat([pos_emd_vis, pos_emd_mask], dim=1)
+
+        x_rec = self.MAE_decoder(x_full, pos_full, N)
+
+        B, M, C = x_rec.shape
+        rebuild_points = (
+            self.increase_dim(x_rec.transpose(1, 2))
+            .transpose(1, 2)
+            .reshape(B * M, -1, 3)
+        )  # B M 1024
+
+        gt_points = neighborhood[mask].reshape(B * M, -1, 3)
+        loss1 = self.loss_func(rebuild_points, gt_points)
+
+        if vis:  # visualization
+            vis_points = neighborhood[~mask].reshape(B * (self.num_group - M), -1, 3)
+            full_vis = vis_points + center[~mask].unsqueeze(1)
+            full_rebuild = rebuild_points + center[mask].unsqueeze(1)
+            full = torch.cat([full_vis, full_rebuild], dim=0)
+            # full_points = torch.cat([rebuild_points,vis_points], dim=0)
+            full_center = torch.cat([center[mask], center[~mask]], dim=0)
+            # full = full_points + full_center.unsqueeze(1)
+            ret2 = full_vis.reshape(-1, 3).unsqueeze(0)
+            ret1 = full.reshape(-1, 3).unsqueeze(0)
+            # return ret1, ret2
+            return ret1, ret2, full_center
+        else:
+            return loss1
+
+
+# finetune model
+class PointTransformer(nn.Module):
+    def __init__(self, config, **kwargs):
+        super().__init__()
+        self.config = config
+
+        self.trans_dim = config.trans_dim
+        self.depth = config.depth
+        self.drop_path_rate = config.drop_path_rate
+        self.cls_dim = config.cls_dim
+        self.num_heads = config.num_heads
+
+        self.group_size = config.group_size
+        self.num_group = config.num_group
+        self.encoder_dims = config.encoder_dims
+
+        self.group_divider = Group(num_group=self.num_group, group_size=self.group_size)
+
+        self.encoder = Encoder(encoder_channel=self.encoder_dims)
+
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, self.trans_dim))
+        self.cls_pos = nn.Parameter(torch.randn(1, 1, self.trans_dim))
+
+        self.pos_embed = nn.Sequential(
+            nn.Linear(3, 128), nn.GELU(), nn.Linear(128, self.trans_dim)
+        )
+
+        dpr = [x.item() for x in torch.linspace(0, self.drop_path_rate, self.depth)]
+        self.blocks = TransformerEncoder(
+            embed_dim=self.trans_dim,
+            depth=self.depth,
+            drop_path_rate=dpr,
+            num_heads=self.num_heads,
+        )
+
+        self.norm = nn.LayerNorm(self.trans_dim)
+
+        self.cls_head_finetune = nn.Sequential(
+            nn.Linear(self.trans_dim * 2, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(256, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(256, self.cls_dim),
+        )
+
+        self.build_loss_func()
+
+        trunc_normal_(self.cls_token, std=0.02)
+        trunc_normal_(self.cls_pos, std=0.02)
+
+    def build_loss_func(self):
+        self.loss_ce = nn.CrossEntropyLoss()
+
+    def get_loss_acc(self, ret, gt):
+        loss = self.loss_ce(ret, gt.long())
+        pred = ret.argmax(-1)
+        acc = (pred == gt).sum() / float(gt.size(0))
+        return loss, acc * 100
+
+    def load_model_from_ckpt(self, bert_ckpt_path):
+        if bert_ckpt_path is not None:
+            ckpt = torch.load(bert_ckpt_path)
+            base_ckpt = {
+                k.replace("module.", ""): v for k, v in ckpt["base_model"].items()
+            }
+
+            for k in list(base_ckpt.keys()):
+                if k.startswith("MAE_encoder"):
+                    base_ckpt[k[len("MAE_encoder.") :]] = base_ckpt[k]
+                    del base_ckpt[k]
+                elif k.startswith("base_model"):
+                    base_ckpt[k[len("base_model.") :]] = base_ckpt[k]
+                    del base_ckpt[k]
+
+            incompatible = self.load_state_dict(base_ckpt, strict=False)
+
+            if incompatible.missing_keys:
+                print_log("missing_keys", logger="Transformer")
+                print_log(
+                    get_missing_parameters_message(incompatible.missing_keys),
+                    logger="Transformer",
+                )
+            if incompatible.unexpected_keys:
+                print_log("unexpected_keys", logger="Transformer")
+                print_log(
+                    get_unexpected_parameters_message(incompatible.unexpected_keys),
+                    logger="Transformer",
+                )
+
+            print_log(
+                f"[Transformer] Successful Loading the ckpt from {bert_ckpt_path}",
+                logger="Transformer",
+            )
+        else:
+            print_log("Training from scratch!!!", logger="Transformer")
+            self.apply(self._init_weights)
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            trunc_normal_(m.weight, std=0.02)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
+        elif isinstance(m, nn.Conv1d):
+            trunc_normal_(m.weight, std=0.02)
+            if m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+
+    def forward(self, pts):
+        neighborhood, center = self.group_divider(pts)
+        group_input_tokens = self.encoder(neighborhood)  # B G N
+
+        cls_tokens = self.cls_token.expand(group_input_tokens.size(0), -1, -1)
+        cls_pos = self.cls_pos.expand(group_input_tokens.size(0), -1, -1)
+
+        pos = self.pos_embed(center)
+
+        x = torch.cat((cls_tokens, group_input_tokens), dim=1)
+        pos = torch.cat((cls_pos, pos), dim=1)
+        # transformer
+        x = self.blocks(x, pos)
+        x = self.norm(x)
+        concat_f = torch.cat([x[:, 0], x[:, 1:].max(1)[0]], dim=-1)
+        ret = self.cls_head_finetune(concat_f)
+        return ret
+
+
+###################################################################################################
+############################################TESTS##################################################
+###################################################################################################
+
+
 def init_layers(layers):
     for layer in layers:
-        if isinstance(layer, torch.nn.modules.conv.Conv1d) or isinstance(
-            layer, torch_geometric.nn.dense.linear.Linear  # type: ignore
+        if (
+            isinstance(layer, torch.nn.Conv1d)
+            or isinstance(layer, torch_geometric.nn.dense.linear.Linear)
+            or isinstance(layer, torch.nn.Linear)
+            or isinstance(layer, torch.nn.LayerNorm)
         ):
             torch.nn.init.uniform_(layer.weight)
-            torch.nn.init.uniform_(layer.bias)  # type: ignore
+            if layer.bias is not None:
+                torch.nn.init.uniform_(layer.bias)  # type: ignore
 
 
-def test_embedding():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+class TestPointMAE:
+    device = "cuda"
     num_points_per_batch = 10
     num_batches = 4
     num_groups = 3
-    k = 4
-    embedding_size = 5
-
-    input_tensor = torch.rand(num_batches, num_points_per_batch, 3).to(device)
-    group = Group(num_groups, k).to(device)
-    encoder = Encoder(embedding_size).to(device)
-    torch.manual_seed(0)
-    init_layers(encoder.first_conv)
-    init_layers(encoder.second_conv)
-    neighborhood, _ = group.forward(input_tensor)
-
+    neighborhood_size = 3
+    embedding_dim = 1024
+    transformer_dim = 1024
+    transformer_depth = 4
+    seed = random.randint(0, 10**6)
+    num_heads = 8
+    mlp_ratio = 4.0
     sampling_ratio = num_groups / num_points_per_batch
-    embedder = Embedder(sampling_ratio, k, embedding_size, random_start=False).to(
-        device
-    )
-    torch.manual_seed(0)
-    init_layers(embedder.conv.mlp_1.lins)
-    init_layers(embedder.conv.mlp_2.lins)
 
-    out_1 = encoder.forward(neighborhood)
-    input_tensor_2 = input_tensor.reshape(num_batches * num_points_per_batch, -1).to(
-        device
-    )
-    batch = torch.arange(num_batches, dtype=torch.long)
-    batch = batch.repeat_interleave(num_points_per_batch).to(device)
-    out_2 = embedder.forward(None, input_tensor_2, batch)
+    def test_embedding(self):
+        old_group = Group(self.num_groups, self.neighborhood_size).to(self.device)
+        old_embedder = Encoder(self.embedding_dim).to(self.device)
+        torch.manual_seed(self.seed)
+        new_embedder = Embedder(
+            self.sampling_ratio,
+            self.neighborhood_size,
+            self.embedding_dim,
+            random_start=False,
+        ).to(self.device)
+        init_layers(old_embedder.modules())
+        torch.manual_seed(self.seed)
+        init_layers(new_embedder.modules())
+        old_input_tensor = torch.rand(
+            self.num_batches, self.num_points_per_batch, 3
+        ).to(self.device)
+        neighborhood, _ = old_group.forward(old_input_tensor)
+        old_out = old_embedder.forward(neighborhood)
 
-    assert torch.allclose(out_1.reshape(-1, embedding_size), out_2)
+        new_input_tensor = old_input_tensor.reshape(
+            self.num_batches * self.num_points_per_batch, -1
+        ).to(self.device)
+        batch_tensor = torch.arange(self.num_batches, dtype=torch.long)
+        batch_tensor = batch_tensor.repeat_interleave(self.num_points_per_batch).to(
+            self.device
+        )
+        new_out = new_embedder.forward(None, new_input_tensor, batch_tensor)
+
+        assert torch.allclose(old_out.reshape(-1, self.embedding_dim), new_out)
+
+    def test_block(self):
+        old_block = Block(
+            dim=self.embedding_dim, num_heads=self.num_heads, mlp_ratio=self.mlp_ratio
+        ).to(self.device)
+        new_block = NewBlock(
+            dim=self.embedding_dim, num_heads=self.num_heads, mlp_ratio=self.mlp_ratio
+        ).to(self.device)
+        torch.manual_seed(self.seed)
+        init_layers(old_block.modules())
+        torch.manual_seed(self.seed)
+        init_layers(new_block.modules())
+        input_tensor = torch.rand(self.num_batches, 1024, self.embedding_dim).to(
+            self.device
+        )
+        old_out = old_block.forward(input_tensor)
+        new_out = new_block.forward(input_tensor)
+        assert torch.allclose(old_out, new_out)
+
+    def test_transformer_encoder(self):
+        old_encoder = TransformerEncoder(
+            embed_dim=self.transformer_dim,
+            depth=self.transformer_depth,
+            num_heads=self.num_heads,
+            mlp_ratio=self.mlp_ratio,
+        ).to(self.device)
+        new_encoder = NewTransformerEncoder(
+            embed_dim=self.transformer_dim,
+            depth=self.transformer_depth,
+            num_heads=self.num_heads,
+            mlp_ratio=self.mlp_ratio,
+        ).to(self.device)
+        torch.manual_seed(self.seed)
+        init_layers(old_encoder.modules())
+        torch.manual_seed(self.seed)
+        init_layers(new_encoder.modules())
+
+        input_x = torch.rand(
+            self.num_batches, self.num_groups, self.transformer_dim
+        ).to(self.device)
+        input_pos = torch.rand(
+            self.num_batches, self.num_groups, self.transformer_dim
+        ).to(self.device)
+
+        old_out = old_encoder.forward(input_x, input_pos)
+        new_out = new_encoder.forward(input_x, input_pos)
+
+        assert torch.allclose(old_out, new_out)
 
 
 if __name__ == "__main__":
-    test_embedding()
+    test = TestPointMAE()
+    test.test_block()
