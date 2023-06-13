@@ -886,7 +886,7 @@ class TestPointMAE:
             neighborhood, center
         )
         torch.manual_seed(self.seed)
-        new_x_vis, new_bool_masked_pos = new_mask_transformer.forward(
+        new_x_vis, new_bool_masked_pos, *_ = new_mask_transformer.forward(
             new_input_tensor, batch_tensor
         )
 
