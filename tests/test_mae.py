@@ -502,7 +502,7 @@ class Point_MAE(nn.Module):
             nn.Conv1d(self.trans_dim, 3 * self.group_size, 1)
         )
 
-        trunc_normal_(self.mask_token, std=0.02)
+        nn.init.trunc_normal_(self.mask_token, std=0.02)
         self.loss = config.loss
         # loss
         self.build_loss_func(self.loss)

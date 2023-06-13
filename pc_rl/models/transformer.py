@@ -1,6 +1,3 @@
-from random import random
-
-import numpy as np
 import torch
 from torch import nn
 from torch_geometric.nn import MLP
@@ -257,7 +254,7 @@ class MaskTransformer(nn.Module):
         return overall_mask.to(center.device)
 
     def forward(self, pos, batch, noaug=False):
-        group_input_tokens, _, center = self.encoder(pos, batch)
+        group_input_tokens, neighborhood, center = self.encoder(pos, batch)
 
         if self.mask_type == "rand":
             bool_masked_pos = self._mask_center_rand(center, noaug=noaug)
@@ -273,4 +270,71 @@ class MaskTransformer(nn.Module):
         x_vis = self.blocks(x_vis, pos)
         x_vis = self.norm(x_vis)
 
-        return x_vis, bool_masked_pos
+        return x_vis, bool_masked_pos, neighborhood, center
+
+
+class PointMAE(nn.Module):
+    def __init__(
+        self,
+        transformer_dim,
+        neighborhood_size,
+        num_groups,
+        group_size,
+        mask_transformer_kwargs,
+        decoder_depth,
+        decoder_num_heads,
+        loss_func,
+    ):
+        self.group_size = group_size
+        self.transformer_dim = transformer_dim
+        self.neighborhood_size = neighborhood_size
+        self.num_groups = num_groups
+        self.mae_encoder = MaskTransformer(**mask_transformer_kwargs)
+        self.mask_token = nn.Parameter(torch.zeros(1, 1, self.transformer_dim))
+        self.decoder_pos_embed = nn.Sequential(
+            nn.Linear(3, 128),
+            nn.GELU(),
+            nn.Linear(128, self.transformer_dim),
+        )
+        self.decoder_depth = decoder_depth
+        self.decoder_num_heads = decoder_num_heads
+
+        self.mae_decoder = TransformerDecoder(
+            embed_dim=self.transformer_dim,
+            depth=self.decoder_depth,
+            num_heads=self.decoder_num_heads,
+        )
+
+        self.prediction_head = nn.Conv1d(self.transformer_dim, 3 * self.group_size, 1)
+        nn.init.trunc_normal_(self.mask_token, std=0.02)
+
+        self.loss_func = loss_func
+
+    def forward(self, pos, batch, vis=False):
+        x_vis, mask, neighborhood, center = self.mae_encoder(pos, batch)
+
+        B, _, C = x_vis.shape
+        pos_emd_vis = self.decoder_pos_embed(center[~mask]).reshape(B, -1, C)
+        pos_emd_mask = self.decoder_pos_embed(center[mask]).reshape(B, -1, C)
+
+        _, N, _ = pos_emd_mask.shape
+        mask_token = self.mask_token.expand(B, N, -1)
+        x_full = torch.cat([x_vis, mask_token], dim=1)
+        pos_full = torch.cat([pos_emd_vis, pos_emd_mask], dim=1)
+
+        x_rec = self.mae_decoder(x_full, pos_full, N)
+
+        B, M, C = x_rec.shape
+
+        rebuild_points = (
+            self.prediction_head(x_rec.transpose(1, 2))
+            .transpose(1, 2)
+            .reshape(B * M, -1, 3)
+        )
+
+        gt_points = neighborhood[mask].reshape(B * M, -1, 3)
+        loss = self.loss_func(rebuild_points, gt_points)
+        if vis:
+            raise NotImplementedError
+        else:
+            return loss
