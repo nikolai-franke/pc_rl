@@ -1,14 +1,15 @@
 import random
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch_geometric
 from knn_cuda import KNN
 from pointnet2_ops import pointnet2_utils
-from torch_geometric.typing import np
 
 from pc_rl.models.embedder import Embedder
 from pc_rl.models.transformer import Block as NewBlock
+from pc_rl.models.transformer import MaskTransformer as NewMaskTransformer
 from pc_rl.models.transformer import \
     TransformerDecoder as NewTransformerDecoder
 from pc_rl.models.transformer import \
@@ -311,21 +312,29 @@ class TransformerDecoder(nn.Module):
 
 # Pretrain model
 class MaskTransformer(nn.Module):
-    def __init__(self, config, **kwargs):
+    def __init__(
+        self,
+        mask_ratio,
+        trans_dim,
+        depth,
+        drop_path_rate,
+        num_heads,
+        encoder_dims,
+        mask_type,
+    ):
         super().__init__()
-        self.config = config
         # define the transformer argparse
-        self.mask_ratio = config.transformer_config.mask_ratio
-        self.trans_dim = config.transformer_config.trans_dim
-        self.depth = config.transformer_config.depth
-        self.drop_path_rate = config.transformer_config.drop_path_rate
-        self.num_heads = config.transformer_config.num_heads
-        print_log(f"[args] {config.transformer_config}", logger="Transformer")
+        self.mask_ratio = mask_ratio
+        self.trans_dim = trans_dim
+        self.depth = depth
+        self.drop_path_rate = drop_path_rate
+        self.num_heads = num_heads
+        # print_log(f"[args] {config.transformer_config}", logger="Transformer")
         # embedding
-        self.encoder_dims = config.transformer_config.encoder_dims
+        self.encoder_dims = encoder_dims
         self.encoder = Encoder(encoder_channel=self.encoder_dims)
 
-        self.mask_type = config.transformer_config.mask_type
+        self.mask_type = mask_type
 
         self.pos_embed = nn.Sequential(
             nn.Linear(3, 128),
@@ -346,14 +355,14 @@ class MaskTransformer(nn.Module):
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
-            trunc_normal_(m.weight, std=0.02)
+            nn.init.trunc_normal_(m.weight, std=0.02)
             if isinstance(m, nn.Linear) and m.bias is not None:
                 nn.init.constant_(m.bias, 0)
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
         elif isinstance(m, nn.Conv1d):
-            trunc_normal_(m.weight, std=0.02)
+            nn.init.trunc_normal_(m.weight, std=0.02)
             if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
 
@@ -371,7 +380,9 @@ class MaskTransformer(nn.Module):
         for points in center:
             # G 3
             points = points.unsqueeze(0)  # 1 G 3
-            index = random.randint(0, points.size(1) - 1)
+            # index = random.randint(0, points.size(1) - 1)
+            index = torch.randint(points.shape[1] - 1, (1,))
+
             distance_matrix = torch.norm(
                 points[:, index].reshape(1, 1, 3) - points, p=2, dim=-1
             )  # 1 1 3 - 1 G 3 -> 1 G
@@ -400,17 +411,29 @@ class MaskTransformer(nn.Module):
 
         self.num_mask = int(self.mask_ratio * G)
 
-        overall_mask = np.zeros([B, G])
+        # overall_mask = np.zeros([B, G])
+        # for i in range(B):
+        #     mask = np.hstack(
+        #         [
+        #             np.zeros(G - self.num_mask),
+        #             np.ones(self.num_mask),
+        #         ]
+        #     )
+        #     np.random.shuffle(mask)
+        #     overall_mask[i, :] = mask
+        # overall_mask = torch.from_numpy(overall_mask).to(torch.bool)
+        overall_mask = torch.zeros([B, G])
         for i in range(B):
-            mask = np.hstack(
+            mask = torch.hstack(
                 [
-                    np.zeros(G - self.num_mask),
-                    np.ones(self.num_mask),
+                    torch.zeros(G - self.num_mask),
+                    torch.ones(self.num_mask),
                 ]
             )
-            np.random.shuffle(mask)
+            rand_idx = torch.randperm(len(mask))
+            mask = mask[rand_idx]
             overall_mask[i, :] = mask
-        overall_mask = torch.from_numpy(overall_mask).to(torch.bool)
+            overall_mask = overall_mask.bool()
 
         return overall_mask.to(center.device)  # B G
 
@@ -441,7 +464,7 @@ class MaskTransformer(nn.Module):
 class Point_MAE(nn.Module):
     def __init__(self, config):
         super().__init__()
-        print_log(f"[Point_MAE] ", logger="Point_MAE")
+        # print_log(f"[Point_MAE] ", logger="Point_MAE")
         self.config = config
         self.trans_dim = config.transformer_config.trans_dim
         self.MAE_encoder = MaskTransformer(config)
@@ -465,10 +488,10 @@ class Point_MAE(nn.Module):
             num_heads=self.decoder_num_heads,
         )
 
-        print_log(
-            f"[Point_MAE] divide point cloud into G{self.num_group} x S{self.group_size} points ...",
-            logger="Point_MAE",
-        )
+        # print_log(
+        #     f"[Point_MAE] divide point cloud into G{self.num_group} x S{self.group_size} points ...",
+        #     logger="Point_MAE",
+        # )
         self.group_divider = Group(num_group=self.num_group, group_size=self.group_size)
 
         # prediction head
@@ -693,22 +716,27 @@ class TestPointMAE:
     num_batches = 4
     num_groups = 3
     neighborhood_size = 3
-    embedding_dim = 1024
-    transformer_dim = 1024
-    transformer_depth = 4
+    embedding_size = 512
     seed = random.randint(0, 10**6)
-    num_heads = 8
     mlp_ratio = 4.0
     sampling_ratio = num_groups / num_points_per_batch
 
+    mask_ratio = 0.6
+    transformer_dim = 512
+    transformer_depth = 4
+    drop_path_rate = 0.0
+    num_heads = 8
+    # mask_type = "rand"
+    mask_type = "asdf"
+
     def test_embedding(self):
         old_group = Group(self.num_groups, self.neighborhood_size).to(self.device)
-        old_embedder = Encoder(self.embedding_dim).to(self.device)
+        old_embedder = Encoder(self.embedding_size).to(self.device)
         torch.manual_seed(self.seed)
         new_embedder = Embedder(
             self.sampling_ratio,
             self.neighborhood_size,
-            self.embedding_dim,
+            self.embedding_size,
             random_start=False,
         ).to(self.device)
         init_layers(old_embedder.modules())
@@ -728,7 +756,7 @@ class TestPointMAE:
             self.device
         )
         new_out, new_neighborhood, new_center = new_embedder.forward(
-            None, new_input_tensor, batch_tensor
+            new_input_tensor, batch_tensor
         )
 
         assert torch.allclose(old_out, new_out)
@@ -737,16 +765,16 @@ class TestPointMAE:
 
     def test_block(self):
         old_block = Block(
-            dim=self.embedding_dim, num_heads=self.num_heads, mlp_ratio=self.mlp_ratio
+            dim=self.embedding_size, num_heads=self.num_heads, mlp_ratio=self.mlp_ratio
         ).to(self.device)
         new_block = NewBlock(
-            dim=self.embedding_dim, num_heads=self.num_heads, mlp_ratio=self.mlp_ratio
+            dim=self.embedding_size, num_heads=self.num_heads, mlp_ratio=self.mlp_ratio
         ).to(self.device)
         torch.manual_seed(self.seed)
         init_layers(old_block.modules())
         torch.manual_seed(self.seed)
         init_layers(new_block.modules())
-        input_tensor = torch.rand(self.num_batches, 1024, self.embedding_dim).to(
+        input_tensor = torch.rand(self.num_batches, 1024, self.embedding_size).to(
             self.device
         )
         old_out = old_block.forward(input_tensor)
@@ -809,7 +837,63 @@ class TestPointMAE:
 
         assert torch.allclose(old_out, new_out)
 
+    def test_mask_transformer(self):
+        torch.manual_seed(self.seed)
+        old_mask_transformer = MaskTransformer(
+            mask_ratio=self.mask_ratio,
+            trans_dim=self.transformer_dim,
+            depth=self.transformer_depth,
+            drop_path_rate=self.drop_path_rate,
+            num_heads=self.num_heads,
+            encoder_dims=self.embedding_size,
+            mask_type=self.mask_type,
+        ).to(self.device)
+
+        torch.manual_seed(self.seed)
+        new_mask_transformer = NewMaskTransformer(
+            mask_ratio=self.mask_ratio,
+            transformer_dim=self.transformer_dim,
+            depth=self.transformer_depth,
+            num_heads=self.num_heads,
+            mask_type=self.mask_type,
+            embedder_kwargs={
+                "sampling_ratio": self.sampling_ratio,
+                "neighborhood_size": self.neighborhood_size,
+                "embedding_size": self.embedding_size,
+                "random_start": False,
+            },
+        ).to(self.device)
+        torch.manual_seed(self.seed)
+        init_layers(old_mask_transformer.modules())
+
+        torch.manual_seed(self.seed)
+        init_layers(new_mask_transformer.modules())
+
+        old_input_tensor = torch.rand(
+            self.num_batches, self.num_points_per_batch, 3
+        ).to(self.device)
+        new_input_tensor = old_input_tensor.reshape(
+            self.num_batches * self.num_points_per_batch, -1
+        ).to(self.device)
+        batch_tensor = torch.arange(self.num_batches, dtype=torch.long)
+        batch_tensor = batch_tensor.repeat_interleave(self.num_points_per_batch).to(
+            self.device
+        )
+        group = Group(self.num_groups, self.neighborhood_size).to(self.device)
+        neighborhood, center = group.forward(old_input_tensor)
+        torch.manual_seed(self.seed)
+        old_x_vis, old_bool_masked_pos = old_mask_transformer.forward(
+            neighborhood, center
+        )
+        torch.manual_seed(self.seed)
+        new_x_vis, new_bool_masked_pos = new_mask_transformer.forward(
+            new_input_tensor, batch_tensor
+        )
+
+        assert torch.allclose(old_x_vis, new_x_vis, rtol=1e-4, atol=1e-4)
+        assert torch.equal(old_bool_masked_pos, new_bool_masked_pos)
+
 
 if __name__ == "__main__":
     test = TestPointMAE()
-    test.test_embedding()
+    test.test_mask_transformer()

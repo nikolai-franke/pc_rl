@@ -28,7 +28,7 @@ class Embedder(torch.nn.Module):
             mlp_1, mlp_2, neighborhood_size=neighborhood_size, add_self_loops=False
         )
 
-    def forward(self, x, pos, batch):
+    def forward(self, pos, batch):
         # get indices of group center points via furthest point sampling
         seed_idx = fps(
             pos, batch, ratio=self.sampling_ratio, random_start=self.random_start
