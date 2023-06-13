@@ -159,7 +159,7 @@ class TransformerDecoder(nn.Module):
         return x
 
 
-class MaskTransfromer(nn.Module):
+class MaskTransformer(nn.Module):
     def __init__(
         self,
         mask_ratio=0.6,
@@ -176,8 +176,6 @@ class MaskTransfromer(nn.Module):
         self.num_heads = num_heads
         self.encoder_dim = encoder_dim
         self.mask_type = mask_type
-
-        self.encoder = Encoder
 
         self.pos_embedding = nn.Sequential(
             nn.Linear(3, 128),
@@ -260,3 +258,5 @@ class MaskTransfromer(nn.Module):
 
         x_vis = self.blocks(x_vis, pos)
         x_vis = self.norm(x_vis)
+
+        return x_vis, bool_masked_pos

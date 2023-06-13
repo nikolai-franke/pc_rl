@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Tuple, Union
 
 import torch
 from torch import Tensor
@@ -40,8 +40,16 @@ class Embedder(torch.nn.Module):
             pos, seeds, self.neighborhood_size, batch_x=batch, batch_y=batch_y
         )
         edges = torch.stack([to_idx, from_idx], dim=0)
-        x = self.conv((None, None), (pos, pos[seed_idx]), edges)
-        return x
+        x, neighborhood = self.conv((None, None), (pos, pos[seed_idx]), edges)
+        # reshape into [B, N, X]
+        x = x.reshape(-1, self.neighborhood_size, x.shape[-1])
+        # reshape into [B, G, N, 3]
+        neighborhood = neighborhood.reshape(
+            x.shape[0], -1, self.neighborhood_size, neighborhood.shape[-1]
+        )
+        # reshape into [B, G, 3]
+        seeds = seeds.reshape(-1, self.neighborhood_size, seeds.shape[-1])
+        return x, neighborhood, seeds
 
 
 class PointConv(MessagePassing):
@@ -73,7 +81,7 @@ class PointConv(MessagePassing):
         x: Union[OptTensor, PairOptTensor],  # type: ignore
         pos: Union[Tensor, PairTensor],  # type: ignore
         edge_index: Adj,
-    ) -> Tensor:
+    ) -> Tuple[Tensor, Tensor]:
         if not isinstance(x, tuple):
             x: PairOptTensor = (x, None)
 
@@ -89,16 +97,26 @@ class PointConv(MessagePassing):
             elif isinstance(edge_index, SparseTensor):
                 edge_index = torch_sparse.set_diag(edge_index)  # type: ignore
 
-        out = self.propagate(edge_index, x=x, pos=pos, size=None)
+        out, relative_pos = self.propagate(edge_index, x=x, pos=pos, size=None)
 
-        return out
+        return out, relative_pos
 
-    def message(self, x_j: Optional[Tensor], pos_i: Tensor, pos_j: Tensor) -> Tensor:
-        msg = pos_j - pos_i
+    def aggregate(
+        self,
+        inputs: Tensor,
+        index: Tensor,
+        ptr: Optional[Tensor] = None,
+        dim_size: Optional[int] = None,
+    ):
+        msg, relative_pos = inputs
+        return super().aggregate(msg, index, ptr, dim_size), relative_pos
+
+    def message(self, x_j: Optional[Tensor], pos_i: Tensor, pos_j: Tensor):
+        relative_pos = pos_j - pos_i
         if x_j is not None:
-            msg = torch.cat([x_j, msg], dim=1)
+            msg = torch.cat([x_j, relative_pos], dim=1)
 
-        msg = self.mlp_1(msg)
+        msg = self.mlp_1(relative_pos)
         # reshape into shape [n_groups, neighborhood_size, MLP_out_dim]
         msg = msg.reshape(-1, self.neighborhood_size, msg.shape[-1])
         # get max over neighborhood
@@ -107,7 +125,7 @@ class PointConv(MessagePassing):
         msg = torch.cat([msg_max.expand(-1, self.neighborhood_size, -1), msg], dim=2)
         msg = self.mlp_2(msg.reshape(-1, msg.shape[-1]))
 
-        return msg
+        return msg, relative_pos
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(mlp_1={self.mlp_1},(mlp_2={self.mlp_2})"

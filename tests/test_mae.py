@@ -717,8 +717,8 @@ class TestPointMAE:
         old_input_tensor = torch.rand(
             self.num_batches, self.num_points_per_batch, 3
         ).to(self.device)
-        neighborhood, _ = old_group.forward(old_input_tensor)
-        old_out = old_embedder.forward(neighborhood)
+        old_neighborhood, old_center = old_group.forward(old_input_tensor)
+        old_out = old_embedder.forward(old_neighborhood)
 
         new_input_tensor = old_input_tensor.reshape(
             self.num_batches * self.num_points_per_batch, -1
@@ -727,9 +727,13 @@ class TestPointMAE:
         batch_tensor = batch_tensor.repeat_interleave(self.num_points_per_batch).to(
             self.device
         )
-        new_out = new_embedder.forward(None, new_input_tensor, batch_tensor)
+        new_out, new_neighborhood, new_center = new_embedder.forward(
+            None, new_input_tensor, batch_tensor
+        )
 
-        assert torch.allclose(old_out.reshape(-1, self.embedding_dim), new_out)
+        assert torch.allclose(old_out, new_out)
+        assert torch.equal(old_neighborhood, new_neighborhood)
+        assert torch.equal(old_center, new_center)
 
     def test_block(self):
         old_block = Block(
@@ -808,4 +812,4 @@ class TestPointMAE:
 
 if __name__ == "__main__":
     test = TestPointMAE()
-    test.test_block()
+    test.test_embedding()
