@@ -7,6 +7,7 @@ from knn_cuda import KNN
 from pointnet2_ops import pointnet2_utils
 from torch_geometric.nn import MLP
 
+from pc_rl.builder import build_embedder
 from pc_rl.models.embedder import Embedder
 from pc_rl.models.transformer import Block as NewBlock
 from pc_rl.models.transformer import MaskTransformer as NewMaskTransformer
@@ -733,15 +734,16 @@ class TestPointMAE:
         old_group = Group(self.num_groups, self.neighborhood_size).to(self.device)
         old_embedder = Encoder(self.embedding_size).to(self.device)
         torch.manual_seed(self.seed)
-        mlp_1 = MLP([3, 128, 256])
-        mlp_2 = MLP([512, 512, self.embedding_size])
-        new_embedder = Embedder(
-            mlp_1,
-            mlp_2,
-            self.neighborhood_size,
-            self.sampling_ratio,
-            random_start=False,
-        ).to(self.device)
+
+        embedder_conf = {
+            "hidden_layers": [128, 256, 512],
+            "embedding_size": self.embedding_size,
+            "neighborhood_size": self.neighborhood_size,
+            "sampling_ratio": self.sampling_ratio,
+            "random_start": False,
+        }
+        new_embedder = build_embedder(embedder_conf).to(self.device)
+
         init_layers(old_embedder.modules())
         torch.manual_seed(self.seed)
         init_layers(new_embedder.modules())
@@ -771,7 +773,9 @@ class TestPointMAE:
             dim=self.embedding_size, num_heads=self.num_heads, mlp_ratio=self.mlp_ratio
         ).to(self.device)
         new_block = NewBlock(
-            dim=self.embedding_size, num_heads=self.num_heads, mlp_ratio=self.mlp_ratio
+            embedding_size=self.embedding_size,
+            num_heads=self.num_heads,
+            mlp_ratio=self.mlp_ratio,
         ).to(self.device)
         torch.manual_seed(self.seed)
         init_layers(old_block.modules())
@@ -792,7 +796,7 @@ class TestPointMAE:
             mlp_ratio=self.mlp_ratio,
         ).to(self.device)
         new_encoder = NewTransformerEncoder(
-            embed_dim=self.transformer_dim,
+            embedding_size=self.transformer_dim,
             depth=self.transformer_depth,
             num_heads=self.num_heads,
             mlp_ratio=self.mlp_ratio,
@@ -852,18 +856,21 @@ class TestPointMAE:
         ).to(self.device)
 
         torch.manual_seed(self.seed)
+        embedder_conf = {
+            "hidden_layers": [128, 256, 512],
+            "embedding_size": self.embedding_size,
+            "neighborhood_size": self.neighborhood_size,
+            "sampling_ratio": self.sampling_ratio,
+            "random_start": False,
+        }
+        new_embedder = build_embedder(embedder_conf).to(self.device)
         new_mask_transformer = NewMaskTransformer(
             mask_ratio=self.mask_ratio,
-            transformer_dim=self.transformer_dim,
+            embedding_size=self.transformer_dim,
             depth=self.transformer_depth,
             num_heads=self.num_heads,
             mask_type=self.mask_type,
-            embedder_kwargs={
-                "sampling_ratio": self.sampling_ratio,
-                "neighborhood_size": self.neighborhood_size,
-                "embedding_size": self.embedding_size,
-                "random_start": False,
-            },
+            embedder=new_embedder,
         ).to(self.device)
         torch.manual_seed(self.seed)
         init_layers(old_mask_transformer.modules())
@@ -898,4 +905,8 @@ class TestPointMAE:
 
 if __name__ == "__main__":
     test = TestPointMAE()
-    test.test_embedding()
+    # test.test_embedding()
+    # test.test_block()
+    # test.test_transformer_encoder()
+    # test.test_transformer_decoder()
+    test.test_mask_transformer()
