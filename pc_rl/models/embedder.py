@@ -17,6 +17,15 @@ class Embedder(MessagePassing):
         random_start: bool = True,
         **kwargs,
     ):
+        """
+        Embedding module, which divides a point cloud into groups and uses the two MLPs to embed each group.
+
+        :param mlp_1: first embedding MLP
+        :param mlp_2: second embedding MLP
+        :param neighborhood_size: the number of points contained in each neighborhood
+        :param sampling_ratio: sampling ratio of the furthest point sampling algorithm
+        :param random_start: whether or not to use a random point as the first neighborhood center
+        """
         kwargs.setdefault("aggr", "max")
         super().__init__(**kwargs)
 
