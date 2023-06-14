@@ -1,9 +1,8 @@
 from typing import Callable, List, Type
 
 import torch
+import torch.nn as nn
 from pointnet2_ops.pointnet2_utils import Iterable
-from torch import nn
-from torch_geometric.nn import MLP
 
 
 class Attention(nn.Module):
@@ -53,29 +52,20 @@ class Block(nn.Module):
         attention: Callable,
         mlp: Callable,
         NormLayer: Type[nn.Module] = nn.LayerNorm,
-        transformer_size=512,
     ) -> None:
         super().__init__()
         self.attention = attention
         assert hasattr(self.attention, "dim")
         self.dim = self.attention.dim
-        # self.mlp = mlp
-
-        self.attention = Attention(
-            transformer_size,
-            num_heads=8,
-        )
-        self.mlp = MLP(
-            [transformer_size, 4 * transformer_size, transformer_size],
-            act=nn.GELU(),
-            norm=None,
-        )
+        self.mlp = mlp
         self.norm_1 = NormLayer(self.dim)
         self.norm_2 = NormLayer(self.dim)
 
     def forward(self, x):
-        x = x + self.attention(self.norm_1(x))
-        x = x + self.mlp(self.norm_2(x))
+        x = self.norm_1(x)
+        x = x + self.attention(x)
+        x = self.norm_2(x)
+        x = x + self.mlp(x)
         return x
 
 

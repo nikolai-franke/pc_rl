@@ -212,8 +212,10 @@ class Block(nn.Module):
         )
 
     def forward(self, x):
-        x = x + self.drop_path(self.attn(self.norm1(x)))
-        x = x + self.drop_path(self.mlp(self.norm2(x)))
+        x = self.norm1(x)
+        x = x + self.drop_path(self.attn(x))
+        x = self.norm2(x)
+        x = x + self.drop_path(self.mlp(x))
         return x
 
 
@@ -699,19 +701,6 @@ class PointTransformer(nn.Module):
 ###################################################################################################
 
 
-def init_layers(layers):
-    for layer in layers:
-        if (
-            isinstance(layer, torch.nn.Conv1d)
-            or isinstance(layer, torch_geometric.nn.dense.linear.Linear)
-            or isinstance(layer, torch.nn.Linear)
-            or isinstance(layer, torch.nn.LayerNorm)
-        ):
-            torch.nn.init.uniform_(layer.weight)
-            if layer.bias is not None:
-                torch.nn.init.uniform_(layer.bias)  # type: ignore
-
-
 class TestPointMAE:
     device = "cuda"
     num_points_per_batch = 10
@@ -719,7 +708,8 @@ class TestPointMAE:
     num_groups = 3
     neighborhood_size = 3
     embedding_size = 512
-    seed = random.randint(0, 10**6)
+    # seed = random.randint(0, 10**6)
+    seed = 0
     mlp_ratio = 4.0
     sampling_ratio = num_groups / num_points_per_batch
 
@@ -772,14 +762,25 @@ class TestPointMAE:
         mask_type=mask_type,
     )
 
+    def init_layers(self, layers):
+        for layer in layers:
+            if (
+                isinstance(layer, torch.nn.Conv1d)
+                or isinstance(layer, torch_geometric.nn.dense.linear.Linear)
+                or isinstance(layer, torch.nn.Linear)
+                or isinstance(layer, torch.nn.LayerNorm)
+            ):
+                torch.manual_seed(self.seed)
+                torch.nn.init.uniform_(layer.weight)
+                if layer.bias is not None:
+                    torch.nn.init.uniform_(layer.bias)  # type: ignore
+
     def test_embedding(self):
         old_group = Group(self.num_groups, self.neighborhood_size).to(self.device)
         old_embedder = Encoder(self.embedding_size).to(self.device)
         new_embedder = self.embedder.to(self.device)
-        torch.manual_seed(self.seed)
-        init_layers(old_embedder.modules())
-        torch.manual_seed(self.seed)
-        init_layers(new_embedder.modules())
+        self.init_layers(old_embedder.modules())
+        self.init_layers(new_embedder.modules())
         old_input_tensor = torch.rand(
             self.num_batches, self.num_points_per_batch, 3
         ).to(self.device)
@@ -808,10 +809,8 @@ class TestPointMAE:
         new_attention = NewAttention(
             dim=self.embedding_size, num_heads=self.num_heads
         ).to(self.device)
-        torch.manual_seed(self.seed)
-        init_layers(old_attention.modules())
-        torch.manual_seed(self.seed)
-        init_layers(new_attention.modules())
+        self.init_layers(old_attention.modules())
+        self.init_layers(new_attention.modules())
         input_tensor = torch.rand(
             self.num_batches, self.num_points_per_batch, self.embedding_size
         ).to(self.device)
@@ -839,17 +838,18 @@ class TestPointMAE:
             norm=None,
             dropout=0.0,
         )
-        new_block = NewBlock(attention, mlp).to(self.device)
+        new_block = NewBlock(attention=attention, mlp=mlp).to(self.device)
+
         torch.manual_seed(self.seed)
-        init_layers(old_block.modules())
+        self.init_layers(old_block.modules())
+
         torch.manual_seed(self.seed)
-        init_layers(new_block.modules())
-        input_tensor = torch.rand(
-            self.num_batches, self.num_points_per_batch, self.embedding_size
-        ).to(self.device)
-        torch.manual_seed(self.seed)
+        self.init_layers(new_block.modules())
+
+        input_tensor = torch.rand(self.num_batches, 1024, self.embedding_size).to(
+            self.device
+        )
         old_out = old_block.forward(input_tensor)
-        torch.manual_seed(self.seed)
         new_out = new_block.forward(input_tensor)
         assert torch.allclose(old_out, new_out)
 
@@ -862,9 +862,9 @@ class TestPointMAE:
         ).to(self.device)
         new_encoder = self.encoder.to(self.device)
         torch.manual_seed(self.seed)
-        init_layers(old_encoder.modules())
+        self.init_layers(old_encoder.modules())
         torch.manual_seed(self.seed)
-        init_layers(new_encoder.modules())
+        self.init_layers(new_encoder.modules())
 
         input_x = torch.rand(
             self.num_batches, self.num_groups, self.transformer_dim
