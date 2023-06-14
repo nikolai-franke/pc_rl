@@ -1,11 +1,11 @@
 import random
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch_geometric
 from knn_cuda import KNN
 from pointnet2_ops import pointnet2_utils
+from torch_geometric.nn import MLP
 
 from pc_rl.models.embedder import Embedder
 from pc_rl.models.transformer import Block as NewBlock
@@ -733,10 +733,13 @@ class TestPointMAE:
         old_group = Group(self.num_groups, self.neighborhood_size).to(self.device)
         old_embedder = Encoder(self.embedding_size).to(self.device)
         torch.manual_seed(self.seed)
+        mlp_1 = MLP([3, 128, 256])
+        mlp_2 = MLP([512, 512, self.embedding_size])
         new_embedder = Embedder(
-            self.sampling_ratio,
+            mlp_1,
+            mlp_2,
             self.neighborhood_size,
-            self.embedding_size,
+            self.sampling_ratio,
             random_start=False,
         ).to(self.device)
         init_layers(old_embedder.modules())
@@ -812,7 +815,6 @@ class TestPointMAE:
         assert torch.allclose(old_out, new_out)
 
     def test_transformer_decoder(self):
-        # TODO: find out what return_token_num is
         return_token_num = 10
         torch.manual_seed(self.seed)
         old_decoder = TransformerDecoder(
@@ -896,4 +898,4 @@ class TestPointMAE:
 
 if __name__ == "__main__":
     test = TestPointMAE()
-    test.test_mask_transformer()
+    test.test_embedding()

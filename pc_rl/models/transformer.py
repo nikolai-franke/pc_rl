@@ -140,7 +140,7 @@ class TransformerDecoder(nn.Module):
             ]
         )
         self.norm = NormLayer(embed_dim)
-        self.head = nn.Identity()  # TODO: why do we need this?
+        self.head = nn.Identity()  # TODO: maybe remove this if we don't need a head
 
         self.apply(self._init_weights)
 
