@@ -1,5 +1,7 @@
+from typing import Callable, List, Type
+
 import torch
-from pointnet2_ops.pointnet2_utils import Callable, Type
+from pointnet2_ops.pointnet2_utils import Iterable
 from torch import nn
 from torch_geometric.nn import MLP
 
@@ -7,7 +9,7 @@ from torch_geometric.nn import MLP
 class Attention(nn.Module):
     def __init__(
         self,
-        transformer_size: int,
+        dim: int,
         num_heads: int,
         qkv_bias: bool = False,
         attention_dropout_rate: float = 0.0,
@@ -15,11 +17,12 @@ class Attention(nn.Module):
     ) -> None:
         super().__init__()
         self.num_heads = num_heads
-        head_dim = transformer_size // num_heads
+        self.dim = dim
+        head_dim = dim // num_heads
         self.scale = head_dim**-0.5
-        self.qkv = nn.Linear(transformer_size, transformer_size * 3, bias=qkv_bias)
+        self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attention_dropout_rate)
-        self.proj = nn.Linear(transformer_size, transformer_size)
+        self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(projection_dropout_rate)
 
     def forward(self, x):
@@ -47,32 +50,28 @@ class Attention(nn.Module):
 class Block(nn.Module):
     def __init__(
         self,
-        transformer_size: int,
-        num_heads: int,
-        mlp_ratio: float = 4.0,
-        qkv_bias: bool = False,
-        mlp_dropout_rate: float = 0.0,
-        attention_dropout_rate: float = 0.0,
-        mlp_activation: Callable = nn.GELU(),
+        attention: Callable,
+        mlp: Callable,
         NormLayer: Type[nn.Module] = nn.LayerNorm,
+        transformer_size=512,
     ) -> None:
         super().__init__()
-        self.norm_1 = NormLayer(transformer_size)
-        self.norm_2 = NormLayer(transformer_size)
-        mlp_hidden_dim = int(transformer_size * mlp_ratio)
-        self.mlp = MLP(
-            [transformer_size, mlp_hidden_dim, transformer_size],
-            act=mlp_activation,
-            norm=None,
-            dropout=mlp_dropout_rate,
-        )
+        self.attention = attention
+        assert hasattr(self.attention, "dim")
+        self.dim = self.attention.dim
+        # self.mlp = mlp
+
         self.attention = Attention(
             transformer_size,
-            num_heads=num_heads,
-            qkv_bias=qkv_bias,
-            attention_dropout_rate=attention_dropout_rate,
-            projection_dropout_rate=mlp_dropout_rate,
+            num_heads=8,
         )
+        self.mlp = MLP(
+            [transformer_size, 4 * transformer_size, transformer_size],
+            act=nn.GELU(),
+            norm=None,
+        )
+        self.norm_1 = NormLayer(self.dim)
+        self.norm_2 = NormLayer(self.dim)
 
     def forward(self, x):
         x = x + self.attention(self.norm_1(x))
@@ -81,30 +80,9 @@ class Block(nn.Module):
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(
-        self,
-        transformer_size: int,
-        depth: int,
-        num_heads: int,
-        mlp_ratio: float = 4.0,
-        qkv_bias: bool = False,
-        dropout: float = 0.0,
-        attention_dropout_rate: float = 0.0,
-    ) -> None:
+    def __init__(self, blocks: Iterable[nn.Module]) -> None:
         super().__init__()
-        self.blocks = nn.ModuleList(
-            [
-                Block(
-                    transformer_size=transformer_size,
-                    num_heads=num_heads,
-                    mlp_ratio=mlp_ratio,
-                    qkv_bias=qkv_bias,
-                    mlp_dropout_rate=dropout,
-                    attention_dropout_rate=attention_dropout_rate,
-                )
-                for _ in range(depth)
-            ]
-        )
+        self.blocks = blocks
 
     def forward(self, x, pos):
         for block in self.blocks:
@@ -115,30 +93,13 @@ class TransformerEncoder(nn.Module):
 class TransformerDecoder(nn.Module):
     def __init__(
         self,
-        transformer_size: int,
-        depth: int,
-        num_heads: int,
-        mlp_ratio: float = 4.0,
-        qkv_bias: bool = False,
-        mlp_dropout_rate: float = 0.0,
-        attention_dropout_rate: float = 0.0,
+        blocks: nn.ModuleList,
         NormLayer: Type[nn.Module] = nn.LayerNorm,
     ) -> None:
         super().__init__()
-        self.blocks = nn.ModuleList(
-            [
-                Block(
-                    transformer_size=transformer_size,
-                    num_heads=num_heads,
-                    mlp_ratio=mlp_ratio,
-                    qkv_bias=qkv_bias,
-                    mlp_dropout_rate=mlp_dropout_rate,
-                    attention_dropout_rate=attention_dropout_rate,
-                )
-                for _ in range(depth)
-            ]
-        )
-        self.norm = NormLayer(transformer_size)
+        self.blocks = blocks
+        dim = self.blocks[0].dim
+        self.norm = NormLayer(dim)
         self.head = nn.Identity()  # TODO: maybe remove this if we don't need a head
 
         self.apply(self._init_weights)
@@ -164,9 +125,9 @@ class MaskTransformer(nn.Module):
     def __init__(
         self,
         mask_ratio: float,
-        depth: int,
-        num_heads: int,
         embedder: Callable,
+        encoder: Callable,
+        pos_embedder: Callable,
         mask_type: str = "rand",  # TODO:check if we need different mask_types
     ) -> None:
         super().__init__()
@@ -178,22 +139,16 @@ class MaskTransformer(nn.Module):
         ), f"embedder {self.embedder} does not have attribute 'embedding_size'"
 
         self.embedding_size = self.embedder.embedding_size
-        self.depth = depth
-        self.num_heads = num_heads
 
         self.mask_type = mask_type
 
-        self.pos_embedding = nn.Sequential(
-            nn.Linear(3, 128),
-            nn.GELU(),
-            nn.Linear(128, self.embedding_size),
-        )
-
-        self.transformer_encoder = TransformerEncoder(
-            transformer_size=self.embedding_size,
-            depth=self.depth,
-            num_heads=self.num_heads,
-        )
+        self.pos_embedder = pos_embedder
+        # self.pos_embedding = nn.Sequential(
+        #     nn.Linear(3, 128),
+        #     nn.GELU(),
+        #     nn.Linear(128, self.embedding_size),
+        # )
+        self.encoder = encoder
 
         self.norm = nn.LayerNorm(self.embedding_size)
         self.apply(self._init_weights)
@@ -267,9 +222,9 @@ class MaskTransformer(nn.Module):
 
         x_vis = tokens[~bool_masked_pos].reshape(batch_size, -1, C)
         masked_center = center_points[~bool_masked_pos].reshape(batch_size, -1, 3)
-        pos = self.pos_embedding(masked_center)
+        pos = self.pos_embedder(masked_center)
 
-        x_vis = self.transformer_encoder(x_vis, pos)
+        x_vis = self.encoder(x_vis, pos)
         x_vis = self.norm(x_vis)
 
         return x_vis, bool_masked_pos, neighborhoods, center_points
@@ -303,7 +258,7 @@ class PointMAE(nn.Module):
         self.decoder_num_heads = decoder_num_heads
 
         self.mae_decoder = TransformerDecoder(
-            transformer_size=self.transformer_dim,
+            dim=self.transformer_dim,
             depth=self.decoder_depth,
             num_heads=self.decoder_num_heads,
         )
