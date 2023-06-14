@@ -56,8 +56,15 @@ class Block(nn.Module):
         super().__init__()
         self.attention = attention
         assert hasattr(self.attention, "dim")
+
         self.dim = self.attention.dim
         self.mlp = mlp
+        # the first and last channel of the mlp must have the same size as the attention layer
+        assert (
+            self.mlp.channel_list[0] == self.dim
+            and self.mlp.channel_list[-1] == self.dim
+        )
+
         self.norm_1 = NormLayer(self.dim)
         self.norm_2 = NormLayer(self.dim)
 
@@ -123,24 +130,16 @@ class MaskTransformer(nn.Module):
         super().__init__()
         self.mask_ratio = mask_ratio
         self.embedder = embedder
-
         assert hasattr(
             self.embedder, "embedding_size"
         ), f"embedder {self.embedder} does not have attribute 'embedding_size'"
 
         self.embedding_size = self.embedder.embedding_size
-
         self.mask_type = mask_type
-
         self.pos_embedder = pos_embedder
-        # self.pos_embedding = nn.Sequential(
-        #     nn.Linear(3, 128),
-        #     nn.GELU(),
-        #     nn.Linear(128, self.embedding_size),
-        # )
         self.encoder = encoder
-
         self.norm = nn.LayerNorm(self.embedding_size)
+
         self.apply(self._init_weights)
 
     def _init_weights(self, m):

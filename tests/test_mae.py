@@ -721,9 +721,11 @@ class TestPointMAE:
     # mask_type = "rand"
     mask_type = "asdf"
 
+    embedder_mlp_1 = MLP([3, 128, 256])
+    embedder_mlp_2 = MLP([512, 512, embedding_size])
     embedder = Embedder(
-        hidden_layers=[128, 256, 512],
-        embedding_size=embedding_size,
+        mlp_1=embedder_mlp_1,
+        mlp_2=embedder_mlp_2,
         neighborhood_size=neighborhood_size,
         sampling_ratio=sampling_ratio,
         random_start=False,
@@ -753,7 +755,7 @@ class TestPointMAE:
 
     encoder = NewTransformerEncoder(blocks)
 
-    pos_embedder = MLP([3, 128, embedding_size], act=nn.GELU())
+    pos_embedder = MLP([3, 128, embedding_size], act=nn.GELU(), norm=None)
     mask_transformer = NewMaskTransformer(
         mask_ratio=mask_ratio,
         embedder=embedder,
@@ -861,9 +863,7 @@ class TestPointMAE:
             mlp_ratio=self.mlp_ratio,
         ).to(self.device)
         new_encoder = self.encoder.to(self.device)
-        torch.manual_seed(self.seed)
         self.init_layers(old_encoder.modules())
-        torch.manual_seed(self.seed)
         self.init_layers(new_encoder.modules())
 
         input_x = torch.rand(
@@ -903,49 +903,49 @@ class TestPointMAE:
 
     #     assert torch.allclose(old_out, new_out)
 
-    # def test_mask_transformer(self):
-    #     torch.manual_seed(self.seed)
-    #     old_mask_transformer = MaskTransformer(
-    #         mask_ratio=self.mask_ratio,
-    #         trans_dim=self.transformer_dim,
-    #         depth=self.transformer_depth,
-    #         drop_path_rate=self.drop_path_rate,
-    #         num_heads=self.num_heads,
-    #         encoder_dims=self.embedding_size,
-    #         mask_type=self.mask_type,
-    #     ).to(self.device)
+    def test_mask_transformer(self):
+        torch.manual_seed(self.seed)
+        old_mask_transformer = MaskTransformer(
+            mask_ratio=self.mask_ratio,
+            trans_dim=self.transformer_dim,
+            depth=self.transformer_depth,
+            drop_path_rate=self.drop_path_rate,
+            num_heads=self.num_heads,
+            encoder_dims=self.embedding_size,
+            mask_type=self.mask_type,
+        ).to(self.device)
 
-    #     torch.manual_seed(self.seed)
-    #     new_mask_transformer = self.mask_transformer.to(self.device)
-    #     torch.manual_seed(self.seed)
-    #     init_layers(old_mask_transformer.modules())
+        torch.manual_seed(self.seed)
+        new_mask_transformer = self.mask_transformer.to(self.device)
+        torch.manual_seed(self.seed)
+        self.init_layers(old_mask_transformer.modules())
 
-    #     torch.manual_seed(self.seed)
-    #     init_layers(new_mask_transformer.modules())
+        torch.manual_seed(self.seed)
+        self.init_layers(new_mask_transformer.modules())
 
-    #     old_input_tensor = torch.rand(
-    #         self.num_batches, self.num_points_per_batch, 3
-    #     ).to(self.device)
-    #     new_input_tensor = old_input_tensor.reshape(
-    #         self.num_batches * self.num_points_per_batch, -1
-    #     ).to(self.device)
-    #     batch_tensor = torch.arange(self.num_batches, dtype=torch.long)
-    #     batch_tensor = batch_tensor.repeat_interleave(self.num_points_per_batch).to(
-    #         self.device
-    #     )
-    #     group = Group(self.num_groups, self.neighborhood_size).to(self.device)
-    #     neighborhood, center = group.forward(old_input_tensor)
-    #     torch.manual_seed(self.seed)
-    #     old_x_vis, old_bool_masked_pos = old_mask_transformer.forward(
-    #         neighborhood, center
-    #     )
-    #     torch.manual_seed(self.seed)
-    #     new_x_vis, new_bool_masked_pos, *_ = new_mask_transformer.forward(
-    #         new_input_tensor, batch_tensor
-    #     )
+        old_input_tensor = torch.rand(
+            self.num_batches, self.num_points_per_batch, 3
+        ).to(self.device)
+        new_input_tensor = old_input_tensor.reshape(
+            self.num_batches * self.num_points_per_batch, -1
+        ).to(self.device)
+        batch_tensor = torch.arange(self.num_batches, dtype=torch.long)
+        batch_tensor = batch_tensor.repeat_interleave(self.num_points_per_batch).to(
+            self.device
+        )
+        group = Group(self.num_groups, self.neighborhood_size).to(self.device)
+        neighborhood, center = group.forward(old_input_tensor)
+        torch.manual_seed(self.seed)
+        old_x_vis, old_bool_masked_pos = old_mask_transformer.forward(
+            neighborhood, center
+        )
+        torch.manual_seed(self.seed)
+        new_x_vis, new_bool_masked_pos, *_ = new_mask_transformer.forward(
+            new_input_tensor, batch_tensor
+        )
 
-    #     assert torch.allclose(old_x_vis, new_x_vis, rtol=1e-4, atol=1e-4)
-    #     assert torch.equal(old_bool_masked_pos, new_bool_masked_pos)
+        assert torch.allclose(old_x_vis, new_x_vis, rtol=1e-4, atol=1e-4)
+        assert torch.equal(old_bool_masked_pos, new_bool_masked_pos)
 
 
 if __name__ == "__main__":

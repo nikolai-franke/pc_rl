@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -10,8 +10,8 @@ from torch_geometric.nn.inits import reset
 class Embedder(MessagePassing):
     def __init__(
         self,
-        hidden_layers: List[int],
-        embedding_size: int,
+        mlp_1: Callable,
+        mlp_2: Callable,
         neighborhood_size: int,
         sampling_ratio: float,
         random_start: bool = True,
@@ -32,14 +32,15 @@ class Embedder(MessagePassing):
         self.neighborhood_size = neighborhood_size
         self.sampling_ratio = sampling_ratio
         self.random_start = random_start
-        self.embedding_size = embedding_size
 
-        # all but the last hidden layer are part of mlp_1
-        mlp_1_layers = [3] + hidden_layers[:-1]
-        # mlp_2 only has one hidden layer
-        mlp_2_layers = [mlp_1_layers[-1] * 2, hidden_layers[-1], self.embedding_size]
-        self.mlp_1 = MLP(mlp_1_layers)
-        self.mlp_2 = MLP(mlp_2_layers)
+        self.mlp_1 = mlp_1
+        self.mlp_2 = mlp_2
+
+        print(self.mlp_1.channel_list[-1])
+        assert (
+            self.mlp_1.channel_list[-1] * 2 == self.mlp_2.channel_list[0]
+        ), f"The last layer of mlp_1 (size {self.mlp_1.channel_list[-1]}) must be half the size of the first layer of mlp_2 (size {self.mlp_2.channel_list[0]})"
+        self.embedding_size = self.mlp_2.channel_list[-1]
 
         self.reset_parameters()
 
