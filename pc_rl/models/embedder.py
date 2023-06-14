@@ -29,16 +29,17 @@ class Embedder(MessagePassing):
         kwargs.setdefault("aggr", "max")
         super().__init__(**kwargs)
 
-        # all but the last hidden layer are part of mlp_1
-        mlp_1_layers = [3] + hidden_layers[:-1]
-        # mlp_2 only has one hidden layer
-        mlp_2_layers = [mlp_1_layers[-1] * 2, hidden_layers[-1], embedding_size]
-        self.mlp_1 = MLP(mlp_1_layers)
-        self.mlp_2 = MLP(mlp_2_layers)
-
         self.neighborhood_size = neighborhood_size
         self.sampling_ratio = sampling_ratio
         self.random_start = random_start
+        self.embedding_size = embedding_size
+
+        # all but the last hidden layer are part of mlp_1
+        mlp_1_layers = [3] + hidden_layers[:-1]
+        # mlp_2 only has one hidden layer
+        mlp_2_layers = [mlp_1_layers[-1] * 2, hidden_layers[-1], self.embedding_size]
+        self.mlp_1 = MLP(mlp_1_layers)
+        self.mlp_2 = MLP(mlp_2_layers)
 
         self.reset_parameters()
 
