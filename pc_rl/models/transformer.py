@@ -3,13 +3,11 @@ from pointnet2_ops.pointnet2_utils import Callable
 from torch import nn
 from torch_geometric.nn import MLP
 
-from pc_rl.models.embedder import Embedder
-
 
 class Attention(nn.Module):
     def __init__(
         self,
-        embedding_size,
+        transformer_size,
         num_heads=8,
         qkv_bias=False,
         attention_dropout_rate=0.0,
@@ -17,11 +15,11 @@ class Attention(nn.Module):
     ) -> None:
         super().__init__()
         self.num_heads = num_heads
-        head_dim = embedding_size // num_heads
+        head_dim = transformer_size // num_heads
         self.scale = head_dim**-0.5
-        self.qkv = nn.Linear(embedding_size, embedding_size * 3, bias=qkv_bias)
+        self.qkv = nn.Linear(transformer_size, transformer_size * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attention_dropout_rate)
-        self.proj = nn.Linear(embedding_size, embedding_size)
+        self.proj = nn.Linear(transformer_size, transformer_size)
         self.proj_drop = nn.Dropout(projection_dropout_rate)
 
     def forward(self, x):
@@ -49,27 +47,27 @@ class Attention(nn.Module):
 class Block(nn.Module):
     def __init__(
         self,
-        embedding_size,
-        num_heads,
-        mlp_ratio=4.0,
-        qkv_bias=False,
-        mlp_dropout_rate=0.0,
-        attention_dropout_rate=0.0,
-        mlp_activation=nn.GELU(),
+        transformer_size: int,
+        num_heads: int,
+        mlp_ratio: float = 4.0,
+        qkv_bias: bool = False,
+        mlp_dropout_rate: float = 0.0,
+        attention_dropout_rate: float = 0.0,
+        mlp_activation: Callable = nn.GELU(),
         NormLayer=nn.LayerNorm,
     ) -> None:
         super().__init__()
-        self.norm_1 = NormLayer(embedding_size)
-        self.norm_2 = NormLayer(embedding_size)
-        mlp_hidden_dim = int(embedding_size * mlp_ratio)
+        self.norm_1 = NormLayer(transformer_size)
+        self.norm_2 = NormLayer(transformer_size)
+        mlp_hidden_dim = int(transformer_size * mlp_ratio)
         self.mlp = MLP(
-            [embedding_size, mlp_hidden_dim, embedding_size],
+            [transformer_size, mlp_hidden_dim, transformer_size],
             act=mlp_activation,
             norm=None,
             dropout=mlp_dropout_rate,
         )
         self.attention = Attention(
-            embedding_size,
+            transformer_size,
             num_heads=num_heads,
             qkv_bias=qkv_bias,
             attention_dropout_rate=attention_dropout_rate,
@@ -85,7 +83,7 @@ class Block(nn.Module):
 class TransformerEncoder(nn.Module):
     def __init__(
         self,
-        embedding_size,
+        transformer_size,
         depth,
         num_heads,
         mlp_ratio=4.0,
@@ -97,7 +95,7 @@ class TransformerEncoder(nn.Module):
         self.blocks = nn.ModuleList(
             [
                 Block(
-                    embedding_size=embedding_size,
+                    transformer_size=transformer_size,
                     num_heads=num_heads,
                     mlp_ratio=mlp_ratio,
                     qkv_bias=qkv_bias,
@@ -117,7 +115,7 @@ class TransformerEncoder(nn.Module):
 class TransformerDecoder(nn.Module):
     def __init__(
         self,
-        embedding_size,
+        transformer_size,
         depth,
         num_heads,
         mlp_ratio=4.0,
@@ -130,7 +128,7 @@ class TransformerDecoder(nn.Module):
         self.blocks = nn.ModuleList(
             [
                 Block(
-                    embedding_size=embedding_size,
+                    transformer_size=transformer_size,
                     num_heads=num_heads,
                     mlp_ratio=mlp_ratio,
                     qkv_bias=qkv_bias,
@@ -140,7 +138,7 @@ class TransformerDecoder(nn.Module):
                 for _ in range(depth)
             ]
         )
-        self.norm = NormLayer(embedding_size)
+        self.norm = NormLayer(transformer_size)
         self.head = nn.Identity()  # TODO: maybe remove this if we don't need a head
 
         self.apply(self._init_weights)
@@ -165,19 +163,23 @@ class TransformerDecoder(nn.Module):
 class MaskTransformer(nn.Module):
     def __init__(
         self,
-        mask_ratio,
-        embedding_size,
-        depth,
-        num_heads,
+        mask_ratio: float,
+        depth: int,
+        num_heads: int,
         embedder: Callable,
-        mask_type="rand",
+        mask_type: str = "rand",  # TODO:check if we need different mask_types
     ) -> None:
         super().__init__()
         self.mask_ratio = mask_ratio
-        self.embedding_size = embedding_size
+        self.embedder = embedder
+
+        assert hasattr(
+            self.embedder, "embedding_size"
+        ), f"embedder {self.embedder} does not have attribute 'embedding_size'"
+
+        self.embedding_size = self.embedder.embedding_size
         self.depth = depth
         self.num_heads = num_heads
-        self.embedder = embedder
 
         self.mask_type = mask_type
 
@@ -188,7 +190,7 @@ class MaskTransformer(nn.Module):
         )
 
         self.transformer_encoder = TransformerEncoder(
-            embedding_size=self.embedding_size,
+            transformer_size=self.embedding_size,
             depth=self.depth,
             num_heads=self.num_heads,
         )
@@ -301,7 +303,7 @@ class PointMAE(nn.Module):
         self.decoder_num_heads = decoder_num_heads
 
         self.mae_decoder = TransformerDecoder(
-            embedding_size=self.transformer_dim,
+            transformer_size=self.transformer_dim,
             depth=self.decoder_depth,
             num_heads=self.decoder_num_heads,
         )

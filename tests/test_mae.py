@@ -729,20 +729,20 @@ class TestPointMAE:
     num_heads = 8
     # mask_type = "rand"
     mask_type = "asdf"
+    embedder_conf = {
+        "hidden_layers": [128, 256, 512],
+        "embedding_size": embedding_size,
+        "neighborhood_size": neighborhood_size,
+        "sampling_ratio": sampling_ratio,
+        "random_start": False,
+    }
 
     def test_embedding(self):
         old_group = Group(self.num_groups, self.neighborhood_size).to(self.device)
         old_embedder = Encoder(self.embedding_size).to(self.device)
         torch.manual_seed(self.seed)
 
-        embedder_conf = {
-            "hidden_layers": [128, 256, 512],
-            "embedding_size": self.embedding_size,
-            "neighborhood_size": self.neighborhood_size,
-            "sampling_ratio": self.sampling_ratio,
-            "random_start": False,
-        }
-        new_embedder = build_embedder(embedder_conf).to(self.device)
+        new_embedder = build_embedder(self.embedder_conf).to(self.device)
 
         init_layers(old_embedder.modules())
         torch.manual_seed(self.seed)
@@ -773,7 +773,7 @@ class TestPointMAE:
             dim=self.embedding_size, num_heads=self.num_heads, mlp_ratio=self.mlp_ratio
         ).to(self.device)
         new_block = NewBlock(
-            embedding_size=self.embedding_size,
+            transformer_size=self.embedding_size,
             num_heads=self.num_heads,
             mlp_ratio=self.mlp_ratio,
         ).to(self.device)
@@ -796,7 +796,7 @@ class TestPointMAE:
             mlp_ratio=self.mlp_ratio,
         ).to(self.device)
         new_encoder = NewTransformerEncoder(
-            embedding_size=self.transformer_dim,
+            transformer_size=self.transformer_dim,
             depth=self.transformer_depth,
             num_heads=self.num_heads,
             mlp_ratio=self.mlp_ratio,
@@ -856,17 +856,9 @@ class TestPointMAE:
         ).to(self.device)
 
         torch.manual_seed(self.seed)
-        embedder_conf = {
-            "hidden_layers": [128, 256, 512],
-            "embedding_size": self.embedding_size,
-            "neighborhood_size": self.neighborhood_size,
-            "sampling_ratio": self.sampling_ratio,
-            "random_start": False,
-        }
-        new_embedder = build_embedder(embedder_conf).to(self.device)
+        new_embedder = build_embedder(self.embedder_conf).to(self.device)
         new_mask_transformer = NewMaskTransformer(
             mask_ratio=self.mask_ratio,
-            embedding_size=self.transformer_dim,
             depth=self.transformer_depth,
             num_heads=self.num_heads,
             mask_type=self.mask_type,
