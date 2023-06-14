@@ -36,6 +36,23 @@ class Embedder(MessagePassing):
     def forward(
         self, pos: Tensor, batch: Tensor  # type: ignore
     ) -> Tuple[Tensor, Tensor, Tensor]:
+        """Takes points as input, selects center points via furthest point
+        sampling, creates local neighborhoods via k-nearest-neighbors sampling,
+        and embeds the local neighborhoods with the two MLPs.
+
+        B: batch size
+        N: number of points
+        M: neighborhood size
+        G: number of groups
+        E: embedding size
+
+        :param pos: [B * N, 3] Tensor containing the points
+        :param batch: [B * N, 1] Tensor assigning each point in 'pos' to a batch
+        :returns:
+            - x - [B, G, M, E] Tensor containing the embeddings
+            - neighborhoods - [B, G, N, 3] Tensor containing the neighborhoods in local coordinates (with respect to the neighborhood center)
+            - center_points - [B, G, 3] Tensor containing the center points of each neighborhood
+        """
         center_points_idx = fps(
             pos, batch, ratio=self.sampling_ratio, random_start=self.random_start
         )
