@@ -1,5 +1,5 @@
 import torch
-from pointnet2_ops.pointnet2_utils import Callable
+from pointnet2_ops.pointnet2_utils import Callable, Type
 from torch import nn
 from torch_geometric.nn import MLP
 
@@ -7,11 +7,11 @@ from torch_geometric.nn import MLP
 class Attention(nn.Module):
     def __init__(
         self,
-        transformer_size,
-        num_heads=8,
-        qkv_bias=False,
-        attention_dropout_rate=0.0,
-        projection_dropout_rate=0.0,
+        transformer_size: int,
+        num_heads: int,
+        qkv_bias: bool = False,
+        attention_dropout_rate: float = 0.0,
+        projection_dropout_rate: float = 0.0,
     ) -> None:
         super().__init__()
         self.num_heads = num_heads
@@ -54,7 +54,7 @@ class Block(nn.Module):
         mlp_dropout_rate: float = 0.0,
         attention_dropout_rate: float = 0.0,
         mlp_activation: Callable = nn.GELU(),
-        NormLayer=nn.LayerNorm,
+        NormLayer: Type[nn.Module] = nn.LayerNorm,
     ) -> None:
         super().__init__()
         self.norm_1 = NormLayer(transformer_size)
@@ -83,13 +83,13 @@ class Block(nn.Module):
 class TransformerEncoder(nn.Module):
     def __init__(
         self,
-        transformer_size,
-        depth,
-        num_heads,
-        mlp_ratio=4.0,
-        qkv_bias=False,
-        dropout=0.0,
-        attn_dropout=0.0,
+        transformer_size: int,
+        depth: int,
+        num_heads: int,
+        mlp_ratio: float = 4.0,
+        qkv_bias: bool = False,
+        dropout: float = 0.0,
+        attention_dropout_rate: float = 0.0,
     ) -> None:
         super().__init__()
         self.blocks = nn.ModuleList(
@@ -100,7 +100,7 @@ class TransformerEncoder(nn.Module):
                     mlp_ratio=mlp_ratio,
                     qkv_bias=qkv_bias,
                     mlp_dropout_rate=dropout,
-                    attention_dropout_rate=attn_dropout,
+                    attention_dropout_rate=attention_dropout_rate,
                 )
                 for _ in range(depth)
             ]
@@ -115,14 +115,14 @@ class TransformerEncoder(nn.Module):
 class TransformerDecoder(nn.Module):
     def __init__(
         self,
-        transformer_size,
-        depth,
-        num_heads,
-        mlp_ratio=4.0,
-        qkv_bias=False,
-        mlp_dropout_rate=0.0,
-        attention_dropout_rate=0.0,
-        NormLayer=nn.LayerNorm,
+        transformer_size: int,
+        depth: int,
+        num_heads: int,
+        mlp_ratio: float = 4.0,
+        qkv_bias: bool = False,
+        mlp_dropout_rate: float = 0.0,
+        attention_dropout_rate: float = 0.0,
+        NormLayer: Type[nn.Module] = nn.LayerNorm,
     ) -> None:
         super().__init__()
         self.blocks = nn.ModuleList(
