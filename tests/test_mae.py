@@ -706,7 +706,7 @@ class TestPointMAE:
     num_points_per_batch = 1024
     num_batches = 16
     num_groups = 20
-    neighborhood_size = 3
+    group_size = 3
     embedding_size = 1024
     # seed = random.randint(0, 10**6)
     seed = 0
@@ -726,7 +726,7 @@ class TestPointMAE:
     embedder = Embedder(
         mlp_1=embedder_mlp_1,
         mlp_2=embedder_mlp_2,
-        neighborhood_size=neighborhood_size,
+        group_size=group_size,
         sampling_ratio=sampling_ratio,
         random_start=False,
     )
@@ -758,7 +758,6 @@ class TestPointMAE:
     pos_embedder = MLP([3, 128, embedding_size], act=nn.GELU(), norm=None)
     masked_encoder = NewMaskedEncoder(
         mask_ratio=mask_ratio,
-        embedder=embedder,
         encoder=encoder,
         pos_embedder=pos_embedder,
         mask_type=mask_type,
@@ -778,7 +777,7 @@ class TestPointMAE:
                     torch.nn.init.uniform_(layer.bias)  # type: ignore
 
     def test_embedder(self):
-        old_group = Group(self.num_groups, self.neighborhood_size).to(self.device)
+        old_group = Group(self.num_groups, self.group_size).to(self.device)
         old_embedder = Encoder(self.embedding_size).to(self.device)
         new_embedder = self.embedder.to(self.device)
         self.init_layers(old_embedder.modules())
@@ -879,30 +878,28 @@ class TestPointMAE:
 
         assert torch.allclose(old_out, new_out, rtol=1e-4, atol=1e-4)
 
-    # def test_transformer_decoder(self):
-    #     return_token_num = 10
-    #     torch.manual_seed(self.seed)
-    #     old_decoder = TransformerDecoder(
-    #         self.transformer_dim, self.transformer_depth, self.num_heads, self.mlp_ratio
-    #     ).to(self.device)
-    #     init_layers(old_decoder.modules())
-    #     torch.manual_seed(self.seed)
-    #     new_decoder = NewTransformerDecoder(
-    #         self.transformer_dim, self.transformer_depth, self.num_heads, self.mlp_ratio
-    #     ).to(self.device)
-    #     init_layers(new_decoder.modules())
+    def test_transformer_decoder(self):
+        return_token_num = 10
+        torch.manual_seed(self.seed)
+        old_decoder = TransformerDecoder(
+            self.transformer_dim, self.transformer_depth, self.num_heads, self.mlp_ratio
+        ).to(self.device)
+        self.init_layers(old_decoder.modules())
+        torch.manual_seed(self.seed)
+        new_decoder = NewTransformerDecoder(blocks=self.blocks).to(self.device)
+        self.init_layers(new_decoder.modules())
 
-    #     input_x = torch.rand(
-    #         self.num_batches, self.num_groups, self.transformer_dim
-    #     ).to(self.device)
-    #     input_pos = torch.rand(
-    #         self.num_batches, self.num_groups, self.transformer_dim
-    #     ).to(self.device)
+        input_x = torch.rand(
+            self.num_batches, self.num_groups, self.transformer_dim
+        ).to(self.device)
+        input_pos = torch.rand(
+            self.num_batches, self.num_groups, self.transformer_dim
+        ).to(self.device)
 
-    #     old_out = old_decoder.forward(input_x, input_pos, return_token_num)
-    #     new_out = new_decoder.forward(input_x, input_pos, return_token_num)
+        old_out = old_decoder.forward(input_x, input_pos, return_token_num)
+        new_out = new_decoder.forward(input_x, input_pos, return_token_num)
 
-    #     assert torch.allclose(old_out, new_out)
+        assert torch.allclose(old_out, new_out)
 
     def test_mask_transformer(self):
         torch.manual_seed(self.seed)
@@ -934,13 +931,15 @@ class TestPointMAE:
         batch_tensor = batch_tensor.repeat_interleave(self.num_points_per_batch).to(
             self.device
         )
-        group = Group(self.num_groups, self.neighborhood_size).to(self.device)
+        group = Group(self.num_groups, self.group_size).to(self.device)
         neighborhood, center = group.forward(old_input_tensor)
         torch.manual_seed(self.seed)
         old_x_vis, old_mask = old_mask_transformer.forward(neighborhood, center)
         torch.manual_seed(self.seed)
+
+        x, neighborhoods, center_points = self.embedder(new_input_tensor, batch_tensor)
         new_x_vis, new_mask, *_ = new_mask_transformer.forward(
-            new_input_tensor, batch_tensor
+            x, neighborhoods, center_points
         )
 
         # print(torch.sum(torch.abs(diff := (old_x_vis - new_x_vis))), diff.shape)
@@ -954,5 +953,5 @@ if __name__ == "__main__":
     # test.test_attention()
     # test.test_block()
     # test.test_transformer_encoder()
-    # test.test_transformer_decoder()
-    test.test_mask_transformer()
+    test.test_transformer_decoder()
+    # test.test_mask_transformer()
