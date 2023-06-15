@@ -2,28 +2,30 @@ from torch import nn
 from torch_geometric.nn import MLP
 
 from pc_rl.models.embedder import Embedder
-from pc_rl.models.transformer import (Attention, Block, MaskTransformer,
+from pc_rl.models.transformer import (Attention, Block, MaskedEncoder,
                                       TransformerDecoder, TransformerEncoder)
 
 
 def build_mask_transformer(conf):
     embedder_conf = conf["embedder"]
+
+    mlp_1 = MLP(embedder_conf["mlp_1_layers"], act=embedder_conf["act"])
+    mlp_2 = MLP(embedder_conf["mlp_2_layers"], act=embedder_conf["act"])
     embedder = Embedder(
-        hidden_layers=embedder_conf["hidden_layers"],
-        embedding_size=embedder_conf["embedding_size"],
+        mlp_1=mlp_1,
+        mlp_2=mlp_2,
         neighborhood_size=embedder_conf["neighborhood_size"],
         sampling_ratio=embedder_conf["sampling_ratio"],
         random_start=embedder_conf["random_start"],
     )
 
-    attention_conf = conf["attention"]
-
     encoder_conf = conf["encoder"]
+    attention_conf = conf["attention"]
     blocks = []
     for _ in range(encoder_conf["depth"]):
         mlp = MLP(
             encoder_conf["mlp_layers"],
-            act=encoder_conf["mlp_activation"],
+            act=encoder_conf["act"],
             norm=None,
             dropout=encoder_conf["mlp_dropout_rate"],
         )
@@ -41,8 +43,11 @@ def build_mask_transformer(conf):
     encoder = TransformerEncoder(blocks)
 
     mask_transformer_conf = conf["mask_transformer"]
-    pos_embedder = MLP([3, 128, embedder_conf["embedding_size"]], act=nn.GELU())
-    mask_transformer = MaskTransformer(
+    pos_embedder = MLP(
+        mask_transformer_conf["pos_embedder_layers"],
+        act=mask_transformer_conf["pos_embedder_act"],
+    )
+    mask_transformer = MaskedEncoder(
         mask_ratio=mask_transformer_conf["mask_ratio"],
         embedder=embedder,
         encoder=encoder,

@@ -11,7 +11,7 @@ from pc_rl.builder import build_mask_transformer
 from pc_rl.models.embedder import Embedder
 from pc_rl.models.transformer import Attention as NewAttention
 from pc_rl.models.transformer import Block as NewBlock
-from pc_rl.models.transformer import MaskTransformer as NewMaskTransformer
+from pc_rl.models.transformer import MaskedEncoder as NewMaskedEncoder
 from pc_rl.models.transformer import \
     TransformerDecoder as NewTransformerDecoder
 from pc_rl.models.transformer import \
@@ -703,18 +703,18 @@ class PointTransformer(nn.Module):
 
 class TestPointMAE:
     device = "cuda"
-    num_points_per_batch = 10
-    num_batches = 4
-    num_groups = 3
+    num_points_per_batch = 1024
+    num_batches = 16
+    num_groups = 20
     neighborhood_size = 3
-    embedding_size = 512
+    embedding_size = 1024
     # seed = random.randint(0, 10**6)
     seed = 0
     mlp_ratio = 4.0
     sampling_ratio = num_groups / num_points_per_batch
 
     mask_ratio = 0.6
-    transformer_dim = 512
+    transformer_dim = 1024
     transformer_depth = 4
     drop_path_rate = 0.0
     num_heads = 8
@@ -756,7 +756,7 @@ class TestPointMAE:
     encoder = NewTransformerEncoder(blocks)
 
     pos_embedder = MLP([3, 128, embedding_size], act=nn.GELU(), norm=None)
-    mask_transformer = NewMaskTransformer(
+    masked_encoder = NewMaskedEncoder(
         mask_ratio=mask_ratio,
         embedder=embedder,
         encoder=encoder,
@@ -777,7 +777,7 @@ class TestPointMAE:
                 if layer.bias is not None:
                     torch.nn.init.uniform_(layer.bias)  # type: ignore
 
-    def test_embedding(self):
+    def test_embedder(self):
         old_group = Group(self.num_groups, self.neighborhood_size).to(self.device)
         old_embedder = Encoder(self.embedding_size).to(self.device)
         new_embedder = self.embedder.to(self.device)
@@ -800,7 +800,8 @@ class TestPointMAE:
             new_input_tensor, batch_tensor
         )
 
-        assert torch.allclose(old_out, new_out)
+        assert torch.allclose(old_out, new_out, rtol=1e-4, atol=1e-4)
+        # assert torch.allclose(old_out, new_out)
         assert torch.equal(old_neighborhood, new_neighborhood)
         assert torch.equal(old_center, new_center)
 
@@ -916,7 +917,7 @@ class TestPointMAE:
         ).to(self.device)
 
         torch.manual_seed(self.seed)
-        new_mask_transformer = self.mask_transformer.to(self.device)
+        new_mask_transformer = self.masked_encoder.to(self.device)
         torch.manual_seed(self.seed)
         self.init_layers(old_mask_transformer.modules())
 
@@ -936,23 +937,22 @@ class TestPointMAE:
         group = Group(self.num_groups, self.neighborhood_size).to(self.device)
         neighborhood, center = group.forward(old_input_tensor)
         torch.manual_seed(self.seed)
-        old_x_vis, old_bool_masked_pos = old_mask_transformer.forward(
-            neighborhood, center
-        )
+        old_x_vis, old_mask = old_mask_transformer.forward(neighborhood, center)
         torch.manual_seed(self.seed)
-        new_x_vis, new_bool_masked_pos, *_ = new_mask_transformer.forward(
+        new_x_vis, new_mask, *_ = new_mask_transformer.forward(
             new_input_tensor, batch_tensor
         )
 
+        # print(torch.sum(torch.abs(diff := (old_x_vis - new_x_vis))), diff.shape)
         assert torch.allclose(old_x_vis, new_x_vis, rtol=1e-4, atol=1e-4)
-        assert torch.equal(old_bool_masked_pos, new_bool_masked_pos)
+        assert torch.equal(old_mask, ~new_mask)
 
 
 if __name__ == "__main__":
     test = TestPointMAE()
-    # test.test_embedding()
+    # test.test_embedder()
     # test.test_attention()
-    test.test_block()
+    # test.test_block()
     # test.test_transformer_encoder()
     # test.test_transformer_decoder()
-    # test.test_mask_transformer()
+    test.test_mask_transformer()

@@ -36,7 +36,6 @@ class Embedder(MessagePassing):
         self.mlp_1 = mlp_1
         self.mlp_2 = mlp_2
 
-        print(self.mlp_1.channel_list[-1])
         assert (
             self.mlp_1.channel_list[-1] * 2 == self.mlp_2.channel_list[0]
         ), f"The last layer of mlp_1 (size {self.mlp_1.channel_list[-1]}) must be half the size of the first layer of mlp_2 (size {self.mlp_2.channel_list[0]})"
@@ -69,6 +68,7 @@ class Embedder(MessagePassing):
             - neighborhoods - [B, G, N, 3] Tensor containing the neighborhoods in local coordinates (with respect to the neighborhood center)
             - center_points - [B, G, 3] Tensor containing the center points of each neighborhood
         """
+        B = int(torch.max(batch) + 1)
         center_points_idx = fps(
             pos, batch, ratio=self.sampling_ratio, random_start=self.random_start
         )
@@ -82,15 +82,13 @@ class Embedder(MessagePassing):
 
         x, neighborhoods = self.propagate(edges, pos=(pos, center_points), size=None)
         # reshape into [B, M, E]
-        x = x.reshape(-1, self.neighborhood_size, x.shape[-1])
+        x = x.reshape(B, -1, x.shape[-1])
         # reshape into [B, G, M, 3]
         neighborhoods = neighborhoods.reshape(
-            x.shape[0], -1, self.neighborhood_size, neighborhoods.shape[-1]
+            B, -1, self.neighborhood_size, neighborhoods.shape[-1]
         )
         # reshape into [B, G, 3]
-        center_points = center_points.reshape(
-            -1, self.neighborhood_size, center_points.shape[-1]
-        )
+        center_points = center_points.reshape(B, -1, center_points.shape[-1])
 
         return x, neighborhoods, center_points
 

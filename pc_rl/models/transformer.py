@@ -1,4 +1,4 @@
-from typing import Callable, List, Type
+from typing import Callable, Type
 
 import torch
 import torch.nn as nn
@@ -118,7 +118,7 @@ class TransformerDecoder(nn.Module):
         return x
 
 
-class MaskTransformer(nn.Module):
+class MaskedEncoder(nn.Module):
     def __init__(
         self,
         mask_ratio: float,
@@ -172,9 +172,9 @@ class MaskTransformer(nn.Module):
             mask[idx[:mask_num]] = 1
             mask_idx.append(mask.bool())
 
-        bool_masked_pos = torch.stack(mask_idx).to(center.device)
+        overall_mask = ~torch.stack(mask_idx).to(center.device)
 
-        return bool_masked_pos
+        return overall_mask
 
     def _mask_center_rand(self, center, noaug=False):
         B, G, _ = center.shape
@@ -195,7 +195,7 @@ class MaskTransformer(nn.Module):
             rand_idx = torch.randperm(len(mask))
             mask = mask[rand_idx]
             overall_mask[i, :] = mask
-            overall_mask = overall_mask.bool()
+        overall_mask = ~overall_mask.bool()
 
         return overall_mask.to(center.device)
 
@@ -203,20 +203,31 @@ class MaskTransformer(nn.Module):
         tokens, neighborhoods, center_points = self.embedder(pos, batch)
 
         if self.mask_type == "rand":
-            bool_masked_pos = self._mask_center_rand(center_points, noaug=noaug)
+            mask = self._mask_center_rand(center_points, noaug=noaug)
         else:
-            bool_masked_pos = self._mask_center_block(center_points, noaug=noaug)
+            mask = self._mask_center_block(center_points, noaug=noaug)
 
         batch_size, _, C = tokens.shape
 
-        x_vis = tokens[~bool_masked_pos].reshape(batch_size, -1, C)
-        masked_center = center_points[~bool_masked_pos].reshape(batch_size, -1, 3)
+        x_vis = tokens[mask].reshape(batch_size, -1, C)
+        masked_center = center_points[mask].reshape(batch_size, -1, 3)
         pos = self.pos_embedder(masked_center)
 
         x_vis = self.encoder(x_vis, pos)
         x_vis = self.norm(x_vis)
 
-        return x_vis, bool_masked_pos, neighborhoods, center_points
+        return x_vis, mask, neighborhoods, center_points
+
+
+class MaskedDecoder(nn.Module):
+    def __init__(
+        self,
+        decoder: Callable,
+        pos_embedder: Callable,
+    ):
+        self.decoder = decoder
+        self.pos_embedder = pos_embedder
+        pass
 
 
 class PointMAE(nn.Module):
