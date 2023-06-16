@@ -1,5 +1,3 @@
-import random
-
 import torch
 import torch.nn as nn
 import torch_geometric
@@ -7,14 +5,13 @@ from knn_cuda import KNN
 from pointnet2_ops import pointnet2_utils
 from torch_geometric.nn import MLP
 
-from pc_rl.builder import build_mask_transformer
-from pc_rl.models.embedder import Embedder
-from pc_rl.models.transformer import Attention as NewAttention
-from pc_rl.models.transformer import Block as NewBlock
-from pc_rl.models.transformer import MaskedEncoder as NewMaskedEncoder
-from pc_rl.models.transformer import \
+from pc_rl.models.modules.embedder import Embedder
+from pc_rl.models.modules.transformer import Attention as NewAttention
+from pc_rl.models.modules.transformer import Block as NewBlock
+from pc_rl.models.modules.transformer import MaskedEncoder as NewMaskedEncoder
+from pc_rl.models.modules.transformer import \
     TransformerDecoder as NewTransformerDecoder
-from pc_rl.models.transformer import \
+from pc_rl.models.modules.transformer import \
     TransformerEncoder as NewTransformerEncoder
 
 
@@ -718,8 +715,8 @@ class TestPointMAE:
     transformer_depth = 4
     drop_path_rate = 0.0
     num_heads = 8
-    # mask_type = "rand"
-    mask_type = "asdf"
+    mask_type = "rand"
+    # mask_type = "asdf"
 
     embedder_mlp_1 = MLP([3, 128, 256])
     embedder_mlp_2 = MLP([512, 512, embedding_size])
@@ -901,7 +898,7 @@ class TestPointMAE:
 
         assert torch.allclose(old_out, new_out)
 
-    def test_mask_transformer(self):
+    def test_masked_encoder(self):
         torch.manual_seed(self.seed)
         old_mask_transformer = MaskTransformer(
             mask_ratio=self.mask_ratio,
