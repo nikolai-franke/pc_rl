@@ -21,9 +21,9 @@ def main(config: DictConfig):
     )
 
     path = str(Path(__file__).parent.resolve() / dataset_conf["path"])
-    if dataset_conf["name"] == "modelnet_10":
+    if (dataset_name := dataset_conf["name"]) == "modelnet_10":
         dataset = ModelNet(path, "10", True, transform, pre_transform)
-    elif dataset_conf["name"] == "modelnet_40":
+    elif dataset_name == "modelnet_40":
         dataset = ModelNet(path, "40", True, transform, pre_transform)
     else:
         raise NotImplementedError
