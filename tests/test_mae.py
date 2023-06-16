@@ -742,11 +742,6 @@ class TestPointMAE:
         dim=embedding_size,
         num_heads=num_heads,
     )
-    mlp = MLP(
-        [embedding_size, int(embedding_size * mlp_ratio), embedding_size],
-        act=nn.GELU(),
-        norm=None,
-    )
     block_list = []
     for _ in range(transformer_depth):
         att = NewAttention(

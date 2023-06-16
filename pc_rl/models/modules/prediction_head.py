@@ -2,6 +2,7 @@ from torch import nn
 
 
 class MaePredictionHead(nn.Module):
+    # TODO: maybe rewrite this using the pytorch MessagePassing interface
     def __init__(self, dim: int, group_size: int):
         super().__init__()
         self.head = nn.Conv1d(dim, 3 * group_size, 1)

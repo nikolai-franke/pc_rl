@@ -11,8 +11,8 @@ class Attention(nn.Module):
         dim: int,
         num_heads: int,
         qkv_bias: bool = False,
-        attention_dropout_rate: float = 0.0,
-        projection_dropout_rate: float = 0.0,
+        dropout_rate: float = 0.0,
+        proj_dropout_rate: float = 0.0,
     ) -> None:
         super().__init__()
         self.num_heads = num_heads
@@ -20,9 +20,9 @@ class Attention(nn.Module):
         head_dim = dim // num_heads
         self.scale = head_dim**-0.5
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
-        self.attn_drop = nn.Dropout(attention_dropout_rate)
+        self.attn_drop = nn.Dropout(dropout_rate)
         self.proj = nn.Linear(dim, dim)
-        self.proj_drop = nn.Dropout(projection_dropout_rate)
+        self.proj_drop = nn.Dropout(proj_dropout_rate)
 
     def forward(self, x):
         B, N, E = x.shape
