@@ -1,0 +1,3 @@
+name: modelnet_10
+path: "../data/ModelNet10"
+num_points: 1024

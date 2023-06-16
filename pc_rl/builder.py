@@ -98,7 +98,12 @@ def build_masked_autoencoder(config):
     loss_function = ChamferDistance()
     prediction_head = MaePredictionHead(embedding_size, group_size)
     masked_autoencoder = MaskedAutoEncoder(
-        embedder, masked_encoder, masked_decoder, prediction_head, loss_function
+        embedder=embedder,
+        encoder=masked_encoder,
+        decoder=masked_decoder,
+        prediction_head=prediction_head,
+        loss_function=loss_function,
+        learning_rate=config["learning_rate"],
     )
 
     return masked_autoencoder

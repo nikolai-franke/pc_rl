@@ -1,46 +1,13 @@
-embedder:
-  embedding_size: 384
-  group_size: 32
-  mlp_1_layers: [3, 128, 256]
-  mlp_2_layers: [512, 512]
-  act: relu
-  sampling_ratio: 0.0625
-  random_start: True
+defaults:
+  - dataset: modelnet_40
+  - embedder: default
+  - encoder: default
+  - decoder: default
+  - masked_encoder: default
+  - masked_decoder: default
 
-encoder:
-  depth: 12
-  mlp_layers: [384, 1536, 384]
-  act: gelu
-  dropout_rate: 0.0
-  attention:
-    num_heads: 6
-    qkv_bias: False
-    dropout_rate: 0.0
-    proj_dropout_rate: 0.0
-
-decoder:
-  depth: 4
-  mlp_layers: [384, 1536, 384]
-  act: gelu
-  dropout_rate: 0.0
-  attention:
-    num_heads: 6
-    qkv_bias: False
-    dropout_rate: 0.0
-    proj_dropout_rate: 0.0
-
-masked_encoder:
-  mask_ratio: 0.6
-  mask_type: rand
-  pos_embedder:
-    mlp_layers: [3, 128, 384]
-    act: gelu
-
-masked_decoder:
-  pos_embedder:
-    mlp_layers: [3, 128, 384]
-    act: gelu
-
-
-
-
+batch_size: 128
+learning_rate: 0.001
+num_workers: 4
+max_epochs: 50
+log_every_n_steps: 5
