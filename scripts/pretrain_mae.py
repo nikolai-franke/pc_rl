@@ -5,8 +5,9 @@ import pytorch_lightning as pl
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers.wandb import WandbLogger
 from torch_geometric.data.lightning import LightningDataset
-from torch_geometric.datasets import ModelNet
-from torch_geometric.transforms import NormalizeScale, SamplePoints
+from torch_geometric.datasets import ModelNet, ShapeNet
+from torch_geometric.transforms import (Compose, FixedPoints, NormalizeScale,
+                                        SamplePoints)
 
 from pc_rl.builder import build_masked_autoencoder
 
@@ -16,15 +17,27 @@ def main(config: DictConfig):
     masked_autoencoder = build_masked_autoencoder(config)
     dataset_conf = config["dataset"]
 
-    transform, pre_transform = NormalizeScale(), SamplePoints(
-        dataset_conf["num_points"]
-    )
+    transform = Compose([SamplePoints(dataset_conf["num_points"]), NormalizeScale()])
 
     path = str(Path(__file__).parent.resolve() / dataset_conf["path"])
     if (dataset_name := dataset_conf["name"]) == "modelnet_10":
-        dataset = ModelNet(path, "10", True, transform, pre_transform)
+        dataset = ModelNet(path, "10", True, transform)
     elif dataset_name == "modelnet_40":
-        dataset = ModelNet(path, "40", True, transform, pre_transform)
+        dataset = ModelNet(path, "40", True, transform)
+    elif dataset_name == "shapenet":
+        transform = Compose(
+            [
+                FixedPoints(
+                    dataset_conf["num_points"], replace=False, allow_duplicates=True
+                ),
+                NormalizeScale(),
+            ]
+        )
+        dataset = ShapeNet(
+            path,
+            include_normals=False,
+            transform=transform,
+        )
     else:
         raise NotImplementedError
 
