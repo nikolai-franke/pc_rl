@@ -3,6 +3,7 @@ from torch import nn
 
 class MaePredictionHead(nn.Module):
     def __init__(self, dim: int, group_size: int):
+        super().__init__()
         self.head = nn.Conv1d(dim, 3 * group_size, 1)
 
     def forward(self, x):

@@ -199,7 +199,6 @@ class MaskedEncoder(nn.Module):
 
     def forward(self, x, center_points, noaug=False):
         # TODO: check if we really need the noaug parameter
-        # tokens, neighborhoods, center_points = self.embedder(pos, batch)
 
         if self.mask_type == "rand":
             mask = self._mask_center_rand(center_points, noaug=noaug)
@@ -224,6 +223,7 @@ class MaskedDecoder(nn.Module):
         transformer_decoder: Callable[[Tensor, Tensor, int], Tensor],
         pos_embedder: Callable[[Tensor], Tensor],
     ):
+        super().__init__()
         self.transformer_decoder = transformer_decoder
         assert hasattr(
             self.transformer_decoder, "dim"

@@ -6,8 +6,10 @@ from pointnet2_ops import pointnet2_utils
 from torch_geometric.nn import MLP
 
 from pc_rl.models.modules.embedder import Embedder
+from pc_rl.models.modules.prediction_head import MaePredictionHead
 from pc_rl.models.modules.transformer import Attention as NewAttention
 from pc_rl.models.modules.transformer import Block as NewBlock
+from pc_rl.models.modules.transformer import MaskedDecoder as NewMaskedDecoder
 from pc_rl.models.modules.transformer import MaskedEncoder as NewMaskedEncoder
 from pc_rl.models.modules.transformer import \
     TransformerDecoder as NewTransformerDecoder
@@ -463,31 +465,39 @@ class MaskTransformer(nn.Module):
 
 
 class Point_MAE(nn.Module):
-    def __init__(self, config):
+    def __init__(
+        self, trans_dim, mae_encoder, mae_decoder, group_size, num_group, drop_path_rate
+    ):
         super().__init__()
         # print_log(f"[Point_MAE] ", logger="Point_MAE")
-        self.config = config
-        self.trans_dim = config.transformer_config.trans_dim
-        self.MAE_encoder = MaskTransformer(config)
-        self.group_size = config.group_size
-        self.num_group = config.num_group
-        self.drop_path_rate = config.transformer_config.drop_path_rate
+        # self.config = config
+        # self.trans_dim = config.transformer_config.trans_dim
+        self.trans_dim = trans_dim
+        # self.MAE_encoder = MaskTransformer(config)
+        self.MAE_encoder = mae_encoder
+        # self.group_size = config.group_size
+        self.group_size = group_size
+        # self.num_group = config.num_group
+        self.num_group = num_group
+        # self.drop_path_rate = config.transformer_config.drop_path_rate
+        self.drop_path_rate = drop_path_rate
         self.mask_token = nn.Parameter(torch.zeros(1, 1, self.trans_dim))
         self.decoder_pos_embed = nn.Sequential(
             nn.Linear(3, 128), nn.GELU(), nn.Linear(128, self.trans_dim)
         )
 
-        self.decoder_depth = config.transformer_config.decoder_depth
-        self.decoder_num_heads = config.transformer_config.decoder_num_heads
-        dpr = [
-            x.item() for x in torch.linspace(0, self.drop_path_rate, self.decoder_depth)
-        ]
-        self.MAE_decoder = TransformerDecoder(
-            embed_dim=self.trans_dim,
-            depth=self.decoder_depth,
-            drop_path_rate=dpr,
-            num_heads=self.decoder_num_heads,
-        )
+        # self.decoder_depth = config.transformer_config.decoder_depth
+        # self.decoder_num_heads = config.transformer_config.decoder_num_heads
+        self.MAE_decoder = mae_decoder
+        # dpr = [
+        #     x.item() for x in torch.linspace(0, self.drop_path_rate, self.decoder_depth)
+        # ]
+        # self.MAE_decoder = TransformerDecoder(
+        #     embed_dim=self.trans_dim,
+        #     depth=self.decoder_depth,
+        #     drop_path_rate=dpr,
+        #     num_heads=self.decoder_num_heads,
+        # )
 
         # print_log(
         #     f"[Point_MAE] divide point cloud into G{self.num_group} x S{self.group_size} points ...",
@@ -504,9 +514,9 @@ class Point_MAE(nn.Module):
         )
 
         nn.init.trunc_normal_(self.mask_token, std=0.02)
-        self.loss = config.loss
+        # self.loss = config.loss
         # loss
-        self.build_loss_func(self.loss)
+        # self.build_loss_func(self.loss)
 
     def build_loss_func(self, loss_type):
         if loss_type == "cdl1":
@@ -541,23 +551,24 @@ class Point_MAE(nn.Module):
             .reshape(B * M, -1, 3)
         )  # B M 1024
 
-        gt_points = neighborhood[mask].reshape(B * M, -1, 3)
-        loss1 = self.loss_func(rebuild_points, gt_points)
+        # gt_points = neighborhood[mask].reshape(B * M, -1, 3)
+        # loss1 = self.loss_func(rebuild_points, gt_points)
 
-        if vis:  # visualization
-            vis_points = neighborhood[~mask].reshape(B * (self.num_group - M), -1, 3)
-            full_vis = vis_points + center[~mask].unsqueeze(1)
-            full_rebuild = rebuild_points + center[mask].unsqueeze(1)
-            full = torch.cat([full_vis, full_rebuild], dim=0)
-            # full_points = torch.cat([rebuild_points,vis_points], dim=0)
-            full_center = torch.cat([center[mask], center[~mask]], dim=0)
-            # full = full_points + full_center.unsqueeze(1)
-            ret2 = full_vis.reshape(-1, 3).unsqueeze(0)
-            ret1 = full.reshape(-1, 3).unsqueeze(0)
-            # return ret1, ret2
-            return ret1, ret2, full_center
-        else:
-            return loss1
+        # if vis:  # visualization
+        #     vis_points = neighborhood[~mask].reshape(B * (self.num_group - M), -1, 3)
+        #     full_vis = vis_points + center[~mask].unsqueeze(1)
+        #     full_rebuild = rebuild_points + center[mask].unsqueeze(1)
+        #     full = torch.cat([full_vis, full_rebuild], dim=0)
+        #     # full_points = torch.cat([rebuild_points,vis_points], dim=0)
+        #     full_center = torch.cat([center[mask], center[~mask]], dim=0)
+        #     # full = full_points + full_center.unsqueeze(1)
+        #     ret2 = full_vis.reshape(-1, 3).unsqueeze(0)
+        #     ret1 = full.reshape(-1, 3).unsqueeze(0)
+        #     # return ret1, ret2
+        #     return ret1, ret2, full_center
+        # else:
+        # return loss1
+        return rebuild_points
 
 
 # finetune model
@@ -760,6 +771,24 @@ class TestPointMAE:
         mask_type=mask_type,
     )
 
+    block_list = []
+    for _ in range(transformer_depth):
+        att = NewAttention(
+            dim=embedding_size,
+            num_heads=num_heads,
+        )
+        mlp = MLP(
+            [embedding_size, int(embedding_size * mlp_ratio), embedding_size],
+            act=nn.GELU(),
+            norm=None,
+        )
+        block_list.append(NewBlock(att, mlp))
+    blocks = nn.ModuleList(block_list)
+    decoder = NewTransformerDecoder(blocks)
+    decoder_pos_embedder = MLP([3, 128, embedding_size], act=nn.GELU(), norm=None)
+    masked_decoder = NewMaskedDecoder(decoder, decoder_pos_embedder)
+    prediction_head = MaePredictionHead(transformer_dim, group_size)
+
     def init_layers(self, layers):
         for layer in layers:
             if (
@@ -942,6 +971,59 @@ class TestPointMAE:
         assert torch.allclose(old_x_vis, new_x_vis, rtol=1e-4, atol=1e-4)
         assert torch.equal(old_mask, ~new_mask)
 
+    def test_point_mae(self):
+        old_encoder = MaskTransformer(
+            mask_ratio=self.mask_ratio,
+            trans_dim=self.transformer_dim,
+            depth=self.transformer_depth,
+            num_heads=self.num_heads,
+            drop_path_rate=self.drop_path_rate,
+            encoder_dims=self.embedding_size,
+            mask_type=self.mask_type,
+        )
+        old_decoder = TransformerDecoder(
+            embed_dim=self.transformer_dim,
+            depth=self.transformer_depth,
+            drop_path_rate=self.drop_path_rate,
+            num_heads=self.num_heads,
+        )
+        old_point_mae = Point_MAE(
+            self.transformer_dim,
+            mae_encoder=old_encoder,
+            mae_decoder=old_decoder,
+            group_size=self.group_size,
+            num_group=self.num_groups,
+            drop_path_rate=self.drop_path_rate,
+        ).to(self.device)
+
+        old_input_tensor = torch.rand(
+            self.num_batches, self.num_points_per_batch, 3
+        ).to(self.device)
+        new_input_tensor = old_input_tensor.reshape(
+            self.num_batches * self.num_points_per_batch, -1
+        ).to(self.device)
+        batch_tensor = torch.arange(self.num_batches, dtype=torch.long)
+        batch_tensor = batch_tensor.repeat_interleave(self.num_points_per_batch).to(
+            self.device
+        )
+        self.embedder.to(self.device)
+        self.masked_encoder.to(self.device)
+        self.masked_decoder.to(self.device)
+        self.prediction_head.to(self.device)
+        self.init_layers(old_point_mae.modules())
+        self.init_layers(self.embedder.modules())
+        self.init_layers(self.masked_encoder.modules())
+        self.init_layers(self.masked_decoder.modules())
+        self.init_layers(self.prediction_head.modules())
+
+        x, _, center_points = self.embedder.forward(new_input_tensor, batch_tensor)
+        x_vis, mask = self.masked_encoder.forward(x, center_points)
+        decoder_out = self.masked_decoder.forward(x_vis, mask, center_points)
+        new_out = self.prediction_head.forward(decoder_out)
+
+        old_out = old_point_mae.forward(old_input_tensor)
+        assert torch.allclose(old_out, new_out, rtol=1e-4, atol=1e-4)
+
 
 if __name__ == "__main__":
     test = TestPointMAE()
@@ -949,5 +1031,6 @@ if __name__ == "__main__":
     # test.test_attention()
     # test.test_block()
     # test.test_transformer_encoder()
-    test.test_transformer_decoder()
+    # test.test_transformer_decoder()
     # test.test_mask_transformer()
+    test.test_point_mae()
