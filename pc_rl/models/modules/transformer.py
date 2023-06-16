@@ -223,10 +223,8 @@ class MaskedDecoder(nn.Module):
         self,
         transformer_decoder: Callable[[Tensor, Tensor, int], Tensor],
         pos_embedder: Callable[[Tensor], Tensor],
-        group_size: int,
     ):
         self.transformer_decoder = transformer_decoder
-        self.group_size = group_size
         assert hasattr(
             self.transformer_decoder, "dim"
         ), f"Decoder {self.transformer_decoder} does not have a 'dim' attribute"
@@ -235,7 +233,6 @@ class MaskedDecoder(nn.Module):
         assert (
             pos_dim := self.pos_embedder.channel_list[-1]
         ) == self.dim, f"pos_embedder and decoder don't have matching dimensions: {pos_dim} != {self.dim}"
-        self.prediction_head = nn.Conv1d(self.dim, 3 * self.group_size, 1)
         self.mask_token = nn.Parameter(torch.zeros(1, 1, self.dim))
         nn.init.trunc_normal_(self.mask_token, std=0.02)
 
@@ -250,78 +247,5 @@ class MaskedDecoder(nn.Module):
         pos_full = torch.cat([pos_embedding_visible, pos_embedding_masked], dim=1)
 
         x_recovered = self.transformer_decoder(x_full, pos_full, num_masked_tokens)
-        B, M, C = x_recovered.shape
-        pos_recovered = (
-            self.prediction_head(x_recovered.transpose(1, 2))
-            .transpose(1, 2)
-            .reshape(B * M, -1, 3)
-        )
-        return pos_recovered
 
-
-# class PointMAE(nn.Module):
-#     def __init__(
-#         self,
-#         transformer_dim,
-#         neighborhood_size,
-#         num_groups,
-#         group_size,
-#         decoder_depth,
-#         decoder_num_heads,
-#         loss_func,
-#         mask_transformer: Callable,
-#     ):
-#         self.group_size = group_size
-#         self.transformer_dim = transformer_dim
-#         self.neighborhood_size = neighborhood_size
-#         self.num_groups = num_groups
-#         self.mask_transformer = mask_transformer
-#         # self.mae_encoder = MaskTransformer(**mask_transformer_kwargs)
-#         self.mask_token = nn.Parameter(torch.zeros(1, 1, self.transformer_dim))
-#         self.decoder_pos_embed = nn.Sequential(
-#             nn.Linear(3, 128),
-#             nn.GELU(),
-#             nn.Linear(128, self.transformer_dim),
-#         )
-#         self.decoder_depth = decoder_depth
-#         self.decoder_num_heads = decoder_num_heads
-
-#         self.mae_decoder = TransformerDecoder(
-#             dim=self.transformer_dim,
-#             depth=self.decoder_depth,
-#             num_heads=self.decoder_num_heads,
-#         )
-
-#         self.prediction_head = nn.Conv1d(self.transformer_dim, 3 * self.group_size, 1)
-#         nn.init.trunc_normal_(self.mask_token, std=0.02)
-
-#         self.loss_func = loss_func
-
-#     def forward(self, pos, batch, vis=False):
-#         x_vis, mask, neighborhoods, center_points = self.mask_transformer(pos, batch)
-
-#         B, _, C = x_vis.shape
-#         pos_emd_vis = self.decoder_pos_embed(center_points[~mask]).reshape(B, -1, C)
-#         pos_emd_mask = self.decoder_pos_embed(center_points[mask]).reshape(B, -1, C)
-
-#         _, N, _ = pos_emd_mask.shape
-#         mask_token = self.mask_token.expand(B, N, -1)
-#         x_full = torch.cat([x_vis, mask_token], dim=1)
-#         pos_full = torch.cat([pos_emd_vis, pos_emd_mask], dim=1)
-
-#         x_rec = self.mae_decoder(x_full, pos_full, N)
-
-#         B, M, C = x_rec.shape
-
-#         rebuild_points = (
-#             self.prediction_head(x_rec.transpose(1, 2))
-#             .transpose(1, 2)
-#             .reshape(B * M, -1, 3)
-#         )
-
-#         gt_points = neighborhoods[mask].reshape(B * M, -1, 3)
-#         loss = self.loss_func(rebuild_points, gt_points)
-#         if vis:
-#             raise NotImplementedError
-#         else:
-#             return loss
+        return x_recovered
