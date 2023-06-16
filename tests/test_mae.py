@@ -755,7 +755,7 @@ class TestPointMAE:
     pos_embedder = MLP([3, 128, embedding_size], act=nn.GELU(), norm=None)
     masked_encoder = NewMaskedEncoder(
         mask_ratio=mask_ratio,
-        encoder=encoder,
+        transformer_encoder=encoder,
         pos_embedder=pos_embedder,
         mask_type=mask_type,
     )
@@ -934,10 +934,9 @@ class TestPointMAE:
         old_x_vis, old_mask = old_mask_transformer.forward(neighborhood, center)
         torch.manual_seed(self.seed)
 
-        x, neighborhoods, center_points = self.embedder(new_input_tensor, batch_tensor)
-        new_x_vis, new_mask, *_ = new_mask_transformer.forward(
-            x, neighborhoods, center_points
-        )
+        x, _, center_points = self.embedder(new_input_tensor, batch_tensor)
+
+        new_x_vis, new_mask = new_mask_transformer.forward(x, center_points)
 
         # print(torch.sum(torch.abs(diff := (old_x_vis - new_x_vis))), diff.shape)
         assert torch.allclose(old_x_vis, new_x_vis, rtol=1e-4, atol=1e-4)

@@ -123,7 +123,7 @@ class MaskedEncoder(nn.Module):
     def __init__(
         self,
         mask_ratio: float,
-        encoder: Callable[[Tensor, Tensor], Tensor],
+        transformer_encoder: Callable[[Tensor, Tensor], Tensor],
         pos_embedder: Callable[[Tensor], Tensor],
         mask_type: str = "rand",  # TODO:check if we need different mask_types
     ) -> None:
@@ -131,11 +131,11 @@ class MaskedEncoder(nn.Module):
         self.mask_ratio = mask_ratio
         self.mask_type = mask_type
         self.pos_embedder = pos_embedder
-        self.encoder = encoder
+        self.transformer_encoder = transformer_encoder
         assert hasattr(
-            self.encoder, "dim"
-        ), f"Encoder {self.encoder} does not have a 'dim' attribute "
-        self.embedding_size = self.encoder.dim
+            self.transformer_encoder, "dim"
+        ), f"Encoder {self.transformer_encoder} does not have a 'dim' attribute "
+        self.embedding_size = self.transformer_encoder.dim
         self.norm = nn.LayerNorm(self.embedding_size)
 
         self.apply(self._init_weights)
@@ -197,7 +197,7 @@ class MaskedEncoder(nn.Module):
 
         return overall_mask.to(center.device)
 
-    def forward(self, x, neighborhoods, center_points, noaug=False):
+    def forward(self, x, center_points, noaug=False):
         # TODO: check if we really need the noaug parameter
         # tokens, neighborhoods, center_points = self.embedder(pos, batch)
 
@@ -212,25 +212,25 @@ class MaskedEncoder(nn.Module):
         masked_center = center_points[mask].reshape(batch_size, -1, 3)
         pos = self.pos_embedder(masked_center)
 
-        x_vis = self.encoder(x_vis, pos)
+        x_vis = self.transformer_encoder(x_vis, pos)
         x_vis = self.norm(x_vis)
 
-        return x_vis, mask, neighborhoods, center_points
+        return x_vis, mask
 
 
 class MaskedDecoder(nn.Module):
     def __init__(
         self,
-        decoder: Callable[[Tensor, Tensor, int], Tensor],
+        transformer_decoder: Callable[[Tensor, Tensor, int], Tensor],
         pos_embedder: Callable[[Tensor], Tensor],
         group_size: int,
     ):
-        self.decoder = decoder
+        self.transformer_decoder = transformer_decoder
         self.group_size = group_size
         assert hasattr(
-            self.decoder, "dim"
-        ), f"Decoder {self.decoder} does not have a 'dim' attribute"
-        self.dim = self.decoder.dim
+            self.transformer_decoder, "dim"
+        ), f"Decoder {self.transformer_decoder} does not have a 'dim' attribute"
+        self.dim = self.transformer_decoder.dim
         self.pos_embedder = pos_embedder
         assert (
             pos_dim := self.pos_embedder.channel_list[-1]
@@ -249,7 +249,7 @@ class MaskedDecoder(nn.Module):
         x_full = torch.cat([x_vis, mask_token], dim=1)
         pos_full = torch.cat([pos_embedding_visible, pos_embedding_masked], dim=1)
 
-        x_recovered = self.decoder(x_full, pos_full, num_masked_tokens)
+        x_recovered = self.transformer_decoder(x_full, pos_full, num_masked_tokens)
         B, M, C = x_recovered.shape
         pos_recovered = (
             self.prediction_head(x_recovered.transpose(1, 2))
