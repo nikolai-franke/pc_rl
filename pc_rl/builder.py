@@ -1,7 +1,8 @@
+# from pc_rl.chamfer_distance.chamfer_distance import ChamferDistance
+from chamferdist import ChamferDistance
 from torch import nn
 from torch_geometric.nn import MLP
 
-from pc_rl.chamfer_distance.chamfer_distance import ChamferDistance
 from pc_rl.models.masked_autoencoder import MaskedAutoEncoder
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.prediction_head import MaePredictionHead
@@ -11,13 +12,14 @@ from pc_rl.models.modules.transformer import (Attention, Block, MaskedDecoder,
                                               TransformerEncoder)
 
 
-def build_masked_autoencoder(conf):
-    embedder_conf = conf["embedder"]
+def build_masked_autoencoder(config):
+    embedder_conf = config["embedder"]
     embedding_size = embedder_conf["embedding_size"]
     group_size = embedder_conf["group_size"]
 
-    mlp_1 = MLP(embedder_conf["mlp_1_layers"], act=embedder_conf["act"])
-    mlp_2_layers = embedder_conf["mlp_2_layers"].append(embedding_size)
+    mlp_1 = MLP(list(embedder_conf["mlp_1_layers"]), act=embedder_conf["act"])
+    mlp_2_layers = list(embedder_conf["mlp_2_layers"])
+    mlp_2_layers.append(embedding_size)
     mlp_2 = MLP(mlp_2_layers, act=embedder_conf["act"])
     embedder = Embedder(
         mlp_1=mlp_1,
@@ -27,12 +29,12 @@ def build_masked_autoencoder(conf):
         random_start=embedder_conf["random_start"],
     )
 
-    encoder_conf = conf["encoder"]
+    encoder_conf = config["encoder"]
     attention_conf = encoder_conf["attention"]
     blocks = []
     for _ in range(encoder_conf["depth"]):
         mlp = MLP(
-            encoder_conf["mlp_layers"],
+            list(encoder_conf["mlp_layers"]),
             act=encoder_conf["act"],
             norm=None,
             dropout=encoder_conf["dropout_rate"],
@@ -50,10 +52,11 @@ def build_masked_autoencoder(conf):
 
     transformer_encoder = TransformerEncoder(blocks)
 
-    masked_encoder_conf = conf["masked_encoder"]
+    masked_encoder_conf = config["masked_encoder"]
     pos_embedder = MLP(
-        masked_encoder_conf["pos_embedder"]["mlp_layers"],
+        list(masked_encoder_conf["pos_embedder"]["mlp_layers"]),
         act=masked_encoder_conf["pos_embedder"]["act"],
+        norm=None,
     )
     masked_encoder = MaskedEncoder(
         mask_ratio=masked_encoder_conf["mask_ratio"],
@@ -62,11 +65,11 @@ def build_masked_autoencoder(conf):
         mask_type=masked_encoder_conf["mask_type"],
     )
 
-    decoder_conf = conf["decoder"]
+    decoder_conf = config["decoder"]
     blocks = []
     for _ in range(decoder_conf["depth"]):
         mlp = MLP(
-            decoder_conf["mlp_layers"],
+            list(decoder_conf["mlp_layers"]),
             act=decoder_conf["act"],
             norm=None,
             dropout=decoder_conf["dropout_rate"],
@@ -80,16 +83,18 @@ def build_masked_autoencoder(conf):
         )
         blocks.append(Block(attention, mlp))
 
-    masked_decoder_conf = conf["masked_decoder"]
+    masked_decoder_conf = config["masked_decoder"]
 
     blocks = nn.ModuleList(blocks)
     pos_embedder = MLP(
-        masked_decoder_conf["pos_embedder"]["mlp_layers"],
+        list(masked_decoder_conf["pos_embedder"]["mlp_layers"]),
         act=masked_decoder_conf["pos_embedder"]["act"],
+        norm=None,
     )
 
     transformer_decoder = TransformerDecoder(blocks)
     masked_decoder = MaskedDecoder(transformer_decoder, pos_embedder)
+
     loss_function = ChamferDistance()
     prediction_head = MaePredictionHead(embedding_size, group_size)
     masked_autoencoder = MaskedAutoEncoder(

@@ -9,5 +9,5 @@ class MaePredictionHead(nn.Module):
 
     def forward(self, x):
         B, M, _ = x.shape
-        prediction = self.head(x.transpose(1, 2)).transpose(1, 2).reshape(B * M, -1, 3)
+        prediction = self.head(x.transpose(1, 2)).transpose(1, 2).reshape(B, M, -1, 3)
         return prediction

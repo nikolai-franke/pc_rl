@@ -1,4 +1,5 @@
 import pytorch_lightning as pl
+import torch
 from torch import Tensor
 
 
@@ -21,8 +22,14 @@ class MaskedAutoEncoder(pl.LightningModule):
 
     def training_step(self, data, batch_idx):
         x, neighborhoods, mask = self.forward(data.pos, data.batch)
-        B, M, C = x.shape
+        B, M, *_ = x.shape
         y = neighborhoods[~mask].reshape(B * M, -1, 3)
+        x = x.reshape(B * M, -1, 3)
+
         loss = self.loss_function(y, x)
+        self.log("train/loss", loss)
 
         return loss
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=0.001, weight_decay=0.05)
