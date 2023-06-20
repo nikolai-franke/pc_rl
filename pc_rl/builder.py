@@ -7,7 +7,7 @@ from torch_geometric.nn import MLP
 from pc_rl.models.masked_autoencoder import MaskedAutoEncoder
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.prediction_head import MaePredictionHead
-from pc_rl.models.modules.transformer import (Attention, Block, MaskedDecoder,
+from pc_rl.models.modules.transformer import (Block, MaskedDecoder,
                                               MaskedEncoder,
                                               TransformerDecoder,
                                               TransformerEncoder)
@@ -40,13 +40,6 @@ def build_masked_autoencoder(config):
             norm=None,
             dropout=encoder_conf["dropout_rate"],
         )
-        # attention = Attention(
-        #     dim=embedding_size,
-        #     num_heads=attention_conf["num_heads"],
-        #     qkv_bias=attention_conf["qkv_bias"],
-        #     dropout_rate=attention_conf["dropout_rate"],
-        #     proj_dropout_rate=attention_conf["proj_dropout_rate"],
-        # )
         attention = nn.MultiheadAttention(
             embed_dim=embedding_size,
             num_heads=attention_conf["num_heads"],
@@ -82,13 +75,6 @@ def build_masked_autoencoder(config):
             norm=None,
             dropout=decoder_conf["dropout_rate"],
         )
-        # attention = Attention(
-        #     dim=embedding_size,
-        #     num_heads=attention_conf["num_heads"],
-        #     qkv_bias=attention_conf["qkv_bias"],
-        #     dropout_rate=attention_conf["dropout_rate"],
-        #     proj_dropout_rate=attention_conf["proj_dropout_rate"],
-        # )
         attention = nn.MultiheadAttention(
             embed_dim=embedding_size,
             num_heads=attention_conf["num_heads"],
