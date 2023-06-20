@@ -1,4 +1,4 @@
-embedding_size: 384
+embedding_size: 512
 group_size: 32
 mlp_1_layers: [3, 128, 256]
 mlp_2_layers: [512, 512]
