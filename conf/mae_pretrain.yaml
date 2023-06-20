@@ -1,5 +1,5 @@
 defaults:
-  - dataset: shapenet
+  - dataset: modelnet_40
   - embedder: default
   - encoder: default
   - decoder: default

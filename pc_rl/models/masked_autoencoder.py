@@ -29,7 +29,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         y = neighborhoods[~mask].reshape(B * M, -1, 3)
         x = x.reshape(B * M, -1, 3)
 
-        loss = self.loss_function(y, x)
+        loss = self.loss_function(x, y)
         self.log("train/loss", loss)
 
         return loss

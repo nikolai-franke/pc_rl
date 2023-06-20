@@ -5,59 +5,18 @@ import torch.nn as nn
 from torch import Tensor
 
 
-class Attention(nn.Module):
-    def __init__(
-        self,
-        dim: int,
-        num_heads: int,
-        qkv_bias: bool = False,
-        dropout_rate: float = 0.0,
-        proj_dropout_rate: float = 0.0,
-    ) -> None:
-        super().__init__()
-        self.num_heads = num_heads
-        self.dim = dim
-        head_dim = dim // num_heads
-        self.scale = head_dim**-0.5
-        self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
-        self.attn_drop = nn.Dropout(dropout_rate)
-        self.proj = nn.Linear(dim, dim)
-        self.proj_drop = nn.Dropout(proj_dropout_rate)
-
-    def forward(self, x):
-        B, N, E = x.shape
-        qkv = (
-            self.qkv(x)
-            .reshape(B, N, 3, self.num_heads, E // self.num_heads)
-            .permute(2, 0, 3, 1, 4)
-        )
-        q, k, v = (
-            qkv[0],
-            qkv[1],
-            qkv[2],
-        )
-        attn = (q @ k.transpose(-2, -1)) * self.scale
-        attn = attn.softmax(dim=-1)
-        attn = self.attn_drop(attn)
-
-        x = (attn @ v).transpose(1, 2).reshape(B, N, E)
-        x = self.proj(x)
-        x = self.proj_drop(x)
-        return x
-
-
 class Block(nn.Module):
     def __init__(
         self,
-        attention: Callable[[Tensor], Tensor],
+        attention,
         mlp: Callable[[Tensor], Tensor],
         NormLayer: Type[nn.Module] = nn.LayerNorm,
     ) -> None:
         super().__init__()
         self.attention = attention
-        assert hasattr(self.attention, "dim")
+        # assert hasattr(self.attention, "dim")
 
-        self.dim = self.attention.dim
+        self.dim = self.attention.embed_dim
         self.mlp = mlp
         # the first and last channel of the mlp must have the same size as the attention layer
         assert (
@@ -70,7 +29,7 @@ class Block(nn.Module):
 
     def forward(self, x):
         x = self.norm_1(x)
-        x = x + self.attention(x)
+        x = x + self.attention(x, x, x, need_weights=False)[0]
         x = self.norm_2(x)
         x = x + self.mlp(x)
         return x

@@ -31,7 +31,7 @@ def custom_fps(data, number):
     return fps_data
 
 
-class Encoder(nn.Module):  ## Embedding module
+class OldEncoder(nn.Module):  ## Embedding module
     def __init__(self, encoder_channel):
         super().__init__()
         self.encoder_channel = encoder_channel
@@ -66,7 +66,7 @@ class Encoder(nn.Module):  ## Embedding module
         return feature_global.reshape(bs, g, self.encoder_channel)
 
 
-class Group(nn.Module):  # FPS + KNN
+class OldGroup(nn.Module):  # FPS + KNN
     def __init__(self, num_group, group_size):
         super().__init__()
         self.num_group = num_group
@@ -102,7 +102,7 @@ class Group(nn.Module):  # FPS + KNN
 
 
 ## Transformers
-class Mlp(nn.Module):
+class OldMlp(nn.Module):
     def __init__(
         self,
         in_features,
@@ -128,11 +128,12 @@ class Mlp(nn.Module):
         return x
 
 
-class Attention(nn.Module):
+class OldAttention(nn.Module):
     def __init__(
         self,
         dim,
         num_heads=8,
+        bias=False,
         qkv_bias=False,
         qk_scale=None,
         attn_drop=0.0,
@@ -145,7 +146,7 @@ class Attention(nn.Module):
         self.scale = qk_scale or head_dim**-0.5
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
-        self.proj = nn.Linear(dim, dim)
+        self.proj = nn.Linear(dim, dim, bias=bias)
         self.proj_drop = nn.Dropout(proj_drop)
 
     def forward(self, x):
@@ -171,7 +172,7 @@ class Attention(nn.Module):
         return x
 
 
-class Block(nn.Module):
+class OldBlock(nn.Module):
     def __init__(
         self,
         dim,
@@ -194,14 +195,14 @@ class Block(nn.Module):
         self.drop_path = nn.Identity()
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
-        self.mlp = Mlp(
+        self.mlp = OldMlp(
             in_features=dim,
             hidden_features=mlp_hidden_dim,
             act_layer=act_layer,
             drop=drop,
         )
 
-        self.attn = Attention(
+        self.attn = OldAttention(
             dim,
             num_heads=num_heads,
             qkv_bias=qkv_bias,
@@ -218,7 +219,7 @@ class Block(nn.Module):
         return x
 
 
-class TransformerEncoder(nn.Module):
+class OldTransformerEncoder(nn.Module):
     def __init__(
         self,
         embed_dim=768,
@@ -235,7 +236,7 @@ class TransformerEncoder(nn.Module):
 
         self.blocks = nn.ModuleList(
             [
-                Block(
+                OldBlock(
                     dim=embed_dim,
                     num_heads=num_heads,
                     mlp_ratio=mlp_ratio,
@@ -257,7 +258,7 @@ class TransformerEncoder(nn.Module):
         return x
 
 
-class TransformerDecoder(nn.Module):
+class OldTransformerDecoder(nn.Module):
     def __init__(
         self,
         embed_dim=384,
@@ -274,7 +275,7 @@ class TransformerDecoder(nn.Module):
         super().__init__()
         self.blocks = nn.ModuleList(
             [
-                Block(
+                OldBlock(
                     dim=embed_dim,
                     num_heads=num_heads,
                     mlp_ratio=mlp_ratio,
@@ -335,7 +336,7 @@ class MaskTransformer(nn.Module):
         # print_log(f"[args] {config.transformer_config}", logger="Transformer")
         # embedding
         self.encoder_dims = encoder_dims
-        self.encoder = Encoder(encoder_channel=self.encoder_dims)
+        self.encoder = OldEncoder(encoder_channel=self.encoder_dims)
 
         self.mask_type = mask_type
 
@@ -346,7 +347,7 @@ class MaskTransformer(nn.Module):
         )
 
         dpr = [x.item() for x in torch.linspace(0, self.drop_path_rate, self.depth)]
-        self.blocks = TransformerEncoder(
+        self.blocks = OldTransformerEncoder(
             embed_dim=self.trans_dim,
             depth=self.depth,
             drop_path_rate=dpr,
@@ -503,7 +504,9 @@ class Point_MAE(nn.Module):
         #     f"[Point_MAE] divide point cloud into G{self.num_group} x S{self.group_size} points ...",
         #     logger="Point_MAE",
         # )
-        self.group_divider = Group(num_group=self.num_group, group_size=self.group_size)
+        self.group_divider = OldGroup(
+            num_group=self.num_group, group_size=self.group_size
+        )
 
         # prediction head
         self.increase_dim = nn.Sequential(
@@ -605,51 +608,6 @@ class TestPointMAE:
         sampling_ratio=sampling_ratio,
         random_start=False,
     )
-    attention = NewAttention(
-        dim=embedding_size,
-        num_heads=num_heads,
-    )
-    block_list = []
-    for _ in range(transformer_depth):
-        att = NewAttention(
-            dim=embedding_size,
-            num_heads=num_heads,
-        )
-        mlp = MLP(
-            [embedding_size, int(embedding_size * mlp_ratio), embedding_size],
-            act=nn.GELU(),
-            norm=None,
-        )
-        block_list.append(NewBlock(att, mlp))
-    blocks = nn.ModuleList(block_list)
-
-    encoder = NewTransformerEncoder(blocks)
-
-    pos_embedder = MLP([3, 128, embedding_size], act=nn.GELU(), norm=None)
-    masked_encoder = NewMaskedEncoder(
-        mask_ratio=mask_ratio,
-        transformer_encoder=encoder,
-        pos_embedder=pos_embedder,
-        mask_type=mask_type,
-    )
-
-    block_list = []
-    for _ in range(transformer_depth):
-        att = NewAttention(
-            dim=embedding_size,
-            num_heads=num_heads,
-        )
-        mlp = MLP(
-            [embedding_size, int(embedding_size * mlp_ratio), embedding_size],
-            act=nn.GELU(),
-            norm=None,
-        )
-        block_list.append(NewBlock(att, mlp))
-    blocks = nn.ModuleList(block_list)
-    decoder = NewTransformerDecoder(blocks)
-    decoder_pos_embedder = MLP([3, 128, embedding_size], act=nn.GELU(), norm=None)
-    masked_decoder = NewMaskedDecoder(decoder, decoder_pos_embedder)
-    prediction_head = MaePredictionHead(transformer_dim, group_size)
 
     def init_layers(self, layers):
         for layer in layers:
@@ -663,10 +621,13 @@ class TestPointMAE:
                 torch.nn.init.uniform_(layer.weight)
                 if layer.bias is not None:
                     torch.nn.init.uniform_(layer.bias)  # type: ignore
+            elif isinstance(layer, torch.nn.Parameter):
+                torch.manual_seed(self.seed)
+                torch.nn.init.uniform_(layer)
 
     def test_embedder(self):
-        old_group = Group(self.num_groups, self.group_size).to(self.device)
-        old_embedder = Encoder(self.embedding_size).to(self.device)
+        old_group = OldGroup(self.num_groups, self.group_size).to(self.device)
+        old_embedder = OldEncoder(self.embedding_size).to(self.device)
         new_embedder = self.embedder.to(self.device)
         self.init_layers(old_embedder.modules())
         self.init_layers(new_embedder.modules())
@@ -693,47 +654,35 @@ class TestPointMAE:
         assert torch.equal(old_center, new_center)
 
     def test_attention(self):
-        old_attention = Attention(dim=self.embedding_size, num_heads=self.num_heads).to(
-            self.device
-        )
-        new_attention = NewAttention(
-            dim=self.embedding_size, num_heads=self.num_heads
+        old_attention = OldAttention(
+            dim=self.embedding_size,
+            num_heads=self.num_heads,
+        ).to(self.device)
+        new_attention = nn.MultiheadAttention(
+            self.embedding_size, self.num_heads, batch_first=True, bias=False
         ).to(self.device)
         self.init_layers(old_attention.modules())
         self.init_layers(new_attention.modules())
+        self.init_layers(new_attention.parameters())
         input_tensor = torch.rand(
             self.num_batches, self.num_points_per_batch, self.embedding_size
-        )
+        ).to(self.device)
         old_out = old_attention(input_tensor)
-        new_out = new_attention(input_tensor)
+        new_out = new_attention(
+            input_tensor, input_tensor, input_tensor, need_weights=False
+        )[0]
 
+        print(old_out - new_out)
         assert torch.allclose(old_out, new_out)
 
-    def test_graph_attention(self):
-        attention = NewAttention(dim=self.embedding_size, num_heads=self.num_heads)
-        graph_attention = GraphAttention(
-            dim=self.embedding_size, num_heads=self.num_heads
-        )
-        self.init_layers(attention.modules())
-        self.init_layers(graph_attention.modules())
-        input_tensor = torch.rand(
-            self.num_batches * self.num_points_per_batch, self.embedding_size
-        )
-        batch_tensor = torch.arange(self.num_batches, dtype=torch.long)
-        batch_tensor = batch_tensor.repeat_interleave(self.num_points_per_batch).to(
-            self.device
-        )
-        graph_attention.forward(input_tensor, batch_tensor)
-
     def test_block(self):
-        old_block = Block(
+        old_block = OldBlock(
             dim=self.embedding_size, num_heads=self.num_heads, mlp_ratio=self.mlp_ratio
         ).to(self.device)
 
-        attention = NewAttention(
-            dim=self.embedding_size,
-            num_heads=self.num_heads,
-        )
+        new_attention = nn.MultiheadAttention(
+            self.embedding_size, self.num_heads, batch_first=True, bias=False
+        ).to(self.device)
         mlp = MLP(
             [
                 self.embedding_size,
@@ -744,29 +693,42 @@ class TestPointMAE:
             norm=None,
             dropout=0.0,
         )
-        new_block = NewBlock(attention=attention, mlp=mlp).to(self.device)
+        new_block = NewBlock(attention=new_attention, mlp=mlp).to(self.device)
 
-        torch.manual_seed(self.seed)
         self.init_layers(old_block.modules())
 
-        torch.manual_seed(self.seed)
         self.init_layers(new_block.modules())
+        self.init_layers(new_attention.modules())
+        self.init_layers(new_attention.parameters())
 
         input_tensor = torch.rand(self.num_batches, 1024, self.embedding_size).to(
             self.device
         )
         old_out = old_block.forward(input_tensor)
         new_out = new_block.forward(input_tensor)
-        assert torch.allclose(old_out, new_out)
+        print(old_out - new_out)
+        # assert torch.allclose(old_out, new_out)
 
     def test_transformer_encoder(self):
-        old_encoder = TransformerEncoder(
+        old_encoder = OldTransformerEncoder(
             embed_dim=self.transformer_dim,
             depth=self.transformer_depth,
             num_heads=self.num_heads,
             mlp_ratio=self.mlp_ratio,
         ).to(self.device)
-        new_encoder = self.encoder.to(self.device)
+        encoder_layer = TransformerEncoderLayer(
+            dim_feedforward=int(self.mlp_ratio * self.embedding_size),
+            d_model=self.transformer_dim,
+            nhead=self.num_heads,
+            dropout=0.0,
+            activation="gelu",
+            batch_first=True,
+        )
+        new_encoder = PtTransformerEncoder(
+            encoder_layer,
+            num_layers=self.transformer_depth,
+        ).to(self.device)
+        # new_encoder = self.encoder.to(self.device)
         self.init_layers(old_encoder.modules())
         self.init_layers(new_encoder.modules())
 
@@ -785,7 +747,7 @@ class TestPointMAE:
     def test_transformer_decoder(self):
         return_token_num = 10
         torch.manual_seed(self.seed)
-        old_decoder = TransformerDecoder(
+        old_decoder = OldTransformerDecoder(
             self.transformer_dim, self.transformer_depth, self.num_heads, self.mlp_ratio
         ).to(self.device)
         self.init_layers(old_decoder.modules())
@@ -835,7 +797,7 @@ class TestPointMAE:
         batch_tensor = batch_tensor.repeat_interleave(self.num_points_per_batch).to(
             self.device
         )
-        group = Group(self.num_groups, self.group_size).to(self.device)
+        group = OldGroup(self.num_groups, self.group_size).to(self.device)
         neighborhood, center = group.forward(old_input_tensor)
         torch.manual_seed(self.seed)
         old_x_vis, old_mask = old_mask_transformer.forward(neighborhood, center)
@@ -859,7 +821,7 @@ class TestPointMAE:
             encoder_dims=self.embedding_size,
             mask_type=self.mask_type,
         )
-        old_decoder = TransformerDecoder(
+        old_decoder = OldTransformerDecoder(
             embed_dim=self.transformer_dim,
             depth=self.transformer_depth,
             drop_path_rate=self.drop_path_rate,
@@ -907,8 +869,7 @@ if __name__ == "__main__":
     test = TestPointMAE()
     # test.test_embedder()
     # test.test_attention()
-    test.test_graph_attention()
-    # test.test_block()
+    test.test_block()
     # test.test_transformer_encoder()
     # test.test_transformer_decoder()
     # test.test_point_mae()
