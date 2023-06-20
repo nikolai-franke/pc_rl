@@ -55,9 +55,8 @@ class MaskedAutoEncoder(pl.LightningModule):
                 wandb.log({"full": Object3D(ground_truth[0].cpu().numpy())})
                 self.step = 0
 
-        loss = self.loss_function(x, y)[0]
+        loss = self.loss_function(x, y, point_reduction="sum")[0]
         self.log("train/loss", loss)
-        self.log("train/raw_diff", torch.sum(y - x))
 
         return loss
 

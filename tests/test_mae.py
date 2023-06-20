@@ -7,7 +7,7 @@ from torch_geometric.nn import MLP
 
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.prediction_head import MaePredictionHead
-from pc_rl.models.modules.transformer import Attention as NewAttention
+# from pc_rl.models.modules.transformer import Attention as NewAttention
 from pc_rl.models.modules.transformer import Block as NewBlock
 from pc_rl.models.modules.transformer import MaskedDecoder as NewMaskedDecoder
 from pc_rl.models.modules.transformer import MaskedEncoder as NewMaskedEncoder
@@ -867,9 +867,9 @@ class TestPointMAE:
 
 if __name__ == "__main__":
     test = TestPointMAE()
-    # test.test_embedder()
+    test.test_embedder()
     # test.test_attention()
-    test.test_block()
+    # test.test_block()
     # test.test_transformer_encoder()
     # test.test_transformer_decoder()
     # test.test_point_mae()
