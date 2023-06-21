@@ -1,9 +1,0 @@
-depth: 12
-mlp_layers: [512, 1536, 512]
-act: gelu
-dropout_rate: 0.0
-attention:
-  num_heads: 8
-  qkv_bias: False
-  dropout_rate: 0.0
-  proj_dropout_rate: 0.0

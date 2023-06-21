@@ -1,6 +1,0 @@
-mask_ratio: 0.6
-mask_type: rand
-pos_embedder:
-  mlp_layers: [3, 128, 512]
-  act: gelu
-

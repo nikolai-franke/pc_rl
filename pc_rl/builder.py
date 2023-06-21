@@ -30,21 +30,24 @@ def build_masked_autoencoder(config):
         random_start=embedder_conf["random_start"],
     )
 
-    encoder_conf = config["encoder"]
-    attention_conf = encoder_conf["attention"]
+    model_conf = config["model"]
+
+    attention_conf = model_conf["attention"]
+    block_conf = model_conf["transformer_block"]
     blocks = []
-    for _ in range(encoder_conf["depth"]):
+    for _ in range(model_conf["encoder_depth"]):
         mlp = MLP(
-            list(encoder_conf["mlp_layers"]),
-            act=encoder_conf["act"],
+            list(block_conf["mlp_layers"]),
+            act=block_conf["act"],
             norm=None,
-            dropout=encoder_conf["dropout_rate"],
+            dropout=block_conf["dropout"],
         )
         attention = nn.MultiheadAttention(
             embed_dim=embedding_size,
             num_heads=attention_conf["num_heads"],
             add_bias_kv=attention_conf["qkv_bias"],
-            dropout=attention_conf["dropout_rate"],
+            dropout=attention_conf["dropout"],
+            bias=attention_conf["bias"],
             batch_first=True,
         )
         blocks.append(Block(attention, mlp))
@@ -53,43 +56,40 @@ def build_masked_autoencoder(config):
 
     transformer_encoder = TransformerEncoder(blocks)
 
-    masked_encoder_conf = config["masked_encoder"]
     pos_embedder = MLP(
-        list(masked_encoder_conf["pos_embedder"]["mlp_layers"]),
-        act=masked_encoder_conf["pos_embedder"]["act"],
+        list(model_conf["pos_embedder"]["mlp_layers"]),
+        act=model_conf["pos_embedder"]["act"],
         norm=None,
     )
     masked_encoder = MaskedEncoder(
-        mask_ratio=masked_encoder_conf["mask_ratio"],
+        mask_ratio=model_conf["mask_ratio"],
         transformer_encoder=transformer_encoder,
         pos_embedder=pos_embedder,
-        mask_type=masked_encoder_conf["mask_type"],
+        mask_type=model_conf["mask_type"],
     )
 
-    decoder_conf = config["decoder"]
     blocks = []
-    for _ in range(decoder_conf["depth"]):
+    for _ in range(model_conf["decoder_depth"]):
         mlp = MLP(
-            list(decoder_conf["mlp_layers"]),
-            act=decoder_conf["act"],
+            list(block_conf["mlp_layers"]),
+            act=block_conf["act"],
             norm=None,
-            dropout=decoder_conf["dropout_rate"],
+            dropout=block_conf["dropout"],
         )
         attention = nn.MultiheadAttention(
             embed_dim=embedding_size,
             num_heads=attention_conf["num_heads"],
             add_bias_kv=attention_conf["qkv_bias"],
-            dropout=attention_conf["dropout_rate"],
+            dropout=attention_conf["dropout"],
+            bias=attention_conf["bias"],
             batch_first=True,
         )
         blocks.append(Block(attention, mlp))
 
-    masked_decoder_conf = config["masked_decoder"]
-
     blocks = nn.ModuleList(blocks)
     pos_embedder = MLP(
-        list(masked_decoder_conf["pos_embedder"]["mlp_layers"]),
-        act=masked_decoder_conf["pos_embedder"]["act"],
+        list(model_conf["pos_embedder"]["mlp_layers"]),
+        act=model_conf["pos_embedder"]["act"],
         norm=None,
     )
 

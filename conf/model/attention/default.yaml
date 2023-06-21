@@ -1,0 +1,4 @@
+num_heads: 8
+bias: True
+qkv_bias: False
+dropout: 0.0

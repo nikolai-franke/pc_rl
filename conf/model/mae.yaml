@@ -1,0 +1,12 @@
+defaults:
+  - attention: default
+  - pos_embedder: default
+mask_ratio: 0.6
+mask_type: rand
+transformer_block:
+  mlp_layers: [512, 1536, 512]
+  act: gelu
+  dropout: 0.0
+encoder_depth: 12
+decoder_depth: 4
+

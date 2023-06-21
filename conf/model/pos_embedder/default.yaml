@@ -1,4 +1,2 @@
-pos_embedder:
   mlp_layers: [3, 128, 512]
   act: gelu
-
