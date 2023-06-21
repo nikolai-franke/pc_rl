@@ -2,9 +2,11 @@ from typing import Callable, Optional, Tuple
 
 import torch
 from torch import Tensor
+from torch.nn.utils.rnn import pad_sequence
 from torch_geometric.nn import fps, knn
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.inits import reset
+from torch_geometric.utils import unbatch
 
 
 class Embedder(MessagePassing):
@@ -15,6 +17,7 @@ class Embedder(MessagePassing):
         group_size: int,
         sampling_ratio: float,
         random_start: bool = True,
+        padding_value: float = float("inf"),
         **kwargs,
     ):
         """
@@ -32,6 +35,7 @@ class Embedder(MessagePassing):
         self.group_size = group_size
         self.sampling_ratio = sampling_ratio
         self.random_start = random_start
+        self.padding_value = padding_value
 
         self.mlp_1 = mlp_1
         self.mlp_2 = mlp_2
@@ -79,15 +83,31 @@ class Embedder(MessagePassing):
             pos, center_points, self.group_size, batch_x=batch, batch_y=batch_y
         )
         edges = torch.stack([to_idx, from_idx], dim=0)
+        x, neighborhoods = self.propagate(edges, pos=(pos, center_points))
 
-        x, neighborhoods = self.propagate(edges, pos=(pos, center_points), size=None)
-        # reshape into [B, M, E]
+        # pad and reshape into [B, M, E]
+        x = pad_sequence(
+            unbatch(x, batch_y),
+            padding_value=self.padding_value,
+            batch_first=True,
+        )
         x = x.reshape(B, -1, x.shape[-1])
-        # reshape into [B, G, M, 3]
+
+        # pad and reshape into [B, G, M, 3]
+        neighborhoods = pad_sequence(
+            unbatch(neighborhoods.reshape(-1, self.group_size, 3), batch_y),
+            padding_value=self.padding_value,
+            batch_first=True,
+        )
         neighborhoods = neighborhoods.reshape(
             B, -1, self.group_size, neighborhoods.shape[-1]
         )
-        # reshape into [B, G, 3]
+        # pad and reshape into [B, G, 3]
+        center_points = pad_sequence(
+            unbatch(center_points, batch_y),
+            padding_value=self.padding_value,
+            batch_first=True,
+        )
         center_points = center_points.reshape(B, -1, center_points.shape[-1])
 
         return x, neighborhoods, center_points
