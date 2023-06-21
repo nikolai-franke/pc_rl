@@ -17,6 +17,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.prediction_head = prediction_head
         self.loss_function = loss_function
         self.learning_rate = learning_rate
+        # TODO: don't hardcode this here. Check if lightning provides a convenient way of logging each n steps
         self.log_every = 50
         self.step = 0
 
@@ -61,6 +62,4 @@ class MaskedAutoEncoder(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        return torch.optim.Adam(
-            self.parameters(), lr=self.learning_rate, weight_decay=0.05
-        )
+        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)

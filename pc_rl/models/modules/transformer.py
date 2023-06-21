@@ -3,19 +3,18 @@ from typing import Callable, Type
 import torch
 import torch.nn as nn
 from torch import Tensor
+from torch.nn import MultiheadAttention
 
 
 class Block(nn.Module):
     def __init__(
         self,
-        attention,
+        attention: MultiheadAttention,
         mlp: Callable[[Tensor], Tensor],
         NormLayer: Type[nn.Module] = nn.LayerNorm,
     ) -> None:
         super().__init__()
         self.attention = attention
-        # assert hasattr(self.attention, "dim")
-
         self.dim = self.attention.embed_dim
         self.mlp = mlp
         # the first and last channel of the mlp must have the same size as the attention layer
@@ -144,17 +143,15 @@ class MaskedEncoder(nn.Module):
         for i in range(B):
             mask = torch.hstack(
                 [
-                    torch.zeros(G - self.num_masks),
-                    torch.ones(self.num_masks),
+                    torch.zeros(self.num_masks),
+                    torch.ones(G - self.num_masks),
                 ]
             )
             rand_idx = torch.randperm(len(mask))
             mask = mask[rand_idx]
             overall_mask[i, :] = mask
-        # TODO: Change above code so we don't have to negate the mask. Right now it stays this way for testing purposes
-        overall_mask = ~overall_mask.bool()
 
-        return overall_mask.to(center.device)
+        return overall_mask.bool().to(center.device)
 
     def forward(self, x, center_points, noaug=False):
         # TODO: check if we really need the noaug parameter
