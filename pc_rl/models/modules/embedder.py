@@ -17,7 +17,7 @@ class Embedder(MessagePassing):
         group_size: int,
         sampling_ratio: float,
         random_start: bool = True,
-        padding_value: float = float("inf"),
+        padding_value: float = 0.0,
         **kwargs,
     ):
         """

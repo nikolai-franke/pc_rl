@@ -12,11 +12,13 @@ class TransformerBlock(nn.Module):
         attention: MultiheadAttention,
         mlp: Callable[[Tensor], Tensor],
         NormLayer: Type[nn.Module] = nn.LayerNorm,
+        padding_value: float = 0.0,
     ) -> None:
         super().__init__()
         self.attention = attention
         self.dim = self.attention.embed_dim
         self.mlp = mlp
+        self.padding_token = torch.full((1, self.dim), padding_value)
         # the first and last channel of the mlp must have the same size as the attention layer
         assert (
             self.mlp.channel_list[0] == self.dim
@@ -27,8 +29,11 @@ class TransformerBlock(nn.Module):
         self.norm_2 = NormLayer(self.dim)
 
     def forward(self, x):
+        padding_mask = torch.all(x == self.padding_token, dim=-1)
         x = self.norm_1(x)
-        x = x + self.attention(x, x, x, need_weights=False)[0]
+        attn = self.attention(x, x, x, need_weights=True, key_padding_mask=padding_mask)
+        # attn = self.attention(x, x, x, need_weights=True)
+        x = x + attn[0]
         x = self.norm_2(x)
         x = x + self.mlp(x)
         return x
@@ -157,20 +162,20 @@ class MaskedEncoder(nn.Module):
         # TODO: check if we really need the noaug parameter
 
         if self.mask_type == "rand":
-            mask = self._mask_center_rand(center_points, noaug=noaug)
+            ae_mask = self._mask_center_rand(center_points, noaug=noaug)
         else:
-            mask = self._mask_center_block(center_points, noaug=noaug)
+            ae_mask = self._mask_center_block(center_points, noaug=noaug)
 
         batch_size, _, C = x.shape
 
-        x_vis = x[mask].reshape(batch_size, -1, C)
-        masked_center = center_points[mask].reshape(batch_size, -1, 3)
+        x_vis = x[ae_mask].reshape(batch_size, -1, C)
+        masked_center = center_points[ae_mask].reshape(batch_size, -1, 3)
         pos = self.pos_embedder(masked_center)
 
         x_vis = self.transformer_encoder(x_vis, pos)
         x_vis = self.norm(x_vis)
 
-        return x_vis, mask
+        return x_vis, ae_mask
 
 
 class MaskedDecoder(nn.Module):
