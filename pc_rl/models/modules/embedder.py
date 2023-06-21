@@ -91,7 +91,6 @@ class Embedder(MessagePassing):
             padding_value=self.padding_value,
             batch_first=True,
         )
-        x = x.reshape(B, -1, x.shape[-1])
 
         # pad and reshape into [B, G, M, 3]
         neighborhoods = pad_sequence(
@@ -99,16 +98,12 @@ class Embedder(MessagePassing):
             padding_value=self.padding_value,
             batch_first=True,
         )
-        neighborhoods = neighborhoods.reshape(
-            B, -1, self.group_size, neighborhoods.shape[-1]
-        )
         # pad and reshape into [B, G, 3]
         center_points = pad_sequence(
             unbatch(center_points, batch_y),
             padding_value=self.padding_value,
             batch_first=True,
         )
-        center_points = center_points.reshape(B, -1, center_points.shape[-1])
 
         return x, neighborhoods, center_points
 
