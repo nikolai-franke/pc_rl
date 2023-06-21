@@ -24,6 +24,7 @@ def create_full_point_clouds(x, y, B, neighborhoods, mask, center_points):
 class LogPointCloudCallback(Callback):
     def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
         # TODO: this should be changed later, we can just use a Subset of the validation dataset
+        # or cache the current sample during validation and then upload a cached sample
         with torch.no_grad():
             data = next(iter(trainer.train_dataloader)).cuda()  # type: ignore
             x, neighborhoods, mask, center_points = pl_module.forward(

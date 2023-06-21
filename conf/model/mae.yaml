@@ -6,7 +6,7 @@ mask_type: rand
 transformer_block:
   mlp_layers: [512, 1536, 512]
   act: gelu
-  dropout: 0.0
+  dropout: 0.1
 encoder_depth: 12
-decoder_depth: 4
+decoder_depth: 6
 
