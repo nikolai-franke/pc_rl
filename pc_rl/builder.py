@@ -1,5 +1,3 @@
-# from pc_rl.chamfer_distance.chamfer_distance import ChamferDistance
-# from chamferdist import ChamferDistance
 from pytorch3d.loss import chamfer_distance
 from torch import nn
 from torch_geometric.nn import MLP
