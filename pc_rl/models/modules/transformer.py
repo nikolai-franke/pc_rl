@@ -6,7 +6,7 @@ from torch import Tensor
 from torch.nn import MultiheadAttention
 
 
-class Block(nn.Module):
+class TransformerBlock(nn.Module):
     def __init__(
         self,
         attention: MultiheadAttention,

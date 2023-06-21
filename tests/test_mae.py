@@ -8,9 +8,9 @@ from torch_geometric.nn import MLP
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.prediction_head import MaePredictionHead
 # from pc_rl.models.modules.transformer import Attention as NewAttention
-from pc_rl.models.modules.transformer import Block as NewBlock
 from pc_rl.models.modules.transformer import MaskedDecoder as NewMaskedDecoder
 from pc_rl.models.modules.transformer import MaskedEncoder as NewMaskedEncoder
+from pc_rl.models.modules.transformer import TransformerBlock as NewBlock
 from pc_rl.models.modules.transformer import \
     TransformerDecoder as NewTransformerDecoder
 from pc_rl.models.modules.transformer import \

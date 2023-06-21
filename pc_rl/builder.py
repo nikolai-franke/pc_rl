@@ -5,8 +5,8 @@ from torch_geometric.nn import MLP
 from pc_rl.models.masked_autoencoder import MaskedAutoEncoder
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.prediction_head import MaePredictionHead
-from pc_rl.models.modules.transformer import (Block, MaskedDecoder,
-                                              MaskedEncoder,
+from pc_rl.models.modules.transformer import (MaskedDecoder, MaskedEncoder,
+                                              TransformerBlock,
                                               TransformerDecoder,
                                               TransformerEncoder)
 
@@ -48,7 +48,7 @@ def build_masked_autoencoder(config):
             bias=attention_conf["bias"],
             batch_first=True,
         )
-        blocks.append(Block(attention, mlp))
+        blocks.append(TransformerBlock(attention, mlp))
 
     blocks = ModuleList(blocks)
 
@@ -82,7 +82,7 @@ def build_masked_autoencoder(config):
             bias=attention_conf["bias"],
             batch_first=True,
         )
-        blocks.append(Block(attention, mlp))
+        blocks.append(TransformerBlock(attention, mlp))
 
     blocks = ModuleList(blocks)
     pos_embedder = MLP(
