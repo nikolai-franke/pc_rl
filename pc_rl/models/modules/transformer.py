@@ -113,7 +113,7 @@ class MaskedEncoder(nn.Module):
 
     def _mask_center_block(self, center, noaug=False):
         if noaug or self.mask_ratio == 0:
-            return torch.zeros(center.shape[:2].bool())
+            return torch.ones(center.shape[:2].bool())
         mask_idx = []
         for points in center:
             points = points.unsqueeze(0)
@@ -135,7 +135,7 @@ class MaskedEncoder(nn.Module):
     def _mask_center_rand(self, center, noaug=False):
         B, G, _ = center.shape
         if noaug or self.mask_ratio == 0:
-            return torch.zeros(center.shape[:2]).bool()
+            return torch.ones(center.shape[:2]).bool()
 
         self.num_masks = int(self.mask_ratio * G)
 
