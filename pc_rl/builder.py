@@ -1,5 +1,5 @@
 from pytorch3d.loss import chamfer_distance
-from torch import nn
+from torch.nn import ModuleList, MultiheadAttention
 from torch_geometric.nn import MLP
 
 from pc_rl.models.masked_autoencoder import MaskedAutoEncoder
@@ -40,7 +40,7 @@ def build_masked_autoencoder(config):
             norm=None,
             dropout=block_conf["dropout"],
         )
-        attention = nn.MultiheadAttention(
+        attention = MultiheadAttention(
             embed_dim=embedding_size,
             num_heads=attention_conf["num_heads"],
             add_bias_kv=attention_conf["qkv_bias"],
@@ -50,7 +50,7 @@ def build_masked_autoencoder(config):
         )
         blocks.append(Block(attention, mlp))
 
-    blocks = nn.ModuleList(blocks)
+    blocks = ModuleList(blocks)
 
     transformer_encoder = TransformerEncoder(blocks)
 
@@ -74,7 +74,7 @@ def build_masked_autoencoder(config):
             norm=None,
             dropout=block_conf["dropout"],
         )
-        attention = nn.MultiheadAttention(
+        attention = MultiheadAttention(
             embed_dim=embedding_size,
             num_heads=attention_conf["num_heads"],
             add_bias_kv=attention_conf["qkv_bias"],
@@ -84,7 +84,7 @@ def build_masked_autoencoder(config):
         )
         blocks.append(Block(attention, mlp))
 
-    blocks = nn.ModuleList(blocks)
+    blocks = ModuleList(blocks)
     pos_embedder = MLP(
         list(model_conf["pos_embedder"]["mlp_layers"]),
         act=model_conf["pos_embedder"]["act"],
