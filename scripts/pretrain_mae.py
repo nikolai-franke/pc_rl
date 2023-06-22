@@ -29,7 +29,7 @@ def main(config: DictConfig):
         transform = Compose(
             [
                 FixedPoints(
-                    dataset_conf["num_points"], replace=False, allow_duplicates=True
+                    dataset_conf["num_points"], replace=False, allow_duplicates=False
                 ),
                 NormalizeScale(),
             ]

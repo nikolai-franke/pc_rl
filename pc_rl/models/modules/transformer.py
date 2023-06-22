@@ -101,7 +101,7 @@ class MaskedEncoder(nn.Module):
             self.transformer_encoder, "dim"
         ), f"Encoder {self.transformer_encoder} does not have a 'dim' attribute "
         self.embedding_dim = self.transformer_encoder.dim
-        self.padding_token = torch.full((1, 3), padding_value)
+        self.padding_token = nn.Parameter(torch.full((1, 3), padding_value))
         self.norm = nn.LayerNorm(self.embedding_dim)
 
         self.apply(self._init_weights)
@@ -120,25 +120,27 @@ class MaskedEncoder(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def _mask_center_block(self, center, noaug=False):
-        if noaug or self.mask_ratio == 0:
-            return torch.ones(center.shape[:2].bool())
-        mask_idx = []
-        for points in center:
-            points = points.unsqueeze(0)
-            index = torch.randint(points.shape[1] - 1, (1,))
-            distance_matrix = torch.norm(
-                points[:, index].reshape(1, 1, 3) - points, p=2, dim=-1
-            )
+        # TODO: maybe we don't need this
+        raise NotImplementedError
+        # if noaug or self.mask_ratio == 0:
+        #     return torch.ones(center.shape[:2].bool())
+        # mask_idx = []
+        # for points in center:
+        #     points = points.unsqueeze(0)
+        #     index = torch.randint(points.shape[1] - 1, (1,))
+        #     distance_matrix = torch.norm(
+        #         points[:, index].reshape(1, 1, 3) - points, p=2, dim=-1
+        #     )
 
-            idx = torch.argsort(distance_matrix, dim=-1, descending=False)[0]
-            mask_num = int(self.mask_ratio * len(idx))
-            mask = torch.zeros(len(idx))
-            mask[idx[:mask_num]] = 1
-            mask_idx.append(mask.bool())
+        #     idx = torch.argsort(distance_matrix, dim=-1, descending=False)[0]
+        #     mask_num = int(self.mask_ratio * len(idx))
+        #     mask = torch.zeros(len(idx))
+        #     mask[idx[:mask_num]] = 1
+        #     mask_idx.append(mask.bool())
 
-        overall_mask = torch.stack(mask_idx).to(center.device)
+        # overall_mask = torch.stack(mask_idx).to(center.device)
 
-        return overall_mask
+        # return overall_mask
 
     def _mask_center_rand(self, center, padding_mask, noaug=False):
         B, G, _ = center.shape
@@ -215,20 +217,22 @@ class MaskedDecoder(nn.Module):
             pos_dim := self.pos_embedder.channel_list[-1]
         ) == self.dim, f"pos_embedder and decoder don't have matching dimensions: {pos_dim} != {self.dim}"
         self.mask_token = nn.Parameter(torch.zeros(1, 1, self.dim))
-        self.padding_token = torch.full((1, 3), padding_value)
+        self.padding_token = nn.Parameter(torch.full((1, 3), padding_value))
         nn.init.trunc_normal_(self.mask_token, std=0.02)
 
     def forward(self, x_vis, mask, center_points):
         B, _, C = x_vis.shape
         center_points_visible = center_points[~mask].reshape(B, -1, 3)
         center_points_masked = center_points[mask].reshape(B, -1, 3)
+        _, num_masked_tokens, _ = center_points_masked.shape
 
         center_points_full = torch.cat(
             [center_points_visible, center_points_masked], dim=1
         )
         # since we reordered the center points, we have to recalculate the padding mask
-        padding_mask = torch.all(center_points_full == self.padding_token, dim=-1)
-        _, num_masked_tokens, _ = center_points[~mask].reshape(B, -1, 3).shape
+        full_padding_mask = center_points_full == self.padding_token
+        padding_mask = torch.all(full_padding_mask, dim=-1)
+
         pos_full = self.pos_embedder(center_points_full).reshape(B, -1, C)
 
         mask_token = self.mask_token.expand(B, num_masked_tokens, -1)
@@ -238,4 +242,4 @@ class MaskedDecoder(nn.Module):
             x_full, pos_full, num_masked_tokens, padding_mask
         )
 
-        return x_recovered
+        return x_recovered, full_padding_mask

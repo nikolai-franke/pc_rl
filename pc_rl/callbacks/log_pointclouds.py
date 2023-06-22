@@ -6,15 +6,15 @@ from pc_rl.logger_utils import log_point_cloud
 
 
 def create_full_point_clouds(x, y, B, neighborhoods, mask, center_points):
-    masked_input = neighborhoods[mask]
-    masked_input = masked_input + center_points[mask].unsqueeze(1)
+    masked_input = neighborhoods[~mask]
+    masked_input = masked_input + center_points[~mask].unsqueeze(1)
     masked_input = masked_input.reshape(B, -1, 3)
 
-    prediction = x + center_points[~mask].unsqueeze(1)
+    prediction = x + center_points[mask].unsqueeze(1)
     prediction = prediction.reshape(B, -1, 3)
     prediction = torch.cat([masked_input, prediction], dim=1)
 
-    ground_truth = y + center_points[~mask].unsqueeze(1)
+    ground_truth = y + center_points[mask].unsqueeze(1)
     ground_truth = ground_truth.reshape(B, -1, 3)
     ground_truth = torch.cat([masked_input, ground_truth], dim=1)
 
@@ -27,11 +27,12 @@ class LogPointCloudCallback(Callback):
         # or cache the current sample during validation and then upload a cached sample
         with torch.no_grad():
             data = next(iter(trainer.train_dataloader)).cuda()  # type: ignore
-            x, neighborhoods, mask, center_points = pl_module.forward(
+            x, neighborhoods, mask, padding_mask, center_points = pl_module.forward(
                 data.pos, data.batch
             )
-            B, M, *_ = x.shape
-            y = neighborhoods[~mask].reshape(B * M, -1, 3)
+            B, M, G, _ = x.shape
+            padding_mask = padding_mask.unsqueeze(-2).expand((-1, -1, G, -1))
+            y = neighborhoods[mask].reshape(B * M, -1, 3)
             x = x.reshape(B * M, -1, 3)
             masked_input, prediction, ground_truth = create_full_point_clouds(
                 x, y, B, neighborhoods, mask, center_points

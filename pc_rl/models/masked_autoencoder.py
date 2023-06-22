@@ -18,18 +18,25 @@ class MaskedAutoEncoder(pl.LightningModule):
     def forward(self, pos: Tensor, batch: Tensor):
         x, neighborhoods, center_points = self.embedder(pos, batch)
         x_vis, mask = self.encoder(x, center_points)
-        x_recovered = self.decoder(x_vis, mask, center_points)
+        x_recovered, padding_mask = self.decoder(x_vis, mask, center_points)
         pos_recovered = self.prediction_head(x_recovered)
 
-        return pos_recovered, neighborhoods, mask, center_points
+        return pos_recovered, neighborhoods, mask, padding_mask, center_points
 
     def training_step(self, data, batch_idx):
-        x, neighborhoods, mask, _ = self.forward(data.pos, data.batch)
-        B, M, *_ = x.shape
-        y = neighborhoods[mask].reshape(B * M, -1, 3)
-        x = x.reshape(B * M, -1, 3)
+        prediction, neighborhoods, mask, padding_mask, _ = self.forward(
+            data.pos, data.batch
+        )
+        B, M, G, _ = prediction.shape
+        padding_mask = padding_mask.unsqueeze(-2).expand((-1, -1, G, -1))
+        padding_mask = padding_mask[mask]
+        ground_truth = neighborhoods[mask].reshape(B * M, -1, 3)
 
-        loss = self.loss_function(x, y, point_reduction="sum")[0]
+        prediction = prediction.reshape(B * M, -1, 3)
+        prediction[padding_mask] = 0.0
+        ground_truth[padding_mask] = 0.0
+
+        loss = self.loss_function(prediction, ground_truth, point_reduction="sum")[0]
         self.log("train/loss", loss)
         return loss
 
