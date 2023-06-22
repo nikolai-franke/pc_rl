@@ -86,7 +86,7 @@ def test_padding_masked_encoder():
 
     token, neighborhoods, center_points = embedder.forward(pos, batch)
     x_vis1, ae_mask1 = masked_encoder(token, center_points)
-    x_pred1 = masked_decoder(x_vis1, ae_mask1, center_points)
+    x_pred1, _ = masked_decoder(x_vis1, ae_mask1, center_points)
     pos_recovered1 = prediction_head(x_pred1)
 
     torch.manual_seed(0)
@@ -125,8 +125,11 @@ def test_padding_masked_encoder():
 
     token, neighborhoods, center_points = embedder.forward(pos, batch)
     x_vis2, ae_mask2 = masked_encoder2(token, center_points)
-    x_pred2 = masked_decoder(x_vis1, ae_mask1, center_points)
+    x_pred2, _ = masked_decoder(x_vis1, ae_mask1, center_points)
     pos_recovered2 = prediction_head(x_pred2)
+    print(pos_recovered2.grad_fn)
+    pos_recovered2[0, 0, 0] = 0
+    print(pos_recovered2.grad_fn)
 
     assert torch.equal(x_vis1[0], x_vis2[0])
     assert torch.equal(x_vis1[1, :-EQUALS_DIM], x_vis2[1, :-EQUALS_DIM])
