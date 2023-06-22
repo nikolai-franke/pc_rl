@@ -136,7 +136,7 @@ class MaskedEncoder(nn.Module):
             mask[idx[:mask_num]] = 1
             mask_idx.append(mask.bool())
 
-        overall_mask = ~torch.stack(mask_idx).to(center.device)
+        overall_mask = torch.stack(mask_idx).to(center.device)
 
         return overall_mask
 
@@ -159,17 +159,17 @@ class MaskedEncoder(nn.Module):
         ):
             mask = torch.hstack(
                 [
-                    # we onlly want a random mask in the range [0, non_padding_tokens]
-                    torch.zeros(n_masks),  # type: ignore
-                    torch.ones(n_non_padding_tokens - n_masks),
+                    # we only want a random mask in the range [0, non_padding_tokens]
+                    torch.ones(n_masks),  # type: ignore
+                    torch.zeros(n_non_padding_tokens - n_masks),
                 ]
             )
             rand_idx = torch.randperm(len(mask))
             mask = mask[rand_idx]
             # since we want all masks to have the same number of ones and zeros, we first fill each tensor up with ones
-            mask = torch.hstack([mask, torch.zeros(max_num_masks - n_masks)])
+            mask = torch.hstack([mask, torch.ones(max_num_masks - n_masks)])
             # and then fill each tensor with zeros until each tensor has length G
-            mask = torch.hstack([mask, torch.ones(G - len(mask))])
+            mask = torch.hstack([mask, torch.zeros(G - len(mask))])
             overall_mask[i, :] = mask
 
         return overall_mask.bool().to(center.device)
@@ -185,8 +185,8 @@ class MaskedEncoder(nn.Module):
 
         batch_size, _, C = x.shape
 
-        x_vis = x[ae_mask].reshape(batch_size, -1, C)
-        center_points_vis = center_points[ae_mask].reshape(batch_size, -1, 3)
+        x_vis = x[~ae_mask].reshape(batch_size, -1, C)
+        center_points_vis = center_points[~ae_mask].reshape(batch_size, -1, 3)
         pos = self.pos_embedder(center_points_vis)
 
         # recalculate padding mask
@@ -220,15 +220,15 @@ class MaskedDecoder(nn.Module):
 
     def forward(self, x_vis, mask, center_points):
         B, _, C = x_vis.shape
-        center_points_visible = center_points[mask].reshape(B, -1, 3)
-        center_points_masked = center_points[~mask].reshape(B, -1, 3)
+        center_points_visible = center_points[~mask].reshape(B, -1, 3)
+        center_points_masked = center_points[mask].reshape(B, -1, 3)
 
         center_points_full = torch.cat(
             [center_points_visible, center_points_masked], dim=1
         )
         # since we reordered the center points, we have to recalculate the padding mask
         padding_mask = torch.all(center_points_full == self.padding_token, dim=-1)
-        _, num_masked_tokens, _ = center_points[mask].reshape(B, -1, 3).shape
+        _, num_masked_tokens, _ = center_points[~mask].reshape(B, -1, 3).shape
         pos_full = self.pos_embedder(center_points_full).reshape(B, -1, C)
 
         mask_token = self.mask_token.expand(B, num_masked_tokens, -1)

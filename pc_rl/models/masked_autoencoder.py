@@ -26,7 +26,7 @@ class MaskedAutoEncoder(pl.LightningModule):
     def training_step(self, data, batch_idx):
         x, neighborhoods, mask, _ = self.forward(data.pos, data.batch)
         B, M, *_ = x.shape
-        y = neighborhoods[~mask].reshape(B * M, -1, 3)
+        y = neighborhoods[mask].reshape(B * M, -1, 3)
         x = x.reshape(B * M, -1, 3)
 
         loss = self.loss_function(x, y, point_reduction="sum")[0]
