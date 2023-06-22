@@ -1,4 +1,4 @@
-from typing import Callable, Type
+from typing import Callable, Optional, Type
 
 import torch
 import torch.nn as nn
@@ -75,9 +75,9 @@ class TransformerDecoder(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward(self, x, pos, return_token_num):
+    def forward(self, x, pos, return_token_num, padding_mask=None):
         for block in self.blocks:
-            x = block(x + pos)
+            x = block(x + pos, padding_mask)
 
         x = self.head(self.norm(x[:, -return_token_num:]))
         return x
@@ -190,8 +190,8 @@ class MaskedEncoder(nn.Module):
         pos = self.pos_embedder(center_points_vis)
 
         # recalculate padding mask
-        padding_mask = torch.all(center_points_vis == self.padding_token, dim=-1)
-        x_vis = self.transformer_encoder(x_vis, pos, padding_mask)
+        vis_padding_mask = torch.all(center_points_vis == self.padding_token, dim=-1)
+        x_vis = self.transformer_encoder(x_vis, pos, vis_padding_mask)
         x_vis = self.norm(x_vis)
 
         return x_vis, ae_mask
@@ -200,8 +200,9 @@ class MaskedEncoder(nn.Module):
 class MaskedDecoder(nn.Module):
     def __init__(
         self,
-        transformer_decoder: Callable[[Tensor, Tensor, int], Tensor],
+        transformer_decoder: Callable[[Tensor, Tensor, int, Optional[Tensor]], Tensor],
         pos_embedder: Callable[[Tensor], Tensor],
+        padding_value: float = 0.0,
     ):
         super().__init__()
         self.transformer_decoder = transformer_decoder
@@ -214,18 +215,27 @@ class MaskedDecoder(nn.Module):
             pos_dim := self.pos_embedder.channel_list[-1]
         ) == self.dim, f"pos_embedder and decoder don't have matching dimensions: {pos_dim} != {self.dim}"
         self.mask_token = nn.Parameter(torch.zeros(1, 1, self.dim))
+        self.padding_token = torch.full((1, 3), padding_value)
         nn.init.trunc_normal_(self.mask_token, std=0.02)
 
     def forward(self, x_vis, mask, center_points):
         B, _, C = x_vis.shape
-        pos_embedding_visible = self.pos_embedder(center_points[mask]).reshape(B, -1, C)
-        pos_embedding_masked = self.pos_embedder(center_points[~mask]).reshape(B, -1, C)
+        center_points_visible = center_points[mask].reshape(B, -1, 3)
+        center_points_masked = center_points[~mask].reshape(B, -1, 3)
 
-        _, num_masked_tokens, _ = pos_embedding_masked.shape
+        center_points_full = torch.cat(
+            [center_points_visible, center_points_masked], dim=1
+        )
+        # since we reordered the center points, we have to recalculate the padding mask
+        padding_mask = torch.all(center_points_full == self.padding_token, dim=-1)
+        _, num_masked_tokens, _ = center_points[mask].reshape(B, -1, 3).shape
+        pos_full = self.pos_embedder(center_points_full).reshape(B, -1, C)
+
         mask_token = self.mask_token.expand(B, num_masked_tokens, -1)
         x_full = torch.cat([x_vis, mask_token], dim=1)
-        pos_full = torch.cat([pos_embedding_visible, pos_embedding_masked], dim=1)
 
-        x_recovered = self.transformer_decoder(x_full, pos_full, num_masked_tokens)
+        x_recovered = self.transformer_decoder(
+            x_full, pos_full, num_masked_tokens, padding_mask
+        )
 
         return x_recovered
