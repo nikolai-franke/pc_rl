@@ -1,9 +1,10 @@
 import torch
-from torch.nn import MultiheadAttention
+from torch.nn import ModuleList, MultiheadAttention
 from torch_geometric.nn import MLP
 
 from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.modules.transformer import TransformerBlock
+from pc_rl.models.modules.transformer import (TransformerBlock,
+                                              TransformerEncoder)
 
 embed_dim = 512
 mlp_1 = MLP([3, 128, 256])
@@ -14,14 +15,13 @@ embedder = Embedder(
 )
 attention = MultiheadAttention(embed_dim, 1, batch_first=True, bias=False)
 block_mlp = MLP([512, 1532, 512], norm=None)
-block = TransformerBlock(attention, block_mlp, padding_value=padding_value)
+block = TransformerBlock(attention, block_mlp)
 t1 = torch.rand(10, 3)
 t2 = torch.rand(8, 3)
 batch = torch.hstack(
     (torch.zeros(10, dtype=torch.long), torch.ones(8, dtype=torch.long))
 )
 pos = torch.cat((t1, t2))
-torch.manual_seed(0)
 
 
 def test_padding_embedder():
@@ -37,35 +37,91 @@ def test_padding_embedder():
         assert c == padding_value
 
 
-def test_padding_block():
+def test_padding_encoder():
+    depth = 8
+    pos_embedder = MLP([3, 128, 512], norm=None)
     torch.manual_seed(0)
+    padding_value = 0.0
     embedder = Embedder(
         mlp_1,
         mlp_2,
         group_size=5,
         sampling_ratio=0.5,
-        padding_value=0.0,
+        padding_value=padding_value,
         random_start=False,
     )
     attention = MultiheadAttention(embed_dim, 1, batch_first=True, bias=False)
-    block = TransformerBlock(attention, block_mlp, padding_value=0.0)
+    blocks = []
+    for _ in range(depth):
+        block = TransformerBlock(attention, block_mlp)
+        blocks.append(block)
+    blocks = ModuleList(blocks)
+    transformer_encoder = TransformerEncoder(blocks, padding_value)
     token, neighborhoods, center_points = embedder.forward(pos, batch)
-    x_1 = block(token)
+    center_points = pos_embedder(center_points)
+    x1 = transformer_encoder(token, center_points)
 
     torch.manual_seed(0)
+    padding_value = 1e9
     embedder = Embedder(
         mlp_1,
         mlp_2,
         group_size=5,
         sampling_ratio=0.5,
-        padding_value=1e9,
+        padding_value=padding_value,
         random_start=False,
     )
     attention = MultiheadAttention(embed_dim, 1, batch_first=True, bias=False)
-    block_2 = TransformerBlock(attention, block_mlp, padding_value=1e9)
+    blocks = []
+    for _ in range(depth):
+        block = TransformerBlock(attention, block_mlp)
+        blocks.append(block)
+    blocks = ModuleList(blocks)
+    transformer_encoder = TransformerEncoder(blocks, padding_value)
     token, neighborhoods, center_points = embedder.forward(pos, batch)
-    x_2 = block_2(token)
-    assert torch.equal(x_1[:-1], x_2[:-1])
+    center_points = pos_embedder(center_points)
+    x2 = transformer_encoder(token, center_points)
+
+    print(x1 - x2)
+    assert torch.equal(x1[:-1], x2[:-1])
+
+
+def test_padding_block():
+    torch.manual_seed(0)
+    padding_value = 0.0
+    embedder = Embedder(
+        mlp_1,
+        mlp_2,
+        group_size=5,
+        sampling_ratio=0.5,
+        padding_value=padding_value,
+        random_start=False,
+    )
+    attention = MultiheadAttention(embed_dim, 1, batch_first=True, bias=False)
+    block = TransformerBlock(attention, block_mlp)
+    token, neighborhoods, center_points = embedder.forward(pos, batch)
+    padding_token = torch.full((1, embed_dim), padding_value)
+    padding_mask = torch.all(token == padding_token, dim=-1)
+    x1 = block(token, padding_mask)
+
+    torch.manual_seed(0)
+    padding_value = 1e9
+    embedder = Embedder(
+        mlp_1,
+        mlp_2,
+        group_size=5,
+        sampling_ratio=0.5,
+        padding_value=padding_value,
+        random_start=False,
+    )
+    attention = MultiheadAttention(embed_dim, 1, batch_first=True, bias=False)
+    block_2 = TransformerBlock(attention, block_mlp)
+    token, neighborhoods, center_points = embedder.forward(pos, batch)
+    padding_token = torch.full((1, embed_dim), padding_value)
+    padding_mask = torch.all(token == padding_token, dim=-1)
+    x2 = block_2(token, padding_mask)
+    print(x1 - x2)
+    assert torch.equal(x1[:-1], x2[:-1])
 
 
 def test_padding():
@@ -81,6 +137,7 @@ def test_padding():
 
 
 if __name__ == "__main__":
-    test_padding_embedder()
+    # test_padding_embedder()
     # test_padding_block()
+    test_padding_encoder()
     # test_padding()

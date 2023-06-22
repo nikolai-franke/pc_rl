@@ -12,13 +12,11 @@ class TransformerBlock(nn.Module):
         attention: MultiheadAttention,
         mlp: Callable[[Tensor], Tensor],
         NormLayer: Type[nn.Module] = nn.LayerNorm,
-        padding_value: float = 0.0,
     ) -> None:
         super().__init__()
         self.attention = attention
         self.dim = self.attention.embed_dim
         self.mlp = mlp
-        self.padding_token = torch.full((1, self.dim), padding_value)
         # the first and last channel of the mlp must have the same size as the attention layer
         assert (
             self.mlp.channel_list[0] == self.dim
@@ -28,26 +26,30 @@ class TransformerBlock(nn.Module):
         self.norm_1 = NormLayer(self.dim)
         self.norm_2 = NormLayer(self.dim)
 
-    def forward(self, x):
-        padding_mask = torch.all(x == self.padding_token, dim=-1)
+    def forward(self, x, padding_mask):
         x = self.norm_1(x)
-        attn = self.attention(x, x, x, need_weights=True, key_padding_mask=padding_mask)
-        # attn = self.attention(x, x, x, need_weights=True)
-        x = x + attn[0]
+        x = (
+            x
+            + self.attention(
+                x, x, x, need_weights=False, key_padding_mask=padding_mask
+            )[0]
+        )
         x = self.norm_2(x)
         x = x + self.mlp(x)
         return x
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, blocks: nn.ModuleList) -> None:
+    def __init__(self, blocks: nn.ModuleList, padding_value: float = 0.0) -> None:
         super().__init__()
         self.blocks = blocks
         self.dim = self.blocks[0].dim
+        self.padding_token = torch.full((1, self.dim), padding_value)  # type: ignore
 
     def forward(self, x, pos):
+        padding_mask = torch.all(x == self.padding_token, dim=-1)
         for block in self.blocks:
-            x = block(x + pos)
+            x = block(x + pos, padding_mask)
         return x
 
 
