@@ -3,6 +3,7 @@ from torch.nn import ModuleList, MultiheadAttention
 from torch_geometric.nn import MLP
 
 from pc_rl.models.modules.embedder import Embedder
+from pc_rl.models.modules.prediction_head import MaePredictionHead
 from pc_rl.models.modules.transformer import (MaskedDecoder, MaskedEncoder,
                                               TransformerBlock,
                                               TransformerDecoder,
@@ -12,20 +13,11 @@ batch1_size = 80
 batch2_size = 40
 sampling_ratio = 0.5
 mask_ratio = 0.5
+group_size = 10
 embed_dim = 512
 mlp_1 = MLP([3, 128, 256])
 mlp_2 = MLP([512, 512, embed_dim])
 padding_value = 0.0
-embedder = Embedder(
-    mlp_1,
-    mlp_2,
-    group_size=5,
-    sampling_ratio=sampling_ratio,
-    padding_value=padding_value,
-)
-attention = MultiheadAttention(embed_dim, 1, batch_first=True, bias=False)
-block_mlp = MLP([512, 1532, 512], norm=None)
-block = TransformerBlock(attention, block_mlp)
 torch.manual_seed(0)
 t1 = torch.rand(batch1_size, 3)
 t2 = torch.rand(batch2_size, 3)
@@ -39,6 +31,13 @@ pos = torch.cat((t1, t2))
 
 
 def test_padding_embedder():
+    embedder = Embedder(
+        mlp_1,
+        mlp_2,
+        group_size=group_size,
+        sampling_ratio=sampling_ratio,
+        padding_value=padding_value,
+    )
     embedding, neighborhoods, center_points = embedder.forward(pos, batch)
 
     for e in embedding.flatten()[-512:]:
@@ -60,12 +59,13 @@ def test_padding_masked_encoder():
     embedder = Embedder(
         mlp_1,
         mlp_2,
-        group_size=5,
+        group_size=group_size,
         sampling_ratio=sampling_ratio,
         padding_value=padding_value,
         random_start=False,
     )
     attention = MultiheadAttention(embed_dim, 1, batch_first=True, bias=False)
+    block_mlp = MLP([embed_dim, 3 * embed_dim, embed_dim], norm=None)
     blocks = []
     for _ in range(depth):
         block = TransformerBlock(attention, block_mlp)
@@ -82,9 +82,12 @@ def test_padding_masked_encoder():
     blocks = ModuleList(blocks)
     transformer_decoder = TransformerDecoder(blocks)
     masked_decoder = MaskedDecoder(transformer_decoder, pos_embedder)
+    prediction_head = MaePredictionHead(embed_dim, group_size)
+
     token, neighborhoods, center_points = embedder.forward(pos, batch)
     x_vis1, ae_mask1 = masked_encoder(token, center_points)
     x_pred1 = masked_decoder(x_vis1, ae_mask1, center_points)
+    pos_recovered1 = prediction_head(x_pred1)
 
     torch.manual_seed(0)
     depth = 8
@@ -93,13 +96,14 @@ def test_padding_masked_encoder():
     embedder = Embedder(
         mlp_1,
         mlp_2,
-        group_size=5,
+        group_size=group_size,
         sampling_ratio=sampling_ratio,
         padding_value=padding_value,
         random_start=False,
     )
     attention = MultiheadAttention(embed_dim, 1, batch_first=True, bias=False)
     blocks = []
+    block_mlp = MLP([embed_dim, 3 * embed_dim, embed_dim], norm=None)
     for _ in range(depth):
         block = TransformerBlock(attention, block_mlp)
         blocks.append(block)
@@ -117,15 +121,19 @@ def test_padding_masked_encoder():
     masked_decoder = MaskedDecoder(
         transformer_decoder, pos_embedder, padding_value=padding_value
     )
+    prediction_head = MaePredictionHead(embed_dim, group_size)
 
     token, neighborhoods, center_points = embedder.forward(pos, batch)
     x_vis2, ae_mask2 = masked_encoder2(token, center_points)
     x_pred2 = masked_decoder(x_vis1, ae_mask1, center_points)
+    pos_recovered2 = prediction_head(x_pred2)
 
     assert torch.equal(x_vis1[0], x_vis2[0])
     assert torch.equal(x_vis1[1, :-EQUALS_DIM], x_vis2[1, :-EQUALS_DIM])
     assert torch.equal(ae_mask1, ae_mask2)
-    assert torch.equal(x_pred1[:, :-EQUALS_DIM], x_pred2[:, :-EQUALS_DIM])
+    assert torch.equal(x_pred1[1, :-EQUALS_DIM], x_pred2[1, :-EQUALS_DIM])
+    assert torch.equal(pos_recovered1[0], pos_recovered2[0])
+    assert torch.equal(pos_recovered1[1, :-EQUALS_DIM], pos_recovered2[1, :-EQUALS_DIM])
 
 
 def test_padding_encoder():
@@ -144,6 +152,7 @@ def test_padding_encoder():
     )
     attention = MultiheadAttention(embed_dim, 1, batch_first=True, bias=False)
     blocks = []
+    block_mlp = MLP([embed_dim, 3 * embed_dim, embed_dim], norm=None)
     for _ in range(depth):
         block = TransformerBlock(attention, block_mlp)
         blocks.append(block)
@@ -167,6 +176,7 @@ def test_padding_encoder():
     )
     attention = MultiheadAttention(embed_dim, 1, batch_first=True, bias=False)
     blocks = []
+    block_mlp = MLP([embed_dim, 3 * embed_dim, embed_dim], norm=None)
     for _ in range(depth):
         block = TransformerBlock(attention, block_mlp)
         blocks.append(block)
@@ -195,6 +205,7 @@ def test_padding_block():
         random_start=False,
     )
     attention = MultiheadAttention(embed_dim, 1, batch_first=True, bias=False)
+    block_mlp = MLP([embed_dim, 3 * embed_dim, embed_dim], norm=None)
     block = TransformerBlock(attention, block_mlp)
     token, neighborhoods, center_points = embedder.forward(pos, batch)
     padding_token = torch.full((1, embed_dim), padding_value)
