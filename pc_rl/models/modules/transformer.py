@@ -11,7 +11,7 @@ class TransformerBlock(nn.Module):
     def __init__(
         self,
         attention: MultiheadAttention,
-        mlp: MLP,
+        mlp: MLP,  # TODO: maybe we can allow a more general type and replace the assertion
         NormLayer: Type[nn.Module] = nn.LayerNorm,
     ) -> None:
         super().__init__()
@@ -62,7 +62,6 @@ class TransformerDecoder(nn.Module):
         self.blocks = blocks
         self.dim = self.blocks[0].dim
         self.norm = NormLayer(self.dim)
-        self.head = nn.Identity()  # TODO: maybe remove this if we don't need a head
 
         self.apply(self._init_weights)
 
@@ -79,7 +78,7 @@ class TransformerDecoder(nn.Module):
         for block in self.blocks:
             x = block(x + pos, padding_mask)
 
-        x = self.head(self.norm(x[:, -return_token_num:]))
+        x = self.norm(x[:, -return_token_num:])
         return x
 
 
@@ -178,7 +177,6 @@ class MaskedEncoder(nn.Module):
 
     def forward(self, x, center_points, noaug=False):
         padding_mask = torch.all(center_points == self.padding_token, dim=-1)
-
         if self.mask_type == "rand":
             ae_mask = self._mask_center_rand(center_points, padding_mask, noaug=noaug)
         else:

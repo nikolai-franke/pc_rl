@@ -41,5 +41,33 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.log("train/loss", loss)
         return loss
 
+    def validation_step(self, data, batch_idx):
+        (
+            self.test_prediction,
+            self.test_neighborhoods,
+            self.test_mask,
+            self.test_padding_mask,
+            self.test_center_points,
+        ) = self.forward(data.pos, data.batch)
+        B, M, G, _ = self.test_prediction.shape
+        self.test_padding_mask = self.test_padding_mask.view(B, -1, 1, 1).expand(
+            -1, -1, G, 3
+        )
+        self.test_padding_mask = self.test_padding_mask[self.test_mask]
+        self.test_ground_truth = self.test_neighborhoods[self.test_mask].reshape(
+            B * M, -1, 3
+        )
+
+        self.test_prediction = self.test_prediction.reshape(B * M, -1, 3)
+
+        self.test_prediction[self.test_padding_mask] = 0.0
+        self.test_ground_truth[self.test_padding_mask] = 0.0
+
+        loss = self.loss_function(
+            self.test_prediction, self.test_ground_truth, point_reduction="sum"
+        )[0]
+        self.log("val/loss", loss)
+        return loss
+
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
