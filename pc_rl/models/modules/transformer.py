@@ -229,8 +229,7 @@ class MaskedDecoder(nn.Module):
             [center_points_visible, center_points_masked], dim=1
         )
         # since we reordered the center points, we have to recalculate the padding mask
-        full_padding_mask = center_points_full == self.padding_token
-        padding_mask = torch.all(full_padding_mask, dim=-1)
+        padding_mask = torch.all(center_points_full == self.padding_token, dim=-1)
 
         pos_full = self.pos_embedder(center_points_full).reshape(B, -1, C)
 
@@ -241,4 +240,4 @@ class MaskedDecoder(nn.Module):
             x_full, pos_full, num_masked_tokens, padding_mask
         )
 
-        return x_recovered, full_padding_mask
+        return x_recovered, padding_mask

@@ -28,11 +28,12 @@ class MaskedAutoEncoder(pl.LightningModule):
             data.pos, data.batch
         )
         B, M, G, _ = prediction.shape
-        padding_mask = padding_mask.unsqueeze(-2).expand((-1, -1, G, -1))
+        padding_mask = padding_mask.view(B, -1, 1, 1).expand(-1, -1, G, 3)
         padding_mask = padding_mask[mask]
         ground_truth = neighborhoods[mask].reshape(B * M, -1, 3)
 
         prediction = prediction.reshape(B * M, -1, 3)
+
         prediction[padding_mask] = 0.0
         ground_truth[padding_mask] = 0.0
 
