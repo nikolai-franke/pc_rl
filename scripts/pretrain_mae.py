@@ -7,7 +7,7 @@ from pytorch_lightning.trainer import Trainer
 from torch_geometric.data.lightning import LightningDataset
 from torch_geometric.datasets import ModelNet, ShapeNet
 from torch_geometric.transforms import (Compose, FixedPoints, NormalizeScale,
-                                        SamplePoints)
+                                        RandomRotate, SamplePoints)
 
 from pc_rl.builder import build_masked_autoencoder
 from pc_rl.callbacks.log_pointclouds import LogPointCloudCallback
@@ -31,6 +31,9 @@ def main(config: DictConfig):
                 FixedPoints(
                     dataset_conf["num_points"], replace=False, allow_duplicates=False
                 ),
+                RandomRotate(180, 0),
+                RandomRotate(180, 1),
+                RandomRotate(180, 2),
                 NormalizeScale(),
             ]
         )
