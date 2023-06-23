@@ -4,13 +4,14 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from torch.nn import MultiheadAttention
+from torch_geometric.nn import MLP
 
 
 class TransformerBlock(nn.Module):
     def __init__(
         self,
         attention: MultiheadAttention,
-        mlp: Callable[[Tensor], Tensor],
+        mlp: MLP,
         NormLayer: Type[nn.Module] = nn.LayerNorm,
     ) -> None:
         super().__init__()
