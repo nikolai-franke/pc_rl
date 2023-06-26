@@ -28,12 +28,13 @@ class LogPointCloudCallback(Callback):
         B, _, G, _ = pl_module.test_neighborhoods.shape  # type: ignore
         ground_truth = pl_module.test_ground_truth.reshape(B, -1, G, 3)  # type: ignore
         prediction = pl_module.test_prediction.reshape(B, -1, G, 3)  # type: ignore
+        index = torch.randint(0, prediction.shape[0], (1,))
         masked_input, prediction, ground_truth = create_full_point_clouds(
-            prediction[0],
-            ground_truth[0],
-            pl_module.test_neighborhoods[0],  # type: ignore
-            pl_module.test_mask[0],  # type: ignore
-            pl_module.test_center_points[0],  # type: ignore
+            prediction[index],
+            ground_truth[index],
+            pl_module.test_neighborhoods[index],  # type: ignore
+            pl_module.test_mask[index],  # type: ignore
+            pl_module.test_center_points[index],  # type: ignore
         )
         log_point_cloud("masked_input", masked_input)
         log_point_cloud("prediction", prediction)
