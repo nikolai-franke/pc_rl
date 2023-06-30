@@ -1,3 +1,4 @@
+from hydra.utils import instantiate
 from torch.nn import ModuleList, MultiheadAttention
 from torch_geometric.nn import MLP
 
@@ -10,89 +11,112 @@ from pc_rl.models.modules.transformer import (MaskedDecoder, MaskedEncoder,
                                               TransformerEncoder)
 
 
+def build_embedder(
+    embedding_size: int,
+    mlp_1_layers: list[int],
+    mlp_2_layers: list[int],
+    mlp_act: str,
+    group_size: int,
+    sampling_ratio: int,
+    random_start: bool,
+) -> Embedder:
+    mlp_1 = MLP(mlp_1_layers, act=mlp_act)
+    mlp_2_layers.append(embedding_size)
+    mlp_2 = MLP(mlp_2_layers, act=mlp_act)
+    return Embedder(
+        mlp_1=mlp_1,
+        mlp_2=mlp_2,
+        group_size=group_size,
+        sampling_ratio=sampling_ratio,
+        random_start=random_start,
+    )
+
+
+def build_transformer_block(
+    embedding_size: int,
+    dropout: float,
+    mlp_ratio: int,
+    mlp_act: str,
+    attention_num_heads: int,
+    attention_bias: bool,
+    attention_qkv_bias: bool,
+) -> TransformerBlock:
+    mlp_layers = [embedding_size, int(mlp_ratio * embedding_size), embedding_size]
+    mlp = MLP(
+        mlp_layers,
+        act=mlp_act,
+        norm=None,
+        dropout=dropout,
+    )
+    attention = MultiheadAttention(
+        embed_dim=embedding_size,
+        num_heads=attention_num_heads,
+        add_bias_kv=attention_qkv_bias,
+        bias=attention_bias,
+        dropout=dropout,
+        batch_first=True,
+    )
+    return TransformerBlock(attention, mlp)
+
+
+def build_pos_embedder(mlp_layers: list[int], act: str) -> MLP:
+    return MLP(mlp_layers, act=act, norm=None)
+
+
+def build_masked_encoder(
+    mask_ratio: float,
+    mask_type: str,
+    transformer_encoder: TransformerEncoder,
+    pos_embedder: MLP,
+):
+    return MaskedEncoder(
+        mask_ratio=mask_ratio,
+        mask_type=mask_type,
+        transformer_encoder=transformer_encoder,
+        pos_embedder=pos_embedder,
+    )
+
+
 def build_masked_autoencoder_modules(config):
     embedder_conf = config["model"]["embedder"]
     embedding_size = embedder_conf["embedding_size"]
     group_size = embedder_conf["group_size"]
 
-    mlp_1 = MLP(list(embedder_conf["mlp_1_layers"]), act=embedder_conf["act"])
-    mlp_2_layers = list(embedder_conf["mlp_2_layers"])
-    mlp_2_layers.append(embedding_size)
-    mlp_2 = MLP(mlp_2_layers, act=embedder_conf["act"])
-    embedder = Embedder(
-        mlp_1=mlp_1,
-        mlp_2=mlp_2,
-        group_size=group_size,
-        sampling_ratio=embedder_conf["sampling_ratio"],
-        random_start=embedder_conf["random_start"],
-    )
-
+    embedder = instantiate(config.model.embedder, _convert_="partial")
     model_conf = config["model"]
-
-    attention_conf = model_conf["attention"]
-    block_conf = model_conf["transformer_block"]
     blocks = []
+
     for _ in range(model_conf["encoder_depth"]):
-        mlp = MLP(
-            list(block_conf["mlp_layers"]),
-            act=block_conf["act"],
-            norm=None,
-            dropout=block_conf["dropout"],
+        block = instantiate(
+            config.model.transformer_block, embedding_size=embedding_size
         )
-        attention = MultiheadAttention(
-            embed_dim=embedding_size,
-            num_heads=attention_conf["num_heads"],
-            add_bias_kv=attention_conf["qkv_bias"],
-            dropout=attention_conf["dropout"],
-            bias=attention_conf["bias"],
-            batch_first=True,
-        )
-        blocks.append(TransformerBlock(attention, mlp))
+        blocks.append(block)
 
     blocks = ModuleList(blocks)
-
     transformer_encoder = TransformerEncoder(blocks)
 
-    pos_embedder = MLP(
-        list(model_conf["pos_embedder"]["mlp_layers"]),
-        act=model_conf["pos_embedder"]["act"],
-        norm=None,
-    )
-    masked_encoder = MaskedEncoder(
-        mask_ratio=model_conf["mask_ratio"],
+    pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
+
+    masked_encoder = instantiate(
+        config.model.masked_encoder,
         transformer_encoder=transformer_encoder,
         pos_embedder=pos_embedder,
-        mask_type=model_conf["mask_type"],
     )
 
     blocks = []
     for _ in range(model_conf["decoder_depth"]):
-        mlp = MLP(
-            list(block_conf["mlp_layers"]),
-            act=block_conf["act"],
-            norm=None,
-            dropout=block_conf["dropout"],
+        block = instantiate(
+            config.model.transformer_block, embedding_size=embedding_size
         )
-        attention = MultiheadAttention(
-            embed_dim=embedding_size,
-            num_heads=attention_conf["num_heads"],
-            add_bias_kv=attention_conf["qkv_bias"],
-            dropout=attention_conf["dropout"],
-            bias=attention_conf["bias"],
-            batch_first=True,
-        )
-        blocks.append(TransformerBlock(attention, mlp))
+        blocks.append(block)
 
     blocks = ModuleList(blocks)
-    pos_embedder = MLP(
-        list(model_conf["pos_embedder"]["mlp_layers"]),
-        act=model_conf["pos_embedder"]["act"],
-        norm=None,
-    )
 
+    pos_embedder = instantiate(config.model.pos_embedder)
     transformer_decoder = TransformerDecoder(blocks)
     masked_decoder = MaskedDecoder(transformer_decoder, pos_embedder)
     prediction_head = MaePredictionHead(embedding_size, group_size)
+
     return embedder, masked_encoder, masked_decoder, prediction_head
 
 
