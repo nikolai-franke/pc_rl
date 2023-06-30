@@ -1,4 +1,3 @@
-from pytorch3d.loss import chamfer_distance
 from torch.nn import ModuleList, MultiheadAttention
 from torch_geometric.nn import MLP
 
@@ -11,8 +10,8 @@ from pc_rl.models.modules.transformer import (MaskedDecoder, MaskedEncoder,
                                               TransformerEncoder)
 
 
-def build_masked_autoencoder(config):
-    embedder_conf = config["embedder"]
+def build_masked_autoencoder_modules(config):
+    embedder_conf = config["model"]["embedder"]
     embedding_size = embedder_conf["embedding_size"]
     group_size = embedder_conf["group_size"]
 
@@ -93,15 +92,22 @@ def build_masked_autoencoder(config):
 
     transformer_decoder = TransformerDecoder(blocks)
     masked_decoder = MaskedDecoder(transformer_decoder, pos_embedder)
-
-    loss_function = chamfer_distance
     prediction_head = MaePredictionHead(embedding_size, group_size)
+    return embedder, masked_encoder, masked_decoder, prediction_head
+
+
+def build_masked_autoencoder(config):
+    (
+        embedder,
+        masked_encoder,
+        masked_decoder,
+        prediction_head,
+    ) = build_masked_autoencoder_modules(config)
     masked_autoencoder = MaskedAutoEncoder(
         embedder=embedder,
         encoder=masked_encoder,
         decoder=masked_decoder,
         prediction_head=prediction_head,
-        loss_function=loss_function,
         learning_rate=config["learning_rate"],
     )
 

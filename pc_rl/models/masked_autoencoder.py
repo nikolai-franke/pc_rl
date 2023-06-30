@@ -1,18 +1,16 @@
 import pytorch_lightning as pl
 import torch
+from pytorch3d.loss import chamfer_distance
 from torch import Tensor
 
 
 class MaskedAutoEncoder(pl.LightningModule):
-    def __init__(
-        self, embedder, encoder, decoder, prediction_head, loss_function, learning_rate
-    ):
+    def __init__(self, embedder, encoder, decoder, prediction_head, learning_rate):
         super().__init__()
         self.embedder = embedder
         self.encoder = encoder
         self.decoder = decoder
         self.prediction_head = prediction_head
-        self.loss_function = loss_function
         self.learning_rate = learning_rate
 
     def forward(self, pos: Tensor, batch: Tensor):
@@ -37,8 +35,9 @@ class MaskedAutoEncoder(pl.LightningModule):
         prediction[padding_mask] = 0.0
         ground_truth[padding_mask] = 0.0
 
-        loss = self.loss_function(prediction, ground_truth, point_reduction="sum")[0]
-        self.log("train/loss", loss)
+        loss = chamfer_distance(prediction, ground_truth, point_reduction="sum")[0]
+
+        self.log("train/loss", loss, batch_size=B)
         return loss
 
     def validation_step(self, data, batch_idx):
@@ -63,10 +62,10 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.test_prediction[self.test_padding_mask] = 0.0
         self.test_ground_truth[self.test_padding_mask] = 0.0
 
-        loss = self.loss_function(
+        loss = chamfer_distance(
             self.test_prediction, self.test_ground_truth, point_reduction="sum"
         )[0]
-        self.log("val/loss", loss)
+        self.log("val/loss", loss, batch_size=B)
         return loss
 
     def configure_optimizers(self):

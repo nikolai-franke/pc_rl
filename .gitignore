@@ -1,4 +1,5 @@
 data
+log_data
 outputs
 MAE
 wandb

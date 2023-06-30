@@ -1,7 +1,6 @@
 defaults:
   - _self_
   - dataset: modelnet_40
-  - embedder: default
   - model: mae
 
 batch_size: 128
