@@ -1,0 +1,8 @@
+# mlp_layers: [512, 1536, 512]
+_target_: pc_rl.builder.build_transformer_block
+dropout: 0.1
+mlp_ratio: 3
+mlp_act: gelu
+attention_num_heads: 8
+attention_bias: True
+attention_qkv_bias: False
