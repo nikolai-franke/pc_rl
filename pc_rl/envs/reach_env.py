@@ -1,10 +1,13 @@
 from collections import deque
 
+import numpy as np
 from gymnasium.wrappers.time_limit import TimeLimit
 from sofa_env.scenes.reach.reach_env import (ActionType, ObservationType,
                                              ReachEnv, RenderMode)
 from sofa_env.wrappers.point_cloud import \
     PointCloudFromDepthImageObservationWrapper
+
+from .point_cloud import PointCloud
 
 
 def build_reach_env(max_episode_steps: int = 100):
@@ -13,7 +16,7 @@ def build_reach_env(max_episode_steps: int = 100):
         render_mode=RenderMode.HUMAN,
         action_type=ActionType.DISCRETE,
         observe_target_position=False,
-        image_shape=(480, 480),
+        image_shape=(128, 128),
         frame_skip=1,
         time_step=0.1,
         reward_amount_dict={
@@ -26,6 +29,8 @@ def build_reach_env(max_episode_steps: int = 100):
     )
     env = PointCloudFromDepthImageObservationWrapper(env)
     env = TimeLimit(env, max_episode_steps)
+    env.observation_space = PointCloud(8000, -np.inf, np.inf, feature_shape=(3,))
+
     return env
 
 

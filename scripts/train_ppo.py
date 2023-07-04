@@ -4,22 +4,28 @@ from datetime import datetime
 from pathlib import Path
 
 import hydra
+import numpy as np
 import parllel.logger as logger
 import torch
 from gymnasium.spaces import Discrete
+from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
-from parllel.arrays import buffer_from_example
-from parllel.buffers import AgentSamples, Samples, buffer_method
-from parllel.cages import TrajInfo
+from parllel.arrays import Array, buffer_from_dict_example, buffer_from_example
+from parllel.buffers import (AgentSamples, Buffer, EnvSamples, Samples,
+                             buffer_asarray, buffer_method)
+from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.patterns import (add_advantage_estimation, add_bootstrap_value,
                               add_obs_normalization, add_reward_normalization,
                               build_cages_and_env_buffers)
 from parllel.runners import OnPolicyRunner
 from parllel.samplers.basic import BasicSampler
+from parllel.torch.agents.categorical import CategoricalPgAgent
 from parllel.torch.agents.gaussian import Gaussian, GaussianPgAgent
 from parllel.torch.algos.ppo import (PPO, BatchedDataLoader,
                                      build_dataloader_buffer)
+from parllel.torch.distributions import Categorical
 from parllel.torch.handler import TorchHandler
+from parllel.torch.utils import buffer_to_device, torchify_buffer
 from parllel.transforms import Compose
 from parllel.types import BatchSpec
 from torch.nn import ModuleList, MultiheadAttention
@@ -28,7 +34,8 @@ from torch_geometric.nn import MLP
 import wandb
 from pc_rl.envs.reach_env import build_reach_env
 from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.modules.transformer import (MaskedEncoder, TransformerBlock,
+from pc_rl.models.modules.transformer import (FinetuneEncoder, MaskedEncoder,
+                                              TransformerBlock,
                                               TransformerEncoder)
 from pc_rl.models.pg_model import PgModel
 
@@ -36,99 +43,164 @@ from pc_rl.models.pg_model import PgModel
 @contextmanager
 def build(config: DictConfig):
     # Parllel
-    batch_spec = BatchSpec(128, 2)
-    TrajInfo.set_discount(0.99)
-    parallel = False
+    parallel = config["parallel"]
+    storage = "shared" if parallel else "local"
+    discount = config["algo"]["discount"]
+    batch_spec = BatchSpec(config["batch_T"], config["batch_B"])
+    TrajInfo.set_discount(discount)
+    CageCls = ProcessCage if parallel else SerialCage
 
-    cages, batch_action, batch_env = build_cages_and_env_buffers(
+    cage_kwargs = dict(
         EnvClass=build_reach_env,
         env_kwargs={},
         TrajInfoClass=TrajInfo,
         reset_automatically=True,
-        batch_spec=batch_spec,
-        parallel=parallel,
     )
+    example_cage = CageCls(**cage_kwargs)
+    example_cage.random_step_async()
+    action, obs, reward, terminated, truncated, info = example_cage.await_step()
+
+    spaces = example_cage.spaces
+    obs_space, action_space = spaces.observation, spaces.action
+
+    example_cage.close()
+
+    # allocate batch buffer based on examples
+    np_obs = np.asanyarray(obs)
+    if (dtype := np_obs.dtype) == np.float64:
+        dtype = np.float32
+    elif dtype == np.int64:
+        dtype = np.int32
+
+    batch_observation = Array(
+        shape=(8000, 3),
+        dtype=dtype,
+        batch_shape=tuple(batch_spec),
+        kind="jagged",
+        storage=storage,
+        padding=1,
+    )
+    # in case environment creates rewards of shape (1,) or of integer type,
+    # force to be correct shape and type
+    batch_reward = buffer_from_dict_example(
+        reward,
+        tuple(batch_spec),
+        name="reward",
+        shape=(),
+        dtype=np.float32,
+        storage=storage,
+    )
+    batch_terminated = buffer_from_example(
+        terminated,
+        tuple(batch_spec),
+        shape=(),
+        dtype=bool,
+        storage=storage,
+    )
+    batch_truncated = buffer_from_example(
+        truncated,
+        tuple(batch_spec),
+        shape=(),
+        dtype=bool,
+        storage=storage,
+    )
+    batch_done = buffer_from_example(
+        truncated,
+        tuple(batch_spec),
+        shape=(),
+        dtype=bool,
+        storage=storage,
+        padding=1,
+    )
+    batch_info = buffer_from_dict_example(
+        info, tuple(batch_spec), name="envinfo", storage=storage, padding=1
+    )
+    batch_env = EnvSamples(
+        batch_observation,
+        batch_reward,
+        batch_done,
+        batch_terminated,
+        batch_truncated,
+        batch_info,
+    )
+
+    batch_action = buffer_from_dict_example(
+        action,
+        tuple(batch_spec),
+        name="action",
+        force_32bit="float",
+        storage=storage,
+    )
+
+    cage_kwargs["buffers"] = (
+            batch_action,
+            batch_observation,
+            batch_reward,
+            batch_done,
+            batch_terminated,
+            batch_truncated,
+            batch_info,
+            )
+    logger.debug(f"Instantiating {batch_spec.B} environments...")
+    cages = [CageCls(**cage_kwargs) for _ in range(batch_spec.B)]
+    logger.debug("Environments instantiated.")
 
     spaces = cages[0].spaces
     obs_space, action_space = spaces.observation, spaces.action
+
     n_actions = action_space.n
-    distribution = Gaussian(dim=n_actions)  # type: ignore
-    device = torch.device("cpu")
+    distribution = Categorical(dim=n_actions)  # type: ignore
 
-    embedder_conf = config["embedder"]
-    embedding_size = embedder_conf["embedding_size"]
-    group_size = embedder_conf["group_size"]
+    device = config["device"] or ("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device(device)
 
-    mlp_1 = MLP(list(embedder_conf["mlp_1_layers"]), act=embedder_conf["act"])
-    mlp_2_layers = list(embedder_conf["mlp_2_layers"])
-    mlp_2_layers.append(embedding_size)
-    mlp_2 = MLP(mlp_2_layers, act=embedder_conf["act"])
-    embedder = Embedder(
-        mlp_1=mlp_1,
-        mlp_2=mlp_2,
-        group_size=group_size,
-        sampling_ratio=embedder_conf["sampling_ratio"],
-        random_start=embedder_conf["random_start"],
-    )
+    embedder_conf = config.model.embedder
+    embedding_size = embedder_conf.embedding_size
+    group_size = embedder_conf.group_size
+
+    embedder = instantiate(config.model.embedder, _convert_="partial")
 
     model_conf = config["model"]
-    attention_conf = model_conf["attention"]
-    block_conf = model_conf["transformer_block"]
     blocks = []
     for _ in range(model_conf["encoder_depth"]):
-        mlp = MLP(
-            list(block_conf["mlp_layers"]),
-            act=block_conf["act"],
-            norm=None,
-            dropout=block_conf["dropout"],
+        block = instantiate(
+            config.model.transformer_block, embedding_size=embedding_size
         )
-        attention = MultiheadAttention(
-            embed_dim=embedding_size,
-            num_heads=attention_conf["num_heads"],
-            add_bias_kv=attention_conf["qkv_bias"],
-            dropout=attention_conf["dropout"],
-            bias=attention_conf["bias"],
-            batch_first=True,
-        )
-        blocks.append(TransformerBlock(attention, mlp))
+        blocks.append(block)
 
     blocks = ModuleList(blocks)
-
     transformer_encoder = TransformerEncoder(blocks)
 
-    pos_embedder = MLP(
-        list(model_conf["pos_embedder"]["mlp_layers"]),
-        act=model_conf["pos_embedder"]["act"],
-        norm=None,
+    pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
+    mlp_head = MLP(
+        channel_list=[2 * embedding_size, 512, 1024], act="relu", norm="layer_norm"
     )
-    masked_encoder = MaskedEncoder(
-        mask_ratio=model_conf["mask_ratio"],
+    encoder = FinetuneEncoder(
         transformer_encoder=transformer_encoder,
         pos_embedder=pos_embedder,
+        mlp_head=mlp_head,
     )
 
     rl_model_conf = model_conf["rl_model"]
 
     pg_model = PgModel(
         embedder=embedder,
-        encoder=masked_encoder,
-        decoder=None,
+        encoder=encoder,
         n_actions=n_actions,
         mlp_hidden_sizes=list(rl_model_conf["mlp_layers"]),
         mlp_act=torch.nn.Tanh,
     )
 
-    agent = GaussianPgAgent(
+    batch_env.observation[0] = obs_space.sample().pos
+    example_obs = batch_env.observation[0]
+
+    agent = CategoricalPgAgent(
         model=pg_model,
         distribution=distribution,
-        observation_space=obs_space,
-        action_space=action_space,
+        example_obs=example_obs,
         device=device,
     )
     agent = TorchHandler(agent)
-
-    batch_env.observation[0] = obs_space.sample()
-    example_obs = batch_env.observation[0]
 
     _, agent_info = agent.step(example_obs)
     storage = "shared" if parallel else "local"
@@ -139,24 +211,19 @@ def build(config: DictConfig):
     batch_buffer = add_bootstrap_value(batch_buffer)
     batch_transforms, step_transforms = [], []
 
-    batch_buffer, step_transforms = add_obs_normalization(
-        batch_buffer,
-        step_transforms,
-        initial_count=10_000,
-    )
-
     batch_buffer, batch_transforms = add_reward_normalization(
         batch_buffer,
         batch_transforms,
-        discount=0.99,
+        discount=discount,
     )
+    algo_config = config["algo"]
 
     batch_buffer, batch_transforms = add_advantage_estimation(
         batch_buffer,
         batch_transforms,
-        discount=0.99,
-        gae_lambda=0.95,
-        normalize=True,
+        discount=discount,
+        gae_lambda=algo_config["gae_lambda"],
+        normalize=algo_config["normalize_advantage"],
     )
 
     sampler = BasicSampler(
@@ -164,7 +231,7 @@ def build(config: DictConfig):
         envs=cages,
         agent=agent,
         sample_buffer=batch_buffer,
-        max_steps_decorrelate=20,
+        max_steps_decorrelate=config["max_steps_decorrelate"],
         get_bootstrap_value=True,
         obs_transform=Compose(step_transforms),
         batch_transform=Compose(batch_transforms),
@@ -172,26 +239,44 @@ def build(config: DictConfig):
 
     dataloader_buffer = build_dataloader_buffer(batch_buffer)
 
+    def batch_transform(x: Buffer):
+        x = buffer_asarray(x)
+        x = torchify_buffer(x)
+        return buffer_to_device(x, device=device)
+
     dataloader = BatchedDataLoader(
         buffer=dataloader_buffer,
         sampler_batch_spec=batch_spec,
-        n_batches=4,
+        batch_transform=batch_transform,
+        n_batches=algo_config["minibatches"],
     )
 
     optimizer = torch.optim.Adam(
         agent.model.parameters(),
-        lr=1e-5,
+        lr=algo_config["learning_rate"],
     )
 
-    algorithm = PPO(agent=agent, dataloader=dataloader, optimizer=optimizer)
+    algorithm = PPO(
+        agent=agent,
+        dataloader=dataloader,
+        optimizer=optimizer,
+        learning_rate_scheduler=algo_config["learning_rate_scheduler"],
+        value_loss_coeff=algo_config["value_loss_coeff"],
+        entropy_loss_coeff=algo_config["entropy_loss_coeff"],
+        clip_grad_norm=algo_config["clip_grad_norm"],
+        epochs=algo_config["epochs"],
+        ratio_clip=algo_config["ratio_clip"],
+        value_clipping_mode=algo_config["value_clipping_mode"],
+    )
+    runner_config = config["runner"]
 
     runner = OnPolicyRunner(
         sampler=sampler,
         agent=agent,
         algorithm=algorithm,
         batch_spec=batch_spec,
-        n_steps=102_400,
-        log_interval_steps=10_240,
+        n_steps=runner_config["n_steps"],
+        log_interval_steps=runner_config["log_interval_steps"],
     )
     try:
         yield runner
@@ -205,13 +290,12 @@ def build(config: DictConfig):
         buffer_method(batch_buffer, "destroy")
 
 
-@hydra.main(version_base=None, config_path="../conf", config_name="ppo")
+@hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")
 def main(config: DictConfig):
     mp.set_start_method("fork")
 
     run = wandb.init(
         anonymous="must",
-        mode="disabled",
         project="pc_rl",
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
         sync_tensorboard=True,
@@ -232,7 +316,7 @@ def main(config: DictConfig):
     )
     with build(config) as runner:
         runner.run()
-    run.finis()
+    run.finish()
 
 
 if __name__ == "__main__":

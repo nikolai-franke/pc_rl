@@ -1,14 +1,15 @@
 defaults:
   - attention: default
   - pos_embedder : default
-mask_ratio: 0.0
-transformer_block:
-  mlp_layers: [512, 1536, 512]
-  act: gelu
-  dropout: 0.1
-encoder_depth: 12
-decoder_depth: 6
+  - embedder: default
+  - transformer_block: default
+masked_encoder:
+  _target_: pc_rl.builder.build_masked_encoder
+  mask_ratio: 0.0
+  mask_type: rand
 rl_model:
   act: relu
-  mlp_layers: [512, 512]
+  mlp_layers: [256, 128]
   init_log_std: 0.0
+encoder_depth: 8
+decoder_depth: 4

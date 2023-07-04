@@ -1,0 +1,15 @@
+defaults:
+  - _self_
+  - algo: ppo
+  - model: ppo
+
+parallel: True
+batch_T: 256
+batch_B: 16
+reward_clip_min: -5
+reward_clip_max: 5
+max_steps_decorrelate: 20
+device: null
+runner:
+  n_steps: 8388608
+  log_interval_steps: 4096

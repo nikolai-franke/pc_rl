@@ -86,7 +86,7 @@ class MaskedEncoder(nn.Module):
     def __init__(
         self,
         mask_ratio: float,
-        transformer_encoder: Callable[[Tensor, Tensor, Tensor], Tensor],
+        transformer_encoder: TransformerEncoder,
         pos_embedder: Callable[[Tensor], Tensor],
         mask_type: str = "rand",  # TODO:check if we need different mask_types
         padding_value: float = 0.0,
@@ -144,7 +144,7 @@ class MaskedEncoder(nn.Module):
     def _mask_center_rand(self, center, padding_mask, noaug=False):
         B, G, _ = center.shape
         if noaug or self.mask_ratio == 0:
-            return torch.ones(center.shape[:2]).bool()
+            return torch.zeros(center.shape[:2]).bool()
 
         # count how many center points are paddings in each batch
         num_padding_tokens = torch.count_nonzero(padding_mask, dim=-1)
@@ -200,8 +200,8 @@ class MaskedEncoder(nn.Module):
 class MaskedDecoder(nn.Module):
     def __init__(
         self,
-        transformer_decoder: Callable[[Tensor, Tensor, int, Optional[Tensor]], Tensor],
-        pos_embedder: Callable[[Tensor], Tensor],
+        transformer_decoder: TransformerDecoder,
+        pos_embedder: nn.Module,
         padding_value: float = 0.0,
     ):
         super().__init__()
@@ -240,3 +240,31 @@ class MaskedDecoder(nn.Module):
         )
 
         return x_recovered, padding_mask
+
+
+class FinetuneEncoder(nn.Module):
+    def __init__(
+        self,
+        transformer_encoder: TransformerEncoder,
+        pos_embedder: nn.Module,
+        mlp_head: nn.Module,
+    ) -> None:
+        super().__init__()
+        self.transformer_encoder = transformer_encoder
+        self.pos_embedder = pos_embedder
+        self.mlp_head = mlp_head
+        self.dim = self.transformer_encoder.dim
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, self.dim))  # type: ignore
+        self.cls_pos = nn.Parameter(torch.randn(1, 1, self.dim))  # type: ignore
+        self.norm = nn.LayerNorm(self.dim)  # type: ignore
+
+    def forward(self, x, center_points):
+        cls_tokens = self.cls_token.expand(x.shape[0], -1, -1)
+        cls_pos = self.cls_pos.expand(x.shape[0], -1, -1)
+        pos = self.pos_embedder(center_points)
+        pos = torch.cat((cls_pos, pos), dim=1)
+        x = torch.cat((cls_tokens, x), dim=1)
+        x = self.norm(x)
+        concat_f = torch.cat([x[:, 0], x[:, 1:].max(1)[0]], dim=-1)
+        out = self.mlp_head(concat_f)
+        return out
