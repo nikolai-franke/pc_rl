@@ -1,5 +1,0 @@
-defaults:
-  - _self_
-  - embedder: default
-  - model: ppo
-
