@@ -7,7 +7,6 @@ import hydra
 import numpy as np
 import parllel.logger as logger
 import torch
-from gymnasium.spaces import Discrete
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from parllel.arrays import Array, buffer_from_dict_example, buffer_from_example
@@ -15,12 +14,10 @@ from parllel.buffers import (AgentSamples, Buffer, EnvSamples, Samples,
                              buffer_asarray, buffer_method)
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.patterns import (add_advantage_estimation, add_bootstrap_value,
-                              add_obs_normalization, add_reward_normalization,
-                              build_cages_and_env_buffers)
+                              add_reward_normalization)
 from parllel.runners import OnPolicyRunner
 from parllel.samplers.basic import BasicSampler
 from parllel.torch.agents.categorical import CategoricalPgAgent
-from parllel.torch.agents.gaussian import Gaussian, GaussianPgAgent
 from parllel.torch.algos.ppo import (PPO, BatchedDataLoader,
                                      build_dataloader_buffer)
 from parllel.torch.distributions import Categorical
@@ -28,14 +25,12 @@ from parllel.torch.handler import TorchHandler
 from parllel.torch.utils import buffer_to_device, torchify_buffer
 from parllel.transforms import Compose
 from parllel.types import BatchSpec
-from torch.nn import ModuleList, MultiheadAttention
+from torch.nn import ModuleList
 from torch_geometric.nn import MLP
 
 import wandb
 from pc_rl.envs.reach_env import build_reach_env
-from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.modules.transformer import (FinetuneEncoder, MaskedEncoder,
-                                              TransformerBlock,
+from pc_rl.models.modules.transformer import (FinetuneEncoder,
                                               TransformerEncoder)
 from pc_rl.models.pg_model import PgModel
 
@@ -133,14 +128,14 @@ def build(config: DictConfig):
     )
 
     cage_kwargs["buffers"] = (
-            batch_action,
-            batch_observation,
-            batch_reward,
-            batch_done,
-            batch_terminated,
-            batch_truncated,
-            batch_info,
-            )
+        batch_action,
+        batch_observation,
+        batch_reward,
+        batch_done,
+        batch_terminated,
+        batch_truncated,
+        batch_info,
+    )
     logger.debug(f"Instantiating {batch_spec.B} environments...")
     cages = [CageCls(**cage_kwargs) for _ in range(batch_spec.B)]
     logger.debug("Environments instantiated.")
