@@ -16,9 +16,9 @@ class FinetuneEncoder(nn.Module):
         self.pos_embedder = pos_embedder
         self.mlp_head = mlp_head
         self.dim = self.transformer_encoder.dim
-        self.cls_token = nn.Parameter(torch.zeros(1, 1, self.dim))  # type: ignore
-        self.cls_pos = nn.Parameter(torch.randn(1, 1, self.dim))  # type: ignore
-        self.norm = nn.LayerNorm(self.dim)  # type: ignore
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, self.dim))
+        self.cls_pos = nn.Parameter(torch.randn(1, 1, self.dim))
+        self.norm = nn.LayerNorm(self.dim)
 
     def forward(self, x, center_points):
         cls_tokens = self.cls_token.expand(x.shape[0], -1, -1)
