@@ -1,9 +1,9 @@
-from typing import Callable, Optional, Tuple
+from typing import Optional, Tuple
 
 import torch
 from torch import Tensor
 from torch.nn.utils.rnn import pad_sequence
-from torch_geometric.nn import fps, knn
+from torch_geometric.nn import MLP, fps, knn
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.inits import reset
 from torch_geometric.utils import unbatch
@@ -12,8 +12,8 @@ from torch_geometric.utils import unbatch
 class Embedder(MessagePassing):
     def __init__(
         self,
-        mlp_1: Callable[[Tensor], Tensor],
-        mlp_2: Callable[[Tensor], Tensor],
+        mlp_1: MLP,
+        mlp_2: MLP,
         group_size: int,
         sampling_ratio: float,
         random_start: bool = True,

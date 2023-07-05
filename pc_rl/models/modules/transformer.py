@@ -1,31 +1,33 @@
-from typing import Callable, Optional, Type
-
 import torch
 import torch.nn as nn
-from torch import Tensor
 from torch.nn import MultiheadAttention
-from torch_geometric.nn import MLP
 
 
 class TransformerBlock(nn.Module):
     def __init__(
         self,
         attention: MultiheadAttention,
-        mlp: MLP,  # TODO: maybe we can allow a more general type and replace the assertion
-        NormLayer: Type[nn.Module] = nn.LayerNorm,
+        mlp: nn.Module,
+        NormLayer: type[nn.Module] = nn.LayerNorm,
     ) -> None:
         super().__init__()
         self.attention = attention
         self.dim = self.attention.embed_dim
         self.mlp = mlp
-        # the first and last channel of the mlp must have the same size as the attention layer
-        assert (
-            self.mlp.channel_list[0] == self.dim
-            and self.mlp.channel_list[-1] == self.dim
-        )
-
         self.norm_1 = NormLayer(self.dim)
         self.norm_2 = NormLayer(self.dim)
+        self._check_mlp()
+
+    def _check_mlp(self):
+        with torch.no_grad():
+            input = torch.randn((self.dim,))
+            try:
+                out = self.mlp(input)
+                out = self.norm_1(out)
+            except RuntimeError as e:
+                raise ValueError(
+                    f"The first and the layer of the MLP must have the same size as the embedding_dim: {self.dim}"
+                ) from e
 
     def forward(self, x, padding_mask=None):
         x = self.norm_1(x)
@@ -41,10 +43,10 @@ class TransformerBlock(nn.Module):
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, blocks: nn.ModuleList) -> None:
+    def __init__(self, blocks: list[TransformerBlock]) -> None:
         super().__init__()
-        self.blocks = blocks
-        self.dim = self.blocks[0].dim
+        self.dim = blocks[0].dim
+        self.blocks = nn.ModuleList(blocks)
 
     def forward(self, x, pos, padding_mask=None):
         for block in self.blocks:
@@ -55,12 +57,12 @@ class TransformerEncoder(nn.Module):
 class TransformerDecoder(nn.Module):
     def __init__(
         self,
-        blocks: nn.ModuleList,
-        NormLayer: Type[nn.Module] = nn.LayerNorm,
+        blocks: list[TransformerBlock],
+        NormLayer: type[nn.Module] = nn.LayerNorm,
     ) -> None:
         super().__init__()
-        self.blocks = blocks
-        self.dim = self.blocks[0].dim
+        self.dim = blocks[0].dim
+        self.blocks = nn.ModuleList(blocks)
         self.norm = NormLayer(self.dim)
 
         self.apply(self._init_weights)
@@ -87,7 +89,7 @@ class MaskedEncoder(nn.Module):
         self,
         mask_ratio: float,
         transformer_encoder: TransformerEncoder,
-        pos_embedder: Callable[[Tensor], Tensor],
+        pos_embedder: nn.Module,
         mask_type: str = "rand",  # TODO:check if we need different mask_types
         padding_value: float = 0.0,
     ) -> None:
@@ -96,14 +98,22 @@ class MaskedEncoder(nn.Module):
         self.mask_type = mask_type
         self.pos_embedder = pos_embedder
         self.transformer_encoder = transformer_encoder
-        assert hasattr(
-            self.transformer_encoder, "dim"
-        ), f"Encoder {self.transformer_encoder} does not have a 'dim' attribute "
         self.embedding_dim = self.transformer_encoder.dim
         self.padding_token = nn.Parameter(torch.full((1, 3), padding_value))
         self.norm = nn.LayerNorm(self.embedding_dim)
-
+        self._check_pos_embedder()
         self.apply(self._init_weights)
+
+    def _check_pos_embedder(self):
+        with torch.no_grad():
+            input = torch.randn((self.embedding_dim,))
+            try:
+                out = self.pos_embedder(input)
+                out = self.norm(out)
+            except RuntimeError as e:
+                raise ValueError(
+                    f"The first and the layer of the pos_embedder must have the same size as the embedding_dim: {self.embedding_dim}"
+                ) from e
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
