@@ -40,7 +40,7 @@ def build_transformer_block(
     attention_bias: bool,
     attention_qkv_bias: bool,
 ) -> TransformerBlock:
-    mlp_layers = [embedding_size, int(mlp_ratio * embedding_size), 15]
+    mlp_layers = [embedding_size, int(mlp_ratio * embedding_size), embedding_size]
     mlp = MLP(
         mlp_layers,
         act=mlp_act,
