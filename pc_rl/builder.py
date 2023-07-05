@@ -41,7 +41,7 @@ def build_transformer_block(
     attention_bias: bool,
     attention_qkv_bias: bool,
 ) -> TransformerBlock:
-    mlp_layers = [embedding_size, int(mlp_ratio * embedding_size), embedding_size]
+    mlp_layers = [embedding_size, int(mlp_ratio * embedding_size), 15]
     mlp = MLP(
         mlp_layers,
         act=mlp_act,
@@ -92,7 +92,6 @@ def build_masked_autoencoder_modules(config):
         )
         blocks.append(block)
 
-    blocks = ModuleList(blocks)
     transformer_encoder = TransformerEncoder(blocks)
 
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
@@ -110,7 +109,6 @@ def build_masked_autoencoder_modules(config):
         )
         blocks.append(block)
 
-    blocks = ModuleList(blocks)
 
     pos_embedder = instantiate(config.model.pos_embedder)
     transformer_decoder = TransformerDecoder(blocks)
