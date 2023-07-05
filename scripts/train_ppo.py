@@ -25,13 +25,12 @@ from parllel.torch.handler import TorchHandler
 from parllel.torch.utils import buffer_to_device, torchify_buffer
 from parllel.transforms import Compose
 from parllel.types import BatchSpec
-from torch.nn import ModuleList
 from torch_geometric.nn import MLP
 
 import wandb
 from pc_rl.envs.reach_env import build_reach_env
-from pc_rl.models.modules.transformer import (FinetuneEncoder,
-                                              TransformerEncoder)
+from pc_rl.models.modules.transformer import TransformerEncoder
+from pc_rl.models.modules.finetune_encoder import FinetuneEncoder
 from pc_rl.models.pg_model import PgModel
 
 
@@ -163,7 +162,6 @@ def build(config: DictConfig):
         )
         blocks.append(block)
 
-    blocks = ModuleList(blocks)
     transformer_encoder = TransformerEncoder(blocks)
 
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
