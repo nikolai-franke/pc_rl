@@ -1,14 +1,13 @@
 from hydra.utils import instantiate
-from torch.nn import ModuleList, MultiheadAttention
+from torch.nn import MultiheadAttention
 from torch_geometric.nn import MLP
 
 from pc_rl.models.masked_autoencoder import MaskedAutoEncoder
 from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.modules.prediction_head import MaePredictionHead
-from pc_rl.models.modules.transformer import (MaskedDecoder, MaskedEncoder,
-                                              TransformerBlock,
+from pc_rl.models.modules.transformer import (TransformerBlock,
                                               TransformerDecoder,
                                               TransformerEncoder)
+from pc_rl.models.modules.mae import MaskedEncoder, MaskedDecoder, PredictionHead
 
 
 def build_embedder(
@@ -109,11 +108,10 @@ def build_masked_autoencoder_modules(config):
         )
         blocks.append(block)
 
-
     pos_embedder = instantiate(config.model.pos_embedder)
     transformer_decoder = TransformerDecoder(blocks)
     masked_decoder = MaskedDecoder(transformer_decoder, pos_embedder)
-    prediction_head = MaePredictionHead(embedding_size, group_size)
+    prediction_head = PredictionHead(embedding_size, group_size)
 
     return embedder, masked_encoder, masked_decoder, prediction_head
 
