@@ -3,6 +3,7 @@ log_data
 outputs
 MAE
 wandb
+*.csv
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
