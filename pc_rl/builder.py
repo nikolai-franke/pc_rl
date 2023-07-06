@@ -1,13 +1,22 @@
+from collections.abc import Callable
+import torch
+
+import torch.nn as nn
 from hydra.utils import instantiate
+from parllel.torch.models import MlpModel
 from torch.nn import MultiheadAttention
 from torch_geometric.nn import MLP
+from torch_geometric.nn.resolver import activation_resolver
 
+from pc_rl.models.categorical_pg_model import CategoricalPgModel
 from pc_rl.models.masked_autoencoder import MaskedAutoEncoder
 from pc_rl.models.modules.embedder import Embedder
+from pc_rl.models.modules.finetune_encoder import FinetuneEncoder
+from pc_rl.models.modules.mae import (MaskedDecoder, MaskedEncoder,
+                                      PredictionHead)
 from pc_rl.models.modules.transformer import (TransformerBlock,
                                               TransformerDecoder,
                                               TransformerEncoder)
-from pc_rl.models.modules.mae import MaskedEncoder, MaskedDecoder, PredictionHead
 
 
 def build_embedder(
@@ -58,7 +67,21 @@ def build_transformer_block(
     return TransformerBlock(attention, mlp)
 
 
-def build_pos_embedder(mlp_layers: list[int], act: str) -> MLP:
+def build_transformer_encoder(
+    transformer_block_factory: Callable[[], TransformerBlock], depth: int
+):
+    blocks = [transformer_block_factory() for _ in range(depth)]
+    return TransformerEncoder(blocks)
+
+
+def build_transformer_decoder(
+    transformer_block_factory: Callable[[], TransformerBlock], depth: int
+):
+    blocks = [transformer_block_factory() for _ in range(depth)]
+    return TransformerDecoder(blocks)
+
+
+def build_pos_embedder(mlp_layers: list[int], act: type[nn.Module] | str) -> MLP:
     return MLP(mlp_layers, act=act, norm=None)
 
 
@@ -73,6 +96,58 @@ def build_masked_encoder(
         mask_type=mask_type,
         transformer_encoder=transformer_encoder,
         pos_embedder=pos_embedder,
+    )
+
+
+def build_categorical_pg_model(
+    embedder: Embedder,
+    finetune_encoder: FinetuneEncoder,
+    n_actions: int,
+    pi_mlp_hidden_sizes: list[int],
+    pi_mlp_act: type[nn.Module] | str,
+    value_mlp_hidden_sizes: list[int],
+    value_mlp_act: type[nn.Module] | str,
+):
+    input_size = finetune_encoder.out_dim
+
+    pi_mlp = MlpModel(
+        input_size=input_size,
+        hidden_sizes=pi_mlp_hidden_sizes,
+        # hidden_nonlinearity=activation_resolver(pi_mlp_act),
+        hidden_nonlinearity=torch.nn.Tanh,
+        output_size=n_actions,
+    )
+
+    value_mlp = MlpModel(
+        input_size=input_size,
+        hidden_sizes=value_mlp_hidden_sizes,
+        hidden_nonlinearity=torch.nn.Tanh,
+        output_size=1,
+    )
+
+    return CategoricalPgModel(
+        embedder=embedder,
+        encoder=finetune_encoder,
+        pi_mlp=pi_mlp,
+        value_mlp=value_mlp,
+    )
+
+
+def build_finetune_encoder(
+    transformer_encoder: TransformerEncoder,
+    pos_embedder: nn.Module,
+    mlp_head_hidden_sizes: list[int],
+    mlp_head_out_size: int,
+    mlp_head_act: type[nn.Module] | str,
+):
+    mlp_head_sizes = [2 * transformer_encoder.dim] + mlp_head_hidden_sizes
+    mlp_head_sizes.append(mlp_head_out_size)
+    mlp_head = MLP(channel_list=mlp_head_sizes, act=mlp_head_act, norm="layer_norm")
+
+    return FinetuneEncoder(
+        transformer_encoder=transformer_encoder,
+        pos_embedder=pos_embedder,
+        mlp_head=mlp_head,
     )
 
 

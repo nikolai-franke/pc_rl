@@ -14,11 +14,29 @@ class FinetuneEncoder(nn.Module):
         super().__init__()
         self.transformer_encoder = transformer_encoder
         self.pos_embedder = pos_embedder
-        self.mlp_head = mlp_head
         self.dim = self.transformer_encoder.dim
+        self.norm = nn.LayerNorm(self.dim)
+        self.mlp_head = mlp_head
+        self._check_mlp_head()
+        self.out_dim = self._get_out_dim()
         self.cls_token = nn.Parameter(torch.zeros(1, 1, self.dim))
         self.cls_pos = nn.Parameter(torch.randn(1, 1, self.dim))
-        self.norm = nn.LayerNorm(self.dim)
+
+    def _check_mlp_head(self):
+        with torch.no_grad():
+            input = torch.randn((2 * self.dim,))
+            try:
+                self.mlp_head(input)
+            except RuntimeError as e:
+                raise ValueError(
+                        f"The first layer of the MLP head must have size 2 * embedding_size: {2 * self.dim}"
+                ) from e
+
+    def _get_out_dim(self):
+        with torch.no_grad():
+            input = torch.randn((2 * self.dim,))
+            out = self.mlp_head(input)
+        return out.shape[-1]
 
     def forward(self, x, center_points):
         cls_tokens = self.cls_token.expand(x.shape[0], -1, -1)

@@ -1,14 +1,15 @@
 defaults:
   - _self_
   - algo: ppo
-  - model: ppo
+  - model: ppo_discrete
+  - env: reach
 
 parallel: True
-batch_T: 256
-batch_B: 16
+batch_T: 128
+batch_B: 8
 reward_clip_min: -5
 reward_clip_max: 5
-max_steps_decorrelate: 20
+max_steps_decorrelate: 0
 device: null
 runner:
   n_steps: 8388608

@@ -6,7 +6,6 @@ from pathlib import Path
 import hydra
 import numpy as np
 import parllel.logger as logger
-from parllel.logger import Verbosity
 import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
@@ -14,6 +13,7 @@ from parllel.arrays import Array, buffer_from_dict_example, buffer_from_example
 from parllel.buffers import (AgentSamples, Buffer, EnvSamples, Samples,
                              buffer_asarray, buffer_method)
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
+from parllel.logger import Verbosity
 from parllel.patterns import (add_advantage_estimation, add_bootstrap_value,
                               add_reward_normalization)
 from parllel.runners import OnPolicyRunner
@@ -26,13 +26,8 @@ from parllel.torch.handler import TorchHandler
 from parllel.torch.utils import buffer_to_device, torchify_buffer
 from parllel.transforms import Compose
 from parllel.types import BatchSpec
-from torch_geometric.nn import MLP
 
 import wandb
-from pc_rl.models.modules.transformer import TransformerEncoder
-from pc_rl.models.modules.finetune_encoder import FinetuneEncoder
-from pc_rl.models.categorical_pg_model import CategoricalPgModel
-from hydra.utils import instantiate
 
 
 @contextmanager
@@ -153,38 +148,29 @@ def build(config: DictConfig):
 
     embedder_conf = config.model.embedder
     embedding_size = embedder_conf.embedding_size
-    group_size = embedder_conf.group_size
 
-    embedder = instantiate(config.model.embedder, _convert_="partial")
-
-    model_conf = config["model"]
-    blocks = []
-    for _ in range(model_conf["encoder_depth"]):
-        block = instantiate(
-            config.model.transformer_block, embedding_size=embedding_size
-        )
-        blocks.append(block)
-
-    transformer_encoder = TransformerEncoder(blocks)
+    transformer_block_factory = instantiate(
+        config.model.transformer_block, embedding_size=embedding_size, _partial_=True
+    )
+    transformer_encoder = instantiate(
+        config.model.transformer_encoder,
+        transformer_block_factory=transformer_block_factory,
+    )
 
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
-    mlp_head = MLP(
-        channel_list=[2 * embedding_size, 512, 1024], act="relu", norm="layer_norm"
-    )
-    encoder = FinetuneEncoder(
+    embedder = instantiate(config.model.embedder, _convert_="partial")
+
+    finetune_encoder = instantiate(
+        config.model.finetune_encoder,
+        _convert_="partial",
         transformer_encoder=transformer_encoder,
         pos_embedder=pos_embedder,
-        mlp_head=mlp_head,
     )
-
-    rl_model_conf = model_conf["rl_model"]
-
-    pg_model = CategoricalPgModel(
+    pg_model = instantiate(
+        config.model.rl_model,
         embedder=embedder,
-        encoder=encoder,
+        finetune_encoder=finetune_encoder,
         n_actions=n_actions,
-        mlp_hidden_sizes=list(rl_model_conf["mlp_layers"]),
-        mlp_act=torch.nn.Tanh,
     )
 
     # batch_env.observation[0] = obs_space.sample().pos
