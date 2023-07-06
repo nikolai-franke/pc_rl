@@ -7,7 +7,7 @@ from parllel.torch.models import MlpModel
 from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 
 
-class PgModel(nn.Module):
+class CategoricalPgModel(nn.Module):
     def __init__(
         self,
         embedder: nn.Module,
