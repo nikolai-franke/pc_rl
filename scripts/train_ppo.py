@@ -6,6 +6,7 @@ from pathlib import Path
 import hydra
 import numpy as np
 import parllel.logger as logger
+from parllel.logger import Verbosity
 import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
@@ -28,10 +29,10 @@ from parllel.types import BatchSpec
 from torch_geometric.nn import MLP
 
 import wandb
-from pc_rl.envs.reach_env import build_reach_env
 from pc_rl.models.modules.transformer import TransformerEncoder
 from pc_rl.models.modules.finetune_encoder import FinetuneEncoder
-from pc_rl.models.pg_model import PgModel
+from pc_rl.models.categorical_pg_model import CategoricalPgModel
+from hydra.utils import instantiate
 
 
 @contextmanager
@@ -44,8 +45,10 @@ def build(config: DictConfig):
     TrajInfo.set_discount(discount)
     CageCls = ProcessCage if parallel else SerialCage
 
+    EnvClass = instantiate(config["env"], _convert_="object", _partial_=True)
+
     cage_kwargs = dict(
-        EnvClass=build_reach_env,
+        EnvClass=EnvClass,
         env_kwargs={},
         TrajInfoClass=TrajInfo,
         reset_automatically=True,
@@ -67,7 +70,7 @@ def build(config: DictConfig):
         dtype = np.int32
 
     batch_observation = Array(
-        shape=(8000, 3),
+        shape=(128 * 128, 3),
         dtype=dtype,
         batch_shape=tuple(batch_spec),
         kind="jagged",
@@ -176,7 +179,7 @@ def build(config: DictConfig):
 
     rl_model_conf = model_conf["rl_model"]
 
-    pg_model = PgModel(
+    pg_model = CategoricalPgModel(
         embedder=embedder,
         encoder=encoder,
         n_actions=n_actions,
@@ -184,7 +187,8 @@ def build(config: DictConfig):
         mlp_act=torch.nn.Tanh,
     )
 
-    batch_env.observation[0] = obs_space.sample().pos
+    # batch_env.observation[0] = obs_space.sample().pos
+    batch_env.observation[0] = obs_space.sample()
     example_obs = batch_env.observation[0]
 
     agent = CategoricalPgAgent(
@@ -305,7 +309,7 @@ def main(config: DictConfig):
         },
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
         model_save_path="model.pt",
-        # verbosity=Verbosity.DEBUG,
+        verbosity=Verbosity.DEBUG,
     )
     with build(config) as runner:
         runner.run()

@@ -72,7 +72,6 @@ class Embedder(MessagePassing):
             - neighborhoods - [B, G, N, 3] Tensor containing the neighborhoods in local coordinates (with respect to the neighborhood center)
             - center_points - [B, G, 3] Tensor containing the center points of each neighborhood
         """
-        B = int(torch.max(batch) + 1)
         center_points_idx = fps(
             pos, batch, ratio=self.sampling_ratio, random_start=self.random_start
         )
