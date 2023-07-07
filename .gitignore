@@ -1,5 +1,6 @@
 data
 log_data
+imgs
 outputs
 MAE
 wandb
