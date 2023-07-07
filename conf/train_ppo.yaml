@@ -6,7 +6,7 @@ defaults:
 
 parallel: True
 batch_T: 128
-batch_B: 8
+batch_B: 16
 reward_clip_min: -5
 reward_clip_max: 5
 max_steps_decorrelate: 0

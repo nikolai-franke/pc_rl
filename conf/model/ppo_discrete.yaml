@@ -19,4 +19,3 @@ rl_model:
   pi_mlp_act: tanh
   value_mlp_hidden_sizes: [256, 128]
   value_mlp_act: tanh
-

@@ -6,7 +6,6 @@ from hydra.utils import instantiate
 from parllel.torch.models import MlpModel
 from torch.nn import MultiheadAttention
 from torch_geometric.nn import MLP
-from torch_geometric.nn.resolver import activation_resolver
 
 from pc_rl.models.categorical_pg_model import CategoricalPgModel
 from pc_rl.models.masked_autoencoder import MaskedAutoEncoder
