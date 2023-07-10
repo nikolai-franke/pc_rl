@@ -14,8 +14,9 @@ from parllel.buffers import (AgentSamples, Buffer, EnvSamples, Samples,
                              buffer_asarray, buffer_method)
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.logger import Verbosity
-from parllel.patterns import (add_advantage_estimation, add_bootstrap_value,
-                              add_reward_normalization)
+from parllel.patterns import (EvalSampler, add_advantage_estimation,
+                              add_bootstrap_value, add_reward_normalization,
+                              build_cages_and_env_buffers, build_eval_sampler)
 from parllel.runners import OnPolicyRunner
 from parllel.samplers.basic import BasicSampler
 from parllel.torch.agents.categorical import CategoricalPgAgent
@@ -25,8 +26,10 @@ from parllel.torch.distributions import Categorical
 from parllel.torch.handler import TorchHandler
 from parllel.torch.utils import buffer_to_device, torchify_buffer
 from parllel.transforms import Compose
+from parllel.transforms.video_recorder import RecordVectorizedVideo
 from parllel.types import BatchSpec
 
+import pc_rl.builder  # import for hydra's instantiate
 import wandb
 
 
@@ -50,7 +53,7 @@ def build(config: DictConfig):
     )
     example_cage = CageCls(**cage_kwargs)
     example_cage.random_step_async()
-    action, obs, reward, terminated, truncated, info = example_cage.await_step()
+    action, obs, reward, terminated, truncated, info = example_cage.await_step()  # type: ignore
 
     spaces = example_cage.spaces
     obs_space, action_space = spaces.observation, spaces.action
@@ -123,16 +126,17 @@ def build(config: DictConfig):
         force_32bit="float",
         storage=storage,
     )
+    if storage == "shared":
+        cage_kwargs["buffers"] = (
+            batch_action,
+            batch_observation,
+            batch_reward,
+            batch_done,
+            batch_terminated,
+            batch_truncated,
+            batch_info,
+        )
 
-    cage_kwargs["buffers"] = (
-        batch_action,
-        batch_observation,
-        batch_reward,
-        batch_done,
-        batch_terminated,
-        batch_truncated,
-        batch_info,
-    )
     logger.debug(f"Instantiating {batch_spec.B} environments...")
     cages = [CageCls(**cage_kwargs) for _ in range(batch_spec.B)]
     logger.debug("Environments instantiated.")
@@ -173,7 +177,6 @@ def build(config: DictConfig):
         n_actions=n_actions,
     )
 
-    # batch_env.observation[0] = obs_space.sample().pos
     batch_env.observation[0] = obs_space.sample()
     example_obs = batch_env.observation[0]
 
@@ -186,10 +189,10 @@ def build(config: DictConfig):
     agent = TorchHandler(agent)
 
     _, agent_info = agent.step(example_obs)
-    storage = "shared" if parallel else "local"
     batch_agent_info = buffer_from_example(agent_info, (batch_spec.T,), storage=storage)
     batch_agent = AgentSamples(batch_action, batch_agent_info)
     batch_buffer = Samples(batch_agent, batch_env)
+    # print(f"Batch buffer: {batch_buffer[0, 0]}")
 
     batch_buffer = add_bootstrap_value(batch_buffer)
     batch_transforms, step_transforms = [], []
@@ -253,13 +256,132 @@ def build(config: DictConfig):
     )
     runner_config = config["runner"]
 
+    eval_config = config["eval"]
+    step_shape = (1, eval_config["n_eval_envs"])
+
+    eval_cage_kwargs = dict(
+        EnvClass=EnvClass,
+        env_kwargs={"add_obs_to_info_dict": True},
+        TrajInfoClass=TrajInfo,
+        reset_automatically=True,
+    )
+
+    example_cage = CageCls(**eval_cage_kwargs)
+    example_cage.random_step_async()
+    action, obs, reward, terminated, truncated, info = example_cage.await_step()  # type: ignore
+    example_cage.close()
+
+    step_observation = Array(
+        shape=(128 * 128, 3),
+        dtype=dtype,
+        batch_shape=step_shape,
+        kind="jagged",
+        storage=storage,
+        padding=1,
+    )
+    # in case environment creates rewards of shape (1,) or of integer type,
+    # force to be correct shape and type
+    step_reward = buffer_from_dict_example(
+        reward,
+        step_shape,
+        name="reward",
+        shape=(),
+        dtype=np.float32,
+        storage=storage,
+    )
+    step_terminated = buffer_from_example(
+        terminated,
+        step_shape,
+        shape=(),
+        dtype=bool,
+        storage=storage,
+    )
+    step_truncated = buffer_from_example(
+        truncated,
+        step_shape,
+        shape=(),
+        dtype=bool,
+        storage=storage,
+    )
+    step_done = buffer_from_example(
+        truncated,
+        step_shape,
+        shape=(),
+        dtype=bool,
+        storage=storage,
+        padding=1,
+    )
+    step_info = buffer_from_dict_example(
+        info, step_shape, name="envinfo", storage=storage, padding=1
+    )
+
+    step_env = EnvSamples(
+        observation=step_observation,
+        reward=step_reward,
+        done=step_done,
+        terminated=step_terminated,
+        truncated=step_truncated,
+        env_info=step_info,
+    )
+
+    step_action = buffer_from_dict_example(
+        action,
+        step_shape,
+        name="action",
+        force_32bit="float",
+        storage=storage,
+    )
+
+    step_env.observation[0] = obs_space.sample()
+    example_obs = step_env.observation[0]
+    _, agent_info = agent.step(example_obs)
+
+    step_agent_info = buffer_from_example(agent_info, (1,), storage=storage)
+    step_agent = AgentSamples(step_action, step_agent_info)
+    step_buffer = Samples(agent=step_agent, env=step_env)
+
+    if issubclass(CageCls, ProcessCage):
+        eval_cage_kwargs["buffers"] = step_buffer
+
+    eval_envs = [CageCls(**eval_cage_kwargs) for _ in range(eval_config["n_eval_envs"])]
+
+    # video_recorder = RecordVectorizedVideo(
+    #         batch_buffer=step_buffer,
+    #         buffer_key_to_record="env_info.rendering",
+    #         env_fps=50,
+    #         record_every_n_steps=1,
+    #         output_dir=Path("./VIDEO/test/"),
+    #         video_length=100,
+    #         # tiled_width=128,
+    #         # tiled_height=128,
+    #         )
+
+    # step_transforms.append(video_recorder)
+
+    if step_transforms is not None:
+        step_transforms = Compose(step_transforms)
+
+    eval_sampler = EvalSampler(
+        max_traj_length=eval_config["max_traj_length"],
+        min_trajectories=eval_config["min_trajectories"],
+        envs=eval_envs,
+        agent=agent,
+        step_buffer=step_buffer,
+        obs_transform=step_transforms,
+        deterministic_actions=eval_config["deterministic_actions"],
+    )
+    # NOTE: end copy
+
+
     runner = OnPolicyRunner(
         sampler=sampler,
+        eval_sampler=eval_sampler,
         agent=agent,
         algorithm=algorithm,
         batch_spec=batch_spec,
         n_steps=runner_config["n_steps"],
         log_interval_steps=runner_config["log_interval_steps"],
+        eval_interval_steps=runner_config["eval_interval_steps"],
     )
     try:
         yield runner
@@ -270,7 +392,7 @@ def build(config: DictConfig):
         for cage in cages:
             cage.close()
         buffer_method(batch_buffer, "close")
-        buffer_method(batch_buffer, "destroy")
+        # buffer_method(step_buffer, "close")
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")
@@ -283,6 +405,7 @@ def main(config: DictConfig):
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
         sync_tensorboard=True,
         save_code=True,
+        # mode="disabled",
     )
     logger.init(
         wandb_run=run,

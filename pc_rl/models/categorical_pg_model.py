@@ -7,6 +7,7 @@ from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.finetune_encoder import FinetuneEncoder
+import parllel.logger as logger
 
 
 class CategoricalPgModel(nn.Module):
@@ -62,5 +63,9 @@ def namedtuple_to_batched_data(
         torch.arange(len(num_nodes), device=num_nodes.device),
         repeats=num_nodes,
     )
+    # batch_unique = torch.unique(batch)
+
+    # if len(batch_unique) != batch.max() + 1:
+    #     logger.debug(f"BATCH UNIQUE")
 
     return pos, batch
