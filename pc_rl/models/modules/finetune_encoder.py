@@ -44,6 +44,7 @@ class FinetuneEncoder(nn.Module):
         pos = self.pos_embedder(center_points)
         pos = torch.cat((cls_pos, pos), dim=1)
         x = torch.cat((cls_tokens, x), dim=1)
+        x = self.transformer_encoder(x, pos)
         x = self.norm(x)
         concat_f = torch.cat([x[:, 0], x[:, 1:].max(1)[0]], dim=-1)
         out = self.mlp_head(concat_f)

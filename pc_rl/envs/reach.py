@@ -17,6 +17,7 @@ def build(
     distance_to_target_threshold: float,
     reward_amount_dict: dict,
     create_scene_kwargs: dict,
+    add_obs_to_info_dict: bool = False,
 ):
     assert len(image_shape) == 2
     image_shape = tuple(image_shape)  # type: ignore
@@ -35,6 +36,7 @@ def build(
         distance_to_target_threshold=distance_to_target_threshold,
         reward_amount_dict=reward_amount_dict,
         create_scene_kwargs=create_scene_kwargs,
+        add_obs_to_info_dict=add_obs_to_info_dict,
     )
     env = PointCloudFromDepthImageObservationWrapper(env)
     env = TimeLimit(env, max_episode_steps)

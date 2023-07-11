@@ -192,7 +192,6 @@ def build(config: DictConfig):
     batch_agent_info = buffer_from_example(agent_info, (batch_spec.T,), storage=storage)
     batch_agent = AgentSamples(batch_action, batch_agent_info)
     batch_buffer = Samples(batch_agent, batch_env)
-    # print(f"Batch buffer: {batch_buffer[0, 0]}")
 
     batch_buffer = add_bootstrap_value(batch_buffer)
     batch_transforms, step_transforms = [], []
@@ -257,11 +256,11 @@ def build(config: DictConfig):
     runner_config = config["runner"]
 
     eval_config = config["eval"]
-    step_shape = (1, eval_config["n_eval_envs"])
 
     eval_cage_kwargs = dict(
         EnvClass=EnvClass,
         env_kwargs={"add_obs_to_info_dict": True},
+        # env_kwargs={},
         TrajInfoClass=TrajInfo,
         reset_automatically=True,
     )
@@ -270,6 +269,8 @@ def build(config: DictConfig):
     example_cage.random_step_async()
     action, obs, reward, terminated, truncated, info = example_cage.await_step()  # type: ignore
     example_cage.close()
+
+    step_shape = (1, eval_config["n_eval_envs"])
 
     step_observation = Array(
         shape=(128 * 128, 3),
@@ -345,18 +346,16 @@ def build(config: DictConfig):
 
     eval_envs = [CageCls(**eval_cage_kwargs) for _ in range(eval_config["n_eval_envs"])]
 
-    # video_recorder = RecordVectorizedVideo(
-    #         batch_buffer=step_buffer,
-    #         buffer_key_to_record="env_info.rendering",
-    #         env_fps=50,
-    #         record_every_n_steps=1,
-    #         output_dir=Path("./VIDEO/test/"),
-    #         video_length=100,
-    #         # tiled_width=128,
-    #         # tiled_height=128,
-    #         )
+    video_recorder = RecordVectorizedVideo(
+        batch_buffer=step_buffer,
+        buffer_key_to_record="env_info.rendering",
+        env_fps=50,
+        record_every_n_steps=1,
+        output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+        video_length=100,
+    )
 
-    # step_transforms.append(video_recorder)
+    step_transforms.append(video_recorder)
 
     if step_transforms is not None:
         step_transforms = Compose(step_transforms)
@@ -371,7 +370,6 @@ def build(config: DictConfig):
         deterministic_actions=eval_config["deterministic_actions"],
     )
     # NOTE: end copy
-
 
     runner = OnPolicyRunner(
         sampler=sampler,
