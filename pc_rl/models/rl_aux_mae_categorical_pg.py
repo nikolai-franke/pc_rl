@@ -1,18 +1,18 @@
+import torch.nn as nn
 import torch.nn.functional as F
 from parllel.torch.utils import infer_leading_dims, restore_leading_dims
-from torch import nn
 
 from pc_rl.agents.aux_categorical import ModelOutputs
-from pc_rl.models.categorical_pg_model import namedtuple_to_batched_data
-from pc_rl.models.modules.auxiliarey_mae import AuxiliaryMae
+from pc_rl.models.aux_mae import AuxMae
 from pc_rl.models.modules.embedder import Embedder
+from pc_rl.models.rl_finetune_categorical_pg import namedtuple_to_batched_data
 
 
 class AuxMaeDiscretePgModel(nn.Module):
     def __init__(
         self,
         embedder: Embedder,
-        auxiliary_mae: AuxiliaryMae,
+        auxiliary_mae: AuxMae,
         pi_mlp: nn.Module,
         value_mlp: nn.Module,
     ) -> None:

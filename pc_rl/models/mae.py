@@ -3,21 +3,33 @@ import torch
 from pytorch3d.loss import chamfer_distance
 from torch import Tensor
 
+from pc_rl.models.modules.embedder import Embedder
+from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
+from pc_rl.models.modules.masked_decoder import MaskedDecoder
+from pc_rl.models.modules.masked_encoder import MaskedEncoder
+
 
 class MaskedAutoEncoder(pl.LightningModule):
-    def __init__(self, embedder, encoder, decoder, prediction_head, learning_rate):
+    def __init__(
+        self,
+        embedder: Embedder,
+        masked_encoder: MaskedEncoder,
+        masked_decoder: MaskedDecoder,
+        mae_prediction_head: MaePredictionHead,
+        learning_rate: float,
+    ):
         super().__init__()
         self.embedder = embedder
-        self.encoder = encoder
-        self.decoder = decoder
-        self.prediction_head = prediction_head
+        self.masked_encoder = masked_encoder
+        self.masked_decoder = masked_decoder
+        self.mae_prediction_head = mae_prediction_head
         self.learning_rate = learning_rate
 
     def forward(self, pos: Tensor, batch: Tensor):
         x, neighborhoods, center_points = self.embedder(pos, batch)
-        x_vis, mask = self.encoder(x, center_points)
-        x_recovered, padding_mask = self.decoder(x_vis, mask, center_points)
-        pos_recovered = self.prediction_head(x_recovered)
+        x_vis, mask = self.masked_encoder(x, center_points)
+        x_recovered, padding_mask = self.masked_decoder(x_vis, mask, center_points)
+        pos_recovered = self.mae_prediction_head(x_recovered)
 
         return pos_recovered, neighborhoods, mask, padding_mask, center_points
 

@@ -1,21 +1,22 @@
 from collections.abc import Callable
-import torch
 
+import torch
 import torch.nn as nn
 from hydra.utils import instantiate
 from parllel.torch.models import MlpModel
 from torch.nn import MultiheadAttention
 from torch_geometric.nn import MLP
 
-from pc_rl.models.categorical_pg_model import CategoricalPgModel
-from pc_rl.models.masked_autoencoder import MaskedAutoEncoder
+from pc_rl.models.finetune_encoder import FinetuneEncoder
+from pc_rl.models.mae import MaskedAutoEncoder
 from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.modules.finetune_encoder import FinetuneEncoder
-from pc_rl.models.modules.mae import (MaskedDecoder, MaskedEncoder,
-                                      PredictionHead)
+from pc_rl.models.modules.masked_decoder import MaskedDecoder
+from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
+from pc_rl.models.modules.masked_encoder import MaskedEncoder
 from pc_rl.models.modules.transformer import (TransformerBlock,
                                               TransformerDecoder,
                                               TransformerEncoder)
+from pc_rl.models.rl_finetune_categorical_pg import CategoricalPgModel
 
 
 def build_embedder(
@@ -185,7 +186,7 @@ def build_masked_autoencoder_modules(config):
     pos_embedder = instantiate(config.model.pos_embedder)
     transformer_decoder = TransformerDecoder(blocks)
     masked_decoder = MaskedDecoder(transformer_decoder, pos_embedder)
-    prediction_head = PredictionHead(embedding_size, group_size)
+    prediction_head = MaePredictionHead(embedding_size, group_size)
 
     return embedder, masked_encoder, masked_decoder, prediction_head
 
@@ -199,9 +200,9 @@ def build_masked_autoencoder(config):
     ) = build_masked_autoencoder_modules(config)
     masked_autoencoder = MaskedAutoEncoder(
         embedder=embedder,
-        encoder=masked_encoder,
-        decoder=masked_decoder,
-        prediction_head=prediction_head,
+        masked_encoder=masked_encoder,
+        masked_decoder=masked_decoder,
+        mae_prediction_head=prediction_head,
         learning_rate=config["learning_rate"],
     )
 

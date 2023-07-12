@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from typing import Optional, Union
 
 import torch
+import torch.nn as nn
 from parllel.buffers import Buffer, NamedArrayTupleClass, buffer_asarray
 from parllel.handlers.agent import AgentStep
 from parllel.torch.agents.categorical import AgentInfo
 from parllel.torch.algos.ppo import TorchAgent
 from parllel.torch.distributions.categorical import Categorical, DistInfo
 from parllel.torch.utils import buffer_to_device, torchify_buffer
-from torch import nn
 
 AgentPrediction = NamedArrayTupleClass(
     "MaePgAgentPrediction",
@@ -79,7 +79,7 @@ class MaeCategoricalPgAgent(TorchAgent):
         model_outputs: ModelOutputs = self.model(*model_inputs)
         dist_info = DistInfo(prob=model_outputs.pi)
         value = model_outputs.value
-        pos_prediction = model_outputs.pos_prediction 
+        pos_prediction = model_outputs.pos_prediction
         ground_truth = model_outputs.ground_truth
         prediction = AgentPrediction(dist_info, value, pos_prediction, ground_truth)
         return prediction

@@ -1,15 +1,17 @@
 import torch
-from torch import nn
+import torch.nn as nn
 
-from pc_rl.models.modules.mae import MaskedDecoder, MaskedEncoder, PredictionHead
+from pc_rl.models.modules.masked_encoder import MaskedEncoder
+from pc_rl.models.modules.masked_decoder import MaskedDecoder, MaePredictionHead
 
 
-class AuxiliaryMae(nn.Module):
+
+class AuxMae(nn.Module):
     def __init__(
         self,
         masked_encoder: MaskedEncoder,
         masked_decoder: MaskedDecoder,
-        mae_prediction_head: PredictionHead,
+        mae_prediction_head: MaePredictionHead,
         mlp_head: nn.Module,
     ):
         super().__init__()
@@ -17,7 +19,7 @@ class AuxiliaryMae(nn.Module):
         self.masked_decoder = masked_decoder
         self.mae_prediction_head = mae_prediction_head
         self.mlp_head = mlp_head
-        self.dim = self.masked_encoder.embedding_dim
+        self.dim = self.masked_encoder.dim
         self.cls_token = nn.Parameter(torch.zeros(1, 1, self.dim))
         self.cls_pos = nn.Parameter(torch.randn(1, 1, self.dim))
 
@@ -34,7 +36,7 @@ class AuxiliaryMae(nn.Module):
         pos_prediction[padding_mask] = 0.0
         pos_ground_truth[padding_mask] = 0.0
 
-        # RL part
+        # classification part
         cls_tokens = self.cls_token.expand(x.shape[0], -1, -1)
         cls_pos = self.cls_pos.expand(x.shape[0], -1, -1)
         # use pos_embedder, transformer_encoder, and norm from masked_encoder

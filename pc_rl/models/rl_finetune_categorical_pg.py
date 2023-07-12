@@ -6,7 +6,7 @@ from parllel.torch.agents.categorical import ModelOutputs
 from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 
 from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.modules.finetune_encoder import FinetuneEncoder
+from pc_rl.models.finetune_encoder import FinetuneEncoder
 
 
 class CategoricalPgModel(nn.Module):

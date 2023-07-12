@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from .transformer import TransformerEncoder
+from pc_rl.models.modules.transformer import TransformerEncoder
 
 
 class FinetuneEncoder(nn.Module):
