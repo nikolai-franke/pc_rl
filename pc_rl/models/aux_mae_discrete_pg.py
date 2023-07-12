@@ -25,19 +25,22 @@ class AuxMaeDiscretePgModel(nn.Module):
     def forward(self, data):
         pos, batch = namedtuple_to_batched_data(data)
         x, neighborhoods, center_points = self.embedder(pos, batch)
-        lead_dim, B, T, _ = infer_leading_dims(x, 1)
-        pos_recovered, x = self.auxiliary_mae(x, center_points)
+        x, pos_prediction, pos_ground_truth = self.auxiliary_mae(
+            x, center_points, neighborhoods
+        )
 
+        lead_dim, B, T, _ = infer_leading_dims(x, 1)
         x = x.view(T * B, -1)
         pi = self.pi_mlp(x)
         pi = F.softmax(pi, dim=-1)
         value = self.value_mlp(x).squeeze(-1)
-        pi, value = restore_leading_dims((pi, value), lead_dim, T, B)
+        pi, value, pos_prediction, pos_ground_truth = restore_leading_dims(
+            (pi, value, pos_prediction, pos_ground_truth), lead_dim, T, B
+        )
 
         return ModelOutputs(
             pi=pi,
             value=value,
-            pos_recovered=pos_recovered,
-            center_points=center_points,
-            neighborhoods=neighborhoods,
+            pos_prediction=pos_prediction,
+            ground_truth=pos_ground_truth,
         )

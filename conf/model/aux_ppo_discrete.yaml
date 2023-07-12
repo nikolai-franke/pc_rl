@@ -1,0 +1,26 @@
+defaults:
+  - pos_embedder : default
+  - embedder: default
+  - transformer_block: default
+
+transformer_encoder:
+  _target_: pc_rl.builder.build_transformer_encoder
+  depth: 8
+
+transformer_decoder:
+  _target_: pc_rl.builder.build_transformer_decoder
+  depth: 4
+
+finetune_encoder:
+  _target_: pc_rl.builder.build_finetune_encoder
+  mlp_head_hidden_sizes: [512]
+  mlp_head_out_size: 1024
+  mlp_head_act: relu
+
+rl_model:
+  _target_: pc_rl.builder.build_categorical_pg_model
+  pi_mlp_hidden_sizes: [256, 128]
+  pi_mlp_act: tanh
+  value_mlp_hidden_sizes: [256, 128]
+  value_mlp_act: tanh
+

@@ -15,9 +15,8 @@ AgentPrediction = NamedArrayTupleClass(
     [
         "dist_info",
         "value",
-        "pos_recovered",
-        "center_points",
-        "neighborhoods",
+        "pos_prediction",
+        "ground_truth",
     ],
 )
 
@@ -26,9 +25,8 @@ AgentPrediction = NamedArrayTupleClass(
 class ModelOutputs:
     pi: Buffer
     value: Buffer
-    pos_recovered: Buffer
-    center_points: Buffer
-    neighborhoods: Buffer
+    pos_prediction: Buffer
+    ground_truth: Buffer
 
 
 class MaeCategoricalPgAgent(TorchAgent):
@@ -41,7 +39,7 @@ class MaeCategoricalPgAgent(TorchAgent):
     ) -> None:
         super().__init__(model, distribution, device)
         example_obs = buffer_asarray(example_obs)
-        examlpe_obs = torchify_buffer(example_obs)
+        example_obs = torchify_buffer(example_obs)
         exmple_inputs = (example_obs,)
         example_inputs = buffer_to_device(exmple_inputs, device=self.device)
 
@@ -68,6 +66,7 @@ class MaeCategoricalPgAgent(TorchAgent):
 
         return buffer_to_device(agent_step, device="cpu")
 
+    @torch.no_grad()
     def value(self, observation: Buffer) -> Buffer:
         model_inputs = (observation,)
         model_inputs = buffer_to_device(model_inputs, device=self.device)
@@ -80,8 +79,7 @@ class MaeCategoricalPgAgent(TorchAgent):
         model_outputs: ModelOutputs = self.model(*model_inputs)
         dist_info = DistInfo(prob=model_outputs.pi)
         value = model_outputs.value
-        pos_recovered = model_outputs.pos_recovered 
-        center_points = model_outputs.center_points
-        neighborhoods = model_outputs.neighborhoods
-        prediction = AgentPrediction(dist_info, value, pos_recovered, center_points, neighborhoods)
+        pos_prediction = model_outputs.pos_prediction 
+        ground_truth = model_outputs.ground_truth
+        prediction = AgentPrediction(dist_info, value, pos_prediction, ground_truth)
         return prediction
