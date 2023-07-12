@@ -19,6 +19,7 @@ from pc_rl.models.modules.transformer import (TransformerBlock,
                                               TransformerEncoder)
 from pc_rl.models.pg.aux_mae_categorical import AuxMaeCategoricalPgModel
 from pc_rl.models.pg.finetune_categorical import CategoricalPgModel
+from pc_rl.models.pg.finetune_continuous import ContinuousPgModel
 
 
 def build_embedder(
@@ -98,6 +99,41 @@ def build_masked_encoder(
         mask_type=mask_type,
         transformer_encoder=transformer_encoder,
         pos_embedder=pos_embedder,
+    )
+
+
+def build_continuous_pg_model(
+    embedder: Embedder,
+    finetune_encoder: FinetuneEncoder,
+    n_actions: int,
+    mu_mlp_hidden_sizes: list[int],
+    mu_mlp_act: type[nn.Module] | str,
+    value_mlp_hidden_sizes: list[int],
+    value_mlp_act: type[nn.Module] | str,
+    init_log_std: float,
+):
+    input_size = finetune_encoder.out_dim
+
+    mu_mlp = MlpModel(
+        input_size=input_size,
+        hidden_sizes=mu_mlp_hidden_sizes,
+        # hidden_nonlinearity=activation_resolver(pi_mlp_act),
+        hidden_nonlinearity=torch.nn.Tanh,
+        output_size=n_actions,
+    )
+
+    value_mlp = MlpModel(
+        input_size=input_size,
+        hidden_sizes=value_mlp_hidden_sizes,
+        hidden_nonlinearity=torch.nn.Tanh,
+        output_size=1,
+    )
+    return ContinuousPgModel(
+        embedder=embedder,
+        encoder=finetune_encoder,
+        mu_mlp=mu_mlp,
+        value_mlp=value_mlp,
+        init_log_std=init_log_std,
     )
 
 
