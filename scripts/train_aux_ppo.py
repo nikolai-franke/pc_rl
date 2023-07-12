@@ -15,28 +15,21 @@ from parllel.buffers import (AgentSamples, Buffer, EnvSamples, Samples,
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.logger import Verbosity
 from parllel.patterns import (EvalSampler, add_advantage_estimation,
-                              add_bootstrap_value, add_reward_normalization,)
+                              add_bootstrap_value, add_reward_normalization)
 from parllel.runners import OnPolicyRunner
 from parllel.samplers.basic import BasicSampler
-from parllel.torch.algos.ppo import (BatchedDataLoader,
-                                     build_dataloader_buffer)
+from parllel.torch.algos.ppo import BatchedDataLoader, build_dataloader_buffer
 from parllel.torch.distributions import Categorical
 from parllel.torch.handler import TorchHandler
-from parllel.torch.models import MlpModel
 from parllel.torch.utils import buffer_to_device, torchify_buffer
 from parllel.transforms import Compose
 from parllel.transforms.video_recorder import RecordVectorizedVideo
 from parllel.types import BatchSpec
-from torch_geometric.nn.models.mlp import MLP
-from pc_rl.algos.aux_ppo import AuxPPO
 
 import pc_rl.builder  # import for hydra's instantiate
 import wandb
 from pc_rl.agents.aux_categorical import MaeCategoricalPgAgent
-from pc_rl.models.aux_mae_discrete_pg import AuxMaeDiscretePgModel
-from pc_rl.models.modules.auxiliarey_mae import AuxiliaryMae
-from pc_rl.models.modules.mae import (MaskedDecoder, MaskedEncoder,
-                                      PredictionHead)
+from pc_rl.algos.aux_ppo import AuxPPO
 
 
 @contextmanager
@@ -158,56 +151,48 @@ def build(config: DictConfig):
 
     embedder_conf = config.model.embedder
     embedding_size = embedder_conf.embedding_size
+    group_size = embedder_conf.group_size
 
     transformer_block_factory = instantiate(
         config.model.transformer_block, embedding_size=embedding_size, _partial_=True
     )
     transformer_encoder = instantiate(
-        config.model.transformer_encoder,
+        config.model.masked_encoder.transformer_encoder,
         transformer_block_factory=transformer_block_factory,
     )
 
     transformer_decoder = instantiate(
-        config.model.transformer_decoder,
+        config.model.masked_decoder.transformer_decoder,
         transformer_block_factory=transformer_block_factory,
     )
 
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
-    embedder = instantiate(config.model.embedder, _convert_="partial")
-
-    masked_encoder = MaskedEncoder(
-        mask_ratio=0.6,
+    masked_encoder = instantiate(
+        config.model.masked_encoder,
         transformer_encoder=transformer_encoder,
         pos_embedder=pos_embedder,
     )
 
-    pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
+    embedder = instantiate(config.model.embedder, _convert_="partial")
+
+    # pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
+
     masked_decoder = MaskedDecoder(
         transformer_decoder=transformer_decoder,
         pos_embedder=pos_embedder,
     )
-    mae_prediction_head = PredictionHead(dim=512, group_size=32)
+    mae_prediction_head = PredictionHead(dim=embedding_size, group_size=group_size)
 
-    mlp_head_sizes = [1024, 512, 1024]
-    mlp_head = MLP(channel_list=mlp_head_sizes, act="relu", norm="layer_norm")
-    aux_mae = AuxiliaryMae(
-        masked_encoder, masked_decoder, mae_prediction_head, mlp_head
-    )
-    pi_mlp = MlpModel(
-        input_size=1024,
-        hidden_sizes=[256, 128],
-        hidden_nonlinearity=torch.nn.Tanh,
-        output_size=7,
-    )
-    value_mlp = MlpModel(
-        input_size=1024,
-        hidden_sizes=[256, 128],
-        hidden_nonlinearity=torch.nn.Tanh,
-        output_size=1,
+    aux_mae = instantiate(
+        config.model.aux_mae,
+        _convert_="partial",
+        masked_encoder=masked_encoder,
+        masked_decoder=masked_decoder,
+        mae_prediction_head=mae_prediction_head,
     )
 
-    aux_mae_pg_model = AuxMaeDiscretePgModel(
-        embedder=embedder, auxiliary_mae=aux_mae, pi_mlp=pi_mlp, value_mlp=value_mlp
+    aux_mae_pg_model = instantiate(
+        config.model.rl_model, _convert_="partial", embedder=embedder, aux_mae=aux_mae
     )
 
     batch_env.observation[0] = obs_space.sample()

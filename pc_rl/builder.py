@@ -7,15 +7,17 @@ from parllel.torch.models import MlpModel
 from torch.nn import MultiheadAttention
 from torch_geometric.nn import MLP
 
+from pc_rl.models.aux_mae import AuxMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.mae import MaskedAutoEncoder
 from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.modules.masked_decoder import MaskedDecoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
+from pc_rl.models.modules.masked_decoder import MaskedDecoder
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
 from pc_rl.models.modules.transformer import (TransformerBlock,
                                               TransformerDecoder,
                                               TransformerEncoder)
+from pc_rl.models.rl_aux_mae_categorical_pg import AuxMaeCategoricalPgModel
 from pc_rl.models.rl_finetune_categorical_pg import CategoricalPgModel
 
 
@@ -133,6 +135,39 @@ def build_categorical_pg_model(
     )
 
 
+def build_rl_aux_categorical_pg_model(
+    embedder: Embedder,
+    aux_mae: AuxMae,
+    n_actions: int,
+    pi_mlp_hidden_sizes: list[int],
+    pi_mlp_act: type[nn.Module] | str,
+    value_mlp_hidden_sizes: list[int],
+    value_mlp_act: type[nn.Module] | str,
+):
+    input_size = aux_mae.out_dim
+    pi_mlp = MlpModel(
+        input_size=input_size,
+        hidden_sizes=pi_mlp_hidden_sizes,
+        # hidden_nonlinearity=activation_resolver(pi_mlp_act),
+        hidden_nonlinearity=torch.nn.Tanh,
+        output_size=n_actions,
+    )
+
+    value_mlp = MlpModel(
+        input_size=input_size,
+        hidden_sizes=value_mlp_hidden_sizes,
+        hidden_nonlinearity=torch.nn.Tanh,
+        output_size=1,
+    )
+
+    return AuxMaeCategoricalPgModel(
+        embedder=embedder,
+        aux_mae=aux_mae,
+        pi_mlp=pi_mlp,
+        value_mlp=value_mlp,
+    )
+
+
 def build_finetune_encoder(
     transformer_encoder: TransformerEncoder,
     pos_embedder: nn.Module,
@@ -147,6 +182,26 @@ def build_finetune_encoder(
     return FinetuneEncoder(
         transformer_encoder=transformer_encoder,
         pos_embedder=pos_embedder,
+        mlp_head=mlp_head,
+    )
+
+
+def build_aux_mae(
+    masked_encoder: MaskedEncoder,
+    masked_decoder: MaskedDecoder,
+    mae_prediction_head: MaePredictionHead,
+    mlp_head_hidden_sizes: list[int],
+    mlp_head_out_size: int,
+    mlp_head_act: type[nn.Module] | str,
+):
+    mlp_head_sizes = [2 * masked_encoder.dim] + mlp_head_hidden_sizes
+    mlp_head_sizes.append(mlp_head_out_size)
+    mlp_head = MLP(channel_list=mlp_head_sizes, act=mlp_head_act, norm="layer_norm")
+
+    return AuxMae(
+        masked_encoder=masked_encoder,
+        masked_decoder=masked_decoder,
+        mae_prediction_head=mae_prediction_head,
         mlp_head=mlp_head,
     )
 

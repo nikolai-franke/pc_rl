@@ -8,7 +8,7 @@ from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.rl_finetune_categorical_pg import namedtuple_to_batched_data
 
 
-class AuxMaeDiscretePgModel(nn.Module):
+class AuxMaeCategoricalPgModel(nn.Module):
     def __init__(
         self,
         embedder: Embedder,

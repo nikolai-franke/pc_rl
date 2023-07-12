@@ -3,22 +3,27 @@ defaults:
   - embedder: default
   - transformer_block: default
 
-transformer_encoder:
-  _target_: pc_rl.builder.build_transformer_encoder
-  depth: 8
+masked_encoder:
+  _target_: pc_rl.builder.build_masked_encoder
+  mask_ratio: 0.6
+  mask_type: rand
+  transformer_encoder:
+    _target_: pc_rl.builder.build_transformer_encoder
+    depth: 8
 
-transformer_decoder:
-  _target_: pc_rl.builder.build_transformer_decoder
-  depth: 4
+masked_decoder:
+  transformer_decoder:
+    _target_: pc_rl.builder.build_transformer_decoder
+    depth: 4
 
-finetune_encoder:
-  _target_: pc_rl.builder.build_finetune_encoder
+aux_mae:
+  _target_: pc_rl.builder.build_aux_mae
   mlp_head_hidden_sizes: [512]
   mlp_head_out_size: 1024
   mlp_head_act: relu
 
 rl_model:
-  _target_: pc_rl.builder.build_categorical_pg_model
+  _target_: pc_rl.builder.build_rl_aux_categorical_pg_model
   pi_mlp_hidden_sizes: [256, 128]
   pi_mlp_act: tanh
   value_mlp_hidden_sizes: [256, 128]
