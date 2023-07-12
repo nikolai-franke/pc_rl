@@ -15,12 +15,10 @@ from parllel.buffers import (AgentSamples, Buffer, EnvSamples, Samples,
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.logger import Verbosity
 from parllel.patterns import (EvalSampler, add_advantage_estimation,
-                              add_bootstrap_value, add_reward_normalization,
-                              build_cages_and_env_buffers, build_eval_sampler)
+                              add_bootstrap_value, add_reward_normalization,)
 from parllel.runners import OnPolicyRunner
 from parllel.samplers.basic import BasicSampler
-from parllel.torch.agents.categorical import CategoricalPgAgent
-from parllel.torch.algos.ppo import (PPO, BatchedDataLoader,
+from parllel.torch.algos.ppo import (BatchedDataLoader,
                                      build_dataloader_buffer)
 from parllel.torch.distributions import Categorical
 from parllel.torch.handler import TorchHandler

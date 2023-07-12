@@ -44,6 +44,7 @@ class AuxPPO(PPO):
         value_clipping_mode: str,
         value_clip: Optional[float] = None,
         kl_divergence_limit: float = np.inf,
+        aux_loss_coeff: float = 10.0,
         **kwargs,
     ) -> None:
         # TODO: maybe it makes sense to add a parameter to weigh the two losses manually
@@ -62,6 +63,7 @@ class AuxPPO(PPO):
             kl_divergence_limit,
             **kwargs,
         )
+        self.aux_loss_coeff = aux_loss_coeff
 
     def loss(self, batch: SamplesForLoss) -> torch.Tensor:
         agent_prediction: AgentPrediction = self.agent.predict(
@@ -134,7 +136,7 @@ class AuxPPO(PPO):
 
         mae_loss = chamfer_distance(
             pos_prediction, ground_truth, point_reduction="sum"
-        )[0]
+        )[0] * self.aux_loss_coeff
 
         loss = pi_loss + value_loss + entropy_loss + mae_loss
 
