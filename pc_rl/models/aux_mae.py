@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
-from pc_rl.models.modules.masked_decoder import MaskedDecoder, MaePredictionHead
+from pc_rl.models.modules.masked_decoder import MaskedDecoder
+from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 
 
 
