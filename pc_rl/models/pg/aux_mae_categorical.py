@@ -5,7 +5,7 @@ from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 from pc_rl.agents.aux_categorical import ModelOutputs
 from pc_rl.models.aux_mae import AuxMae
 from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.rl_finetune_categorical_pg import namedtuple_to_batched_data
+from pc_rl.models.pg.finetune_categorical import namedtuple_to_batched_data
 
 
 class AuxMaeCategoricalPgModel(nn.Module):

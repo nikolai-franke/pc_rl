@@ -17,8 +17,8 @@ from pc_rl.models.modules.masked_encoder import MaskedEncoder
 from pc_rl.models.modules.transformer import (TransformerBlock,
                                               TransformerDecoder,
                                               TransformerEncoder)
-from pc_rl.models.rl_aux_mae_categorical_pg import AuxMaeCategoricalPgModel
-from pc_rl.models.rl_finetune_categorical_pg import CategoricalPgModel
+from pc_rl.models.pg.aux_mae_categorical import AuxMaeCategoricalPgModel
+from pc_rl.models.pg.finetune_categorical import CategoricalPgModel
 
 
 def build_embedder(
