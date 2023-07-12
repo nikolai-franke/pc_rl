@@ -19,8 +19,8 @@ class AuxMae(nn.Module):
         self.masked_decoder = masked_decoder
         self.mae_prediction_head = mae_prediction_head
         self.mlp_head = mlp_head
-        self._check_mlp_head()
         self.dim = self.masked_encoder.dim
+        self._check_mlp_head()
         self.out_dim = self._get_out_dim()
         self.cls_token = nn.Parameter(torch.zeros(1, 1, self.dim))
         self.cls_pos = nn.Parameter(torch.randn(1, 1, self.dim))

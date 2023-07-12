@@ -30,6 +30,8 @@ import pc_rl.builder  # import for hydra's instantiate
 import wandb
 from pc_rl.agents.aux_categorical import MaeCategoricalPgAgent
 from pc_rl.algos.aux_ppo import AuxPPO
+from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
+from pc_rl.models.modules.masked_decoder import MaskedDecoder
 
 
 @contextmanager
@@ -167,6 +169,7 @@ def build(config: DictConfig):
     )
 
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
+
     masked_encoder = instantiate(
         config.model.masked_encoder,
         transformer_encoder=transformer_encoder,
@@ -181,7 +184,7 @@ def build(config: DictConfig):
         transformer_decoder=transformer_decoder,
         pos_embedder=pos_embedder,
     )
-    mae_prediction_head = PredictionHead(dim=embedding_size, group_size=group_size)
+    mae_prediction_head = MaePredictionHead(dim=embedding_size, group_size=group_size)
 
     aux_mae = instantiate(
         config.model.aux_mae,
@@ -192,7 +195,11 @@ def build(config: DictConfig):
     )
 
     aux_mae_pg_model = instantiate(
-        config.model.rl_model, _convert_="partial", embedder=embedder, aux_mae=aux_mae
+        config.model.rl_model,
+        _convert_="partial",
+        embedder=embedder,
+        aux_mae=aux_mae,
+        n_actions=n_actions,
     )
 
     batch_env.observation[0] = obs_space.sample()
