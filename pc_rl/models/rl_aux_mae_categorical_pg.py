@@ -12,20 +12,20 @@ class AuxMaeDiscretePgModel(nn.Module):
     def __init__(
         self,
         embedder: Embedder,
-        auxiliary_mae: AuxMae,
+        aux_mae: AuxMae,
         pi_mlp: nn.Module,
         value_mlp: nn.Module,
     ) -> None:
         super().__init__()
         self.embedder = embedder
-        self.auxiliary_mae = auxiliary_mae
+        self.aux_mae = aux_mae
         self.pi_mlp = pi_mlp
         self.value_mlp = value_mlp
 
     def forward(self, data):
         pos, batch = namedtuple_to_batched_data(data)
         x, neighborhoods, center_points = self.embedder(pos, batch)
-        x, pos_prediction, pos_ground_truth = self.auxiliary_mae(
+        x, pos_prediction, pos_ground_truth = self.aux_mae(
             x, center_points, neighborhoods
         )
 
