@@ -1,6 +1,6 @@
 _target_: pc_rl.envs.reach.build
 action_type: ???
-max_episode_steps: 100
+max_episode_steps: 200
 render_mode: headless
 image_shape: [128, 128]
 frame_skip: 1
@@ -8,11 +8,11 @@ time_step: 0.1
 discrete_action_magnitude: 100.0
 distance_to_target_threshold: 0.02
 reward_amount_dict:
-  distance_to_target: -0.1
+  distance_to_target: -0.0
   delta_distance_to_target: -10.0
-  time_step_cost: -0.1
-  workspace_violation: -10.0
-  successful_task: 10.0
+  time_step_cost: -0.0
+  workspace_violation: -0.0
+  successful_task: 100.0
 create_scene_kwargs:
   show_bounding_boxes: False
   show_remote_center_of_motion: True

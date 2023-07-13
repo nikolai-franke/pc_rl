@@ -2,7 +2,7 @@ defaults:
   - _self_
   - algo: ppo
   - model: aux_ppo_discrete
-  - env: reach_discrete
+  - env/reach/discrete@env
 
 parallel: True
 batch_T: 128

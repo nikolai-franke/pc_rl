@@ -1,4 +1,3 @@
 defaults:
-  - reach_base
-
+  - base
 action_type: discrete

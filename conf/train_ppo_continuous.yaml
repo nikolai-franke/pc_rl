@@ -2,10 +2,10 @@ defaults:
   - _self_
   - algo: ppo
   - model: ppo_continuous
-  - env: reach_continuous
+  - env/reach/continuous@env
 
 parallel: True
-batch_T: 128
+batch_T: 256
 batch_B: 8
 reward_clip_min: -5
 reward_clip_max: 5
@@ -19,7 +19,7 @@ runner:
 
 eval:
   n_eval_envs: 4
-  max_traj_length: 100
+  max_traj_length: 200
   min_trajectories: 4
   deterministic_actions: False
 
