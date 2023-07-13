@@ -19,9 +19,10 @@ from parllel.patterns import (EvalSampler, add_advantage_estimation,
 from parllel.runners import OnPolicyRunner
 from parllel.samplers.basic import BasicSampler
 from parllel.torch.agents.categorical import CategoricalPgAgent
+from parllel.torch.agents.gaussian import GaussianPgAgent
 from parllel.torch.algos.ppo import (PPO, BatchedDataLoader,
                                      build_dataloader_buffer)
-from parllel.torch.distributions import Categorical
+from parllel.torch.distributions import Categorical, Gaussian
 from parllel.torch.handler import TorchHandler
 from parllel.torch.utils import buffer_to_device, torchify_buffer
 from parllel.transforms import Compose
@@ -30,6 +31,7 @@ from parllel.types import BatchSpec
 
 import pc_rl.builder  # import for hydra's instantiate
 import wandb
+import gymnasium as gym
 
 
 @contextmanager
@@ -56,6 +58,9 @@ def build(config: DictConfig):
 
     spaces = example_cage.spaces
     obs_space, action_space = spaces.observation, spaces.action
+    discrete = isinstance(action_space, gym.spaces.Discrete)
+    AgentClass = CategoricalPgAgent if discrete else GaussianPgAgent
+    DistributionClass = Categorical if discrete else Gaussian
 
     example_cage.close()
 
@@ -143,8 +148,8 @@ def build(config: DictConfig):
     spaces = cages[0].spaces
     obs_space, action_space = spaces.observation, spaces.action
 
-    n_actions = action_space.n
-    distribution = Categorical(dim=n_actions)  # type: ignore
+    n_actions = action_space.n if discrete else action_space.shape[0]
+    distribution = DistributionClass(dim=n_actions)  # type: ignore
 
     device = config["device"] or ("cuda:0" if torch.cuda.is_available() else "cpu")
     device = torch.device(device)
@@ -179,7 +184,7 @@ def build(config: DictConfig):
     batch_env.observation[0] = obs_space.sample()
     example_obs = batch_env.observation[0]
 
-    agent = CategoricalPgAgent(
+    agent = AgentClass(
         model=pg_model,
         distribution=distribution,
         example_obs=example_obs,
