@@ -3,7 +3,7 @@ from collections.abc import Callable
 import torch
 import torch.nn as nn
 from hydra.utils import instantiate
-from parllel.torch.models import MlpModel
+from parllel.torch.models import MlpModel, Optional
 from torch.nn import MultiheadAttention
 from torch_geometric.nn import MLP
 
@@ -108,24 +108,39 @@ def build_continuous_pg_model(
     n_actions: int,
     mu_mlp_hidden_sizes: list[int],
     mu_mlp_act: type[nn.Module] | str,
+    mu_out_act: Optional[type[nn.Module] | str],
     value_mlp_hidden_sizes: list[int],
     value_mlp_act: type[nn.Module] | str,
     init_log_std: float,
 ):
     input_size = finetune_encoder.out_dim
 
+    mu_hidden_nonlinearity = (
+        getattr(torch.nn, mu_mlp_act) if isinstance(mu_mlp_act, str) else mu_mlp_act
+    )
+
     mu_mlp = MlpModel(
         input_size=input_size,
         hidden_sizes=mu_mlp_hidden_sizes,
         # hidden_nonlinearity=activation_resolver(pi_mlp_act),
-        hidden_nonlinearity=torch.nn.Tanh,
+        hidden_nonlinearity=mu_hidden_nonlinearity,
         output_size=n_actions,
     )
+    if mu_out_act is not None:
+        mu_out_nonlinearity = (
+            getattr(torch.nn, mu_out_act) if isinstance(mu_out_act, str) else mu_out_act
+        )
+        mu_mlp = nn.Sequential(mu_mlp, mu_out_nonlinearity())
 
+    value_hidden_nonlinearity = (
+        getattr(torch.nn, value_mlp_act)
+        if isinstance(value_mlp_act, str)
+        else value_mlp_act
+    )
     value_mlp = MlpModel(
         input_size=input_size,
         hidden_sizes=value_mlp_hidden_sizes,
-        hidden_nonlinearity=torch.nn.Tanh,
+        hidden_nonlinearity=value_hidden_nonlinearity,
         output_size=1,
     )
     return ContinuousPgModel(
@@ -148,18 +163,28 @@ def build_categorical_pg_model(
 ):
     input_size = finetune_encoder.out_dim
 
+    pi_hidden_nonlinearity = (
+        getattr(torch.nn, pi_mlp_act) if isinstance(pi_mlp_act, str) else pi_mlp_act
+    )
+
     pi_mlp = MlpModel(
         input_size=input_size,
         hidden_sizes=pi_mlp_hidden_sizes,
         # hidden_nonlinearity=activation_resolver(pi_mlp_act),
-        hidden_nonlinearity=torch.nn.Tanh,
+        hidden_nonlinearity=pi_hidden_nonlinearity,
         output_size=n_actions,
+    )
+
+    value_hidden_nonlinearity = (
+        getattr(torch.nn, value_mlp_act)
+        if isinstance(value_mlp_act, str)
+        else value_mlp_act
     )
 
     value_mlp = MlpModel(
         input_size=input_size,
         hidden_sizes=value_mlp_hidden_sizes,
-        hidden_nonlinearity=torch.nn.Tanh,
+        hidden_nonlinearity=value_hidden_nonlinearity,
         output_size=1,
     )
 
@@ -181,18 +206,26 @@ def build_rl_aux_categorical_pg_model(
     value_mlp_act: type[nn.Module] | str,
 ):
     input_size = aux_mae.out_dim
+    pi_hidden_nonlinearity = (
+        getattr(torch.nn, pi_mlp_act) if isinstance(pi_mlp_act, str) else pi_mlp_act
+    )
     pi_mlp = MlpModel(
         input_size=input_size,
         hidden_sizes=pi_mlp_hidden_sizes,
         # hidden_nonlinearity=activation_resolver(pi_mlp_act),
-        hidden_nonlinearity=torch.nn.Tanh,
+        hidden_nonlinearity=pi_hidden_nonlinearity,
         output_size=n_actions,
     )
 
+    value_hidden_nonlinearity = (
+        getattr(torch.nn, value_mlp_act)
+        if isinstance(value_mlp_act, str)
+        else value_mlp_act
+    )
     value_mlp = MlpModel(
         input_size=input_size,
         hidden_sizes=value_mlp_hidden_sizes,
-        hidden_nonlinearity=torch.nn.Tanh,
+        hidden_nonlinearity=value_hidden_nonlinearity,
         output_size=1,
     )
 
