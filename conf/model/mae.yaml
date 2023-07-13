@@ -1,5 +1,4 @@
 defaults:
-  # - attention: default
   - transformer_block: default
   - embedder: default
   - pos_embedder: default
