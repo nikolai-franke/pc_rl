@@ -4,6 +4,6 @@ defaults:
 rl_model:
   _target_: pc_rl.builder.build_categorical_pg_model
   pi_mlp_hidden_sizes: [256, 128]
-  pi_mlp_act: tanh
+  pi_mlp_act: Tanh
   value_mlp_hidden_sizes: [256, 128]
-  value_mlp_act: tanh
+  value_mlp_act: Tanh

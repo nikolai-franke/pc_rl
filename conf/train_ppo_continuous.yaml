@@ -5,7 +5,7 @@ defaults:
   - env/reach/continuous@env
 
 parallel: True
-batch_T: 256
+batch_T: 512
 batch_B: 8
 reward_clip_min: -5
 reward_clip_max: 5
@@ -22,6 +22,3 @@ eval:
   max_traj_length: 200
   min_trajectories: 4
   deterministic_actions: False
-
-env:
-  action_type: continuous

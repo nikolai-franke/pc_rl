@@ -44,10 +44,10 @@ def build(config: DictConfig):
     TrajInfo.set_discount(discount)
     CageCls = ProcessCage if parallel else SerialCage
 
-    EnvClass = instantiate(config["env"], _convert_="object", _partial_=True)
+    env_factory = instantiate(config["env"], _convert_="object", _partial_=True)
 
     cage_kwargs = dict(
-        EnvClass=EnvClass,
+        EnvClass=env_factory,
         env_kwargs={},
         TrajInfoClass=TrajInfo,
         reset_automatically=True,
@@ -262,7 +262,7 @@ def build(config: DictConfig):
     eval_config = config["eval"]
 
     eval_cage_kwargs = dict(
-        EnvClass=EnvClass,
+        EnvClass=env_factory,
         env_kwargs={"add_obs_to_info_dict": True},
         # env_kwargs={},
         TrajInfoClass=TrajInfo,
@@ -356,7 +356,7 @@ def build(config: DictConfig):
         env_fps=50,
         record_every_n_steps=1,
         output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
-        video_length=100,
+        video_length=200,
     )
 
     step_transforms.append(video_recorder)

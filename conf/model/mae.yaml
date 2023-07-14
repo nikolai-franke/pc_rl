@@ -2,10 +2,12 @@ defaults:
   - transformer_block: default
   - embedder: default
   - pos_embedder: default
+
 masked_encoder:
   _target_: pc_rl.builder.build_masked_encoder
   mask_ratio: 0.6
   mask_type: rand
+
 encoder_depth: 12
 decoder_depth: 6
 

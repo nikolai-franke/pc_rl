@@ -44,10 +44,10 @@ def build(config: DictConfig):
     TrajInfo.set_discount(discount)
     CageCls = ProcessCage if parallel else SerialCage
 
-    EnvClass = instantiate(config["env"], _convert_="object", _partial_=True)
+    env_factory = instantiate(config["env"], _convert_="object", _partial_=True)
 
     cage_kwargs = dict(
-        EnvClass=EnvClass,
+        EnvClass=env_factory,
         env_kwargs={},
         TrajInfoClass=TrajInfo,
         reset_automatically=True,
@@ -284,7 +284,7 @@ def build(config: DictConfig):
     eval_config = config["eval"]
 
     eval_cage_kwargs = dict(
-        EnvClass=EnvClass,
+        EnvClass=env_factory,
         env_kwargs={"add_obs_to_info_dict": True},
         # env_kwargs={},
         TrajInfoClass=TrajInfo,

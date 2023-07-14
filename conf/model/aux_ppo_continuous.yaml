@@ -1,5 +1,5 @@
 defaults:
-  - ppo_base
+  - aux_ppo_base
 
 rl_model:
   _target_: pc_rl.builder.build_continuous_pg_model
