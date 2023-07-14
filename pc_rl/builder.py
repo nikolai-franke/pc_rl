@@ -43,6 +43,7 @@ def build_aux_ppo(
     value_clipping_mode: str,
     value_clip: Optional[float] = None,
     kl_divergence_limit: float = np.inf,
+    **kwargs, #ignore additional kwargs
 ):
     return AuxPPO(
         agent=agent,
@@ -74,6 +75,7 @@ def build_ppo(
     value_clipping_mode: str,
     value_clip: Optional[float] = None,
     kl_divergence_limit: float = np.inf,
+    **kwargs, # ignore additional kwargs
 ):
     # there is no logic here, but I want to keep all of hydra's instantiate targets in one place
     return PPO(
