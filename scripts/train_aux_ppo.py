@@ -37,10 +37,10 @@ from pc_rl.models.modules.masked_decoder import MaskedDecoder
 @contextmanager
 def build(config: DictConfig):
     # Parllel
-    parallel = config["parallel"]
+    parallel = config.parallel
     storage = "shared" if parallel else "local"
-    discount = config["algo"]["discount"]
-    batch_spec = BatchSpec(config["batch_T"], config["batch_B"])
+    discount = config.algo.discount
+    batch_spec = BatchSpec(config.batch_T, config.batch_B)
     TrajInfo.set_discount(discount)
     CageCls = ProcessCage if parallel else SerialCage
 
@@ -148,7 +148,7 @@ def build(config: DictConfig):
     n_actions = action_space.n
     distribution = Categorical(dim=n_actions)  # type: ignore
 
-    device = config["device"] or ("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = config.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
     device = torch.device(device)
 
     embedder_conf = config.model.embedder
@@ -227,14 +227,13 @@ def build(config: DictConfig):
         batch_transforms,
         discount=discount,
     )
-    algo_config = config["algo"]
 
     batch_buffer, batch_transforms = add_advantage_estimation(
         batch_buffer,
         batch_transforms,
         discount=discount,
-        gae_lambda=algo_config["gae_lambda"],
-        normalize=algo_config["normalize_advantage"],
+        gae_lambda=config.algo.gae_lambda,
+        normalize=config.algo.normalize_advantage,
     )
 
     sampler = BasicSampler(
@@ -242,7 +241,7 @@ def build(config: DictConfig):
         envs=cages,
         agent=agent,
         sample_buffer=batch_buffer,
-        max_steps_decorrelate=config["max_steps_decorrelate"],
+        max_steps_decorrelate=config.max_steps_decorrelate,
         get_bootstrap_value=True,
         obs_transform=Compose(step_transforms),
         batch_transform=Compose(batch_transforms),
@@ -259,12 +258,12 @@ def build(config: DictConfig):
         buffer=dataloader_buffer,
         sampler_batch_spec=batch_spec,
         batch_transform=batch_transform,
-        n_batches=algo_config["minibatches"],
+        n_batches=config.algo.minibatches,
     )
 
     optimizer = torch.optim.Adam(
         agent.model.parameters(),
-        lr=algo_config["learning_rate"],
+        lr=config.algo.learning_rate,
     )
 
     algorithm = instantiate(
@@ -275,7 +274,6 @@ def build(config: DictConfig):
         _convert_="partial",
     )
 
-    eval_config = config["eval"]
 
     eval_cage_kwargs = dict(
         EnvClass=env_factory,
@@ -290,7 +288,7 @@ def build(config: DictConfig):
     action, obs, reward, terminated, truncated, info = example_cage.await_step()  # type: ignore
     example_cage.close()
 
-    step_shape = (1, eval_config["n_eval_envs"])
+    step_shape = (1, config.eval.n_eval_envs)
 
     step_observation = Array(
         shape=(128 * 128, 3),
@@ -364,7 +362,7 @@ def build(config: DictConfig):
     if issubclass(CageCls, ProcessCage):
         eval_cage_kwargs["buffers"] = step_buffer
 
-    eval_envs = [CageCls(**eval_cage_kwargs) for _ in range(eval_config["n_eval_envs"])]
+    eval_envs = [CageCls(**eval_cage_kwargs) for _ in range(config.eval.n_eval_envs)]
 
     video_recorder = RecordVectorizedVideo(
         batch_buffer=step_buffer,
@@ -381,13 +379,13 @@ def build(config: DictConfig):
         step_transforms = Compose(step_transforms)
 
     eval_sampler = EvalSampler(
-        max_traj_length=eval_config["max_traj_length"],
-        min_trajectories=eval_config["min_trajectories"],
+        max_traj_length=config.eval.max_traj_length,
+        min_trajectories=config.eval.min_trajectories,
         envs=eval_envs,
         agent=agent,
         step_buffer=step_buffer,
         obs_transform=step_transforms,
-        deterministic_actions=eval_config["deterministic_actions"],
+        deterministic_actions=config.eval.deterministic_actions,
     )
     # NOTE: end copy
 
@@ -397,9 +395,9 @@ def build(config: DictConfig):
         agent=agent,
         algorithm=algorithm,
         batch_spec=batch_spec,
-        n_steps=runner_config["n_steps"],
-        log_interval_steps=runner_config["log_interval_steps"],
-        eval_interval_steps=runner_config["eval_interval_steps"],
+        n_steps=config.runner.n_steps,
+        log_interval_steps=config.runner.log_interval_steps,
+        eval_interval_steps=config.runner.eval_interval_steps,
     )
     try:
         yield runner
