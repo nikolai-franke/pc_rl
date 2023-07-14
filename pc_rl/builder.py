@@ -1,10 +1,16 @@
 from collections.abc import Callable
 
+import numpy as np
 import torch
 import torch.nn as nn
 from hydra.utils import instantiate
+from parllel.replays import BatchedDataLoader
+from parllel.torch.agents.agent import TorchAgent
+from parllel.torch.algos.ppo import PPO, SamplesForLoss
 from parllel.torch.models import MlpModel, Optional
 from torch.nn import MultiheadAttention
+from torch.optim import Optimizer
+from torch.optim.lr_scheduler import _LRScheduler
 from torch_geometric.nn import MLP
 
 from pc_rl.models.aux_mae import AuxMae
@@ -20,6 +26,36 @@ from pc_rl.models.modules.transformer import (TransformerBlock,
 from pc_rl.models.pg.aux_mae_categorical import AuxMaeCategoricalPgModel
 from pc_rl.models.pg.finetune_categorical import CategoricalPgModel
 from pc_rl.models.pg.finetune_continuous import ContinuousPgModel
+
+
+def build_ppo(
+    agent: TorchAgent,
+    dataloader: BatchedDataLoader[SamplesForLoss[np.ndarray]],
+    optimizer: Optimizer,
+    learning_rate_scheduler: Optional[_LRScheduler],
+    value_loss_coeff: float,
+    entropy_loss_coeff: float,
+    clip_grad_norm: Optional[float],
+    epochs: int,
+    ratio_clip: float,
+    value_clipping_mode: str,
+    value_clip: Optional[float] = None,
+    kl_divergence_limit: float = np.inf,
+):
+    return PPO(
+        agent=agent,
+        dataloader=dataloader,
+        optimizer=optimizer,
+        learning_rate_scheduler=learning_rate_scheduler,
+        value_loss_coeff=value_loss_coeff,
+        entropy_loss_coeff=entropy_loss_coeff,
+        clip_grad_norm=clip_grad_norm,
+        epochs=epochs,
+        ratio_clip=ratio_clip,
+        value_clipping_mode=value_clipping_mode,
+        value_clip=value_clip,
+        kl_divergence_limit=kl_divergence_limit,
+    )
 
 
 def build_embedder(

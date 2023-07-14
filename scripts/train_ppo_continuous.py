@@ -15,12 +15,11 @@ from parllel.buffers import (AgentSamples, Buffer, EnvSamples, Samples,
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.logger import Verbosity
 from parllel.patterns import (EvalSampler, add_advantage_estimation,
-                              add_bootstrap_value, add_reward_normalization,)
+                              add_bootstrap_value, add_reward_normalization)
 from parllel.runners import OnPolicyRunner
 from parllel.samplers.basic import BasicSampler
 from parllel.torch.agents.gaussian import GaussianPgAgent
-from parllel.torch.algos.ppo import (PPO, BatchedDataLoader,
-                                     build_dataloader_buffer)
+from parllel.torch.algos.ppo import BatchedDataLoader, build_dataloader_buffer
 from parllel.torch.distributions import Gaussian
 from parllel.torch.handler import TorchHandler
 from parllel.torch.utils import buffer_to_device, torchify_buffer
@@ -35,15 +34,14 @@ import wandb
 @contextmanager
 def build(config: DictConfig):
     # Parllel
-    parallel = config["parallel"]
+    parallel = config.parallel
     storage = "shared" if parallel else "local"
-    discount = config["algo"]["discount"]
-    batch_spec = BatchSpec(config["batch_T"], config["batch_B"])
+    discount = config.algo.discount
+    batch_spec = BatchSpec(config.batch_T, config.batch_B)
     TrajInfo.set_discount(discount)
     CageCls = ProcessCage if parallel else SerialCage
 
-    EnvClass = instantiate(config["env"], _convert_="object", _partial_=True)
-    print(config.env)
+    EnvClass = instantiate(config.env, _convert_="object", _partial_=True)
 
     cage_kwargs = dict(
         EnvClass=EnvClass,
@@ -147,7 +145,7 @@ def build(config: DictConfig):
     n_actions = action_space.shape[0]
     distribution = Gaussian(dim=n_actions)  # type: ignore
 
-    device = config["device"] or ("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = config.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
     device = torch.device(device)
 
     embedder_conf = config.model.embedder
@@ -201,14 +199,13 @@ def build(config: DictConfig):
         batch_transforms,
         discount=discount,
     )
-    algo_config = config["algo"]
 
     batch_buffer, batch_transforms = add_advantage_estimation(
         batch_buffer,
         batch_transforms,
         discount=discount,
-        gae_lambda=algo_config["gae_lambda"],
-        normalize=algo_config["normalize_advantage"],
+        gae_lambda=config.algo.gae_lambda,
+        normalize=config.algo.normalize_advantage,
     )
 
     sampler = BasicSampler(
@@ -216,7 +213,7 @@ def build(config: DictConfig):
         envs=cages,
         agent=agent,
         sample_buffer=batch_buffer,
-        max_steps_decorrelate=config["max_steps_decorrelate"],
+        max_steps_decorrelate=config.max_steps_decorrelate,
         get_bootstrap_value=True,
         obs_transform=Compose(step_transforms),
         batch_transform=Compose(batch_transforms),
@@ -233,29 +230,21 @@ def build(config: DictConfig):
         buffer=dataloader_buffer,
         sampler_batch_spec=batch_spec,
         batch_transform=batch_transform,
-        n_batches=algo_config["minibatches"],
+        n_batches=config.algo.minibatches,
     )
 
     optimizer = torch.optim.Adam(
         agent.model.parameters(),
-        lr=algo_config["learning_rate"],
+        lr=config.algo.learning_rate,
     )
 
-    algorithm = PPO(
+    algorithm = instantiate(
+        config.algo,
         agent=agent,
         dataloader=dataloader,
         optimizer=optimizer,
-        learning_rate_scheduler=algo_config["learning_rate_scheduler"],
-        value_loss_coeff=algo_config["value_loss_coeff"],
-        entropy_loss_coeff=algo_config["entropy_loss_coeff"],
-        clip_grad_norm=algo_config["clip_grad_norm"],
-        epochs=algo_config["epochs"],
-        ratio_clip=algo_config["ratio_clip"],
-        value_clipping_mode=algo_config["value_clipping_mode"],
+        _convert_="partial",
     )
-    runner_config = config["runner"]
-
-    eval_config = config["eval"]
 
     eval_cage_kwargs = dict(
         EnvClass=EnvClass,
@@ -270,7 +259,7 @@ def build(config: DictConfig):
     action, obs, reward, terminated, truncated, info = example_cage.await_step()  # type: ignore
     example_cage.close()
 
-    step_shape = (1, eval_config["n_eval_envs"])
+    step_shape = (1, config.eval.n_eval_envs)
 
     step_observation = Array(
         shape=(128 * 128, 3),
@@ -344,7 +333,7 @@ def build(config: DictConfig):
     if issubclass(CageCls, ProcessCage):
         eval_cage_kwargs["buffers"] = step_buffer
 
-    eval_envs = [CageCls(**eval_cage_kwargs) for _ in range(eval_config["n_eval_envs"])]
+    eval_envs = [CageCls(**eval_cage_kwargs) for _ in range(config.eval.n_eval_envs)]
 
     video_recorder = RecordVectorizedVideo(
         batch_buffer=step_buffer,
@@ -352,7 +341,7 @@ def build(config: DictConfig):
         env_fps=50,
         record_every_n_steps=1,
         output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
-        video_length=100,
+        video_length=config.env.max_episode_length,
     )
 
     step_transforms.append(video_recorder)
@@ -361,13 +350,13 @@ def build(config: DictConfig):
         step_transforms = Compose(step_transforms)
 
     eval_sampler = EvalSampler(
-        max_traj_length=eval_config["max_traj_length"],
-        min_trajectories=eval_config["min_trajectories"],
+        max_traj_length=config.eval.max_traj_length,
+        min_trajectories=config.eval.min_trajectories,
         envs=eval_envs,
         agent=agent,
         step_buffer=step_buffer,
         obs_transform=step_transforms,
-        deterministic_actions=eval_config["deterministic_actions"],
+        deterministic_actions=config.eval.deterministic_actions,
     )
     # NOTE: end copy
 
@@ -377,9 +366,9 @@ def build(config: DictConfig):
         agent=agent,
         algorithm=algorithm,
         batch_spec=batch_spec,
-        n_steps=runner_config["n_steps"],
-        log_interval_steps=runner_config["log_interval_steps"],
-        eval_interval_steps=runner_config["eval_interval_steps"],
+        n_steps=config.runner.n_steps,
+        log_interval_steps=config.runner.log_interval_steps,
+        eval_interval_steps=config.runner.eval_interval_steps,
     )
     try:
         yield runner
@@ -393,7 +382,9 @@ def build(config: DictConfig):
         # buffer_method(step_buffer, "close")
 
 
-@hydra.main(version_base=None, config_path="../conf", config_name="train_ppo_continuous")
+@hydra.main(
+    version_base=None, config_path="../conf", config_name="train_ppo_continuous"
+)
 def main(config: DictConfig):
     mp.set_start_method("fork")
 
