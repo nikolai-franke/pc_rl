@@ -211,7 +211,6 @@ def build(config: DictConfig):
         example_obs=example_obs,
         device=device,
     )
-
     agent = TorchHandler(agent)
 
     _, agent_info = agent.step(example_obs)
@@ -273,7 +272,6 @@ def build(config: DictConfig):
         optimizer=optimizer,
         _convert_="partial",
     )
-
 
     eval_cage_kwargs = dict(
         EnvClass=env_factory,
@@ -370,7 +368,7 @@ def build(config: DictConfig):
         env_fps=50,
         record_every_n_steps=1,
         output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
-        video_length=100,
+        video_length=config.env.max_episode_steps,
     )
 
     step_transforms.append(video_recorder)

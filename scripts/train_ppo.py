@@ -172,8 +172,10 @@ def build(config: DictConfig):
         transformer_encoder=transformer_encoder,
         pos_embedder=pos_embedder,
     )
+
     pg_model = instantiate(
         config.model.rl_model,
+        _convert_="partial",
         embedder=embedder,
         finetune_encoder=finetune_encoder,
         n_actions=n_actions,
