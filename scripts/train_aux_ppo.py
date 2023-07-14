@@ -267,19 +267,13 @@ def build(config: DictConfig):
         lr=algo_config["learning_rate"],
     )
 
-    algorithm = AuxPPO(
+    algorithm = instantiate(
+        config.algo,
         agent=agent,
         dataloader=dataloader,
         optimizer=optimizer,
-        learning_rate_scheduler=algo_config["learning_rate_scheduler"],
-        value_loss_coeff=algo_config["value_loss_coeff"],
-        entropy_loss_coeff=algo_config["entropy_loss_coeff"],
-        clip_grad_norm=algo_config["clip_grad_norm"],
-        epochs=algo_config["epochs"],
-        ratio_clip=algo_config["ratio_clip"],
-        value_clipping_mode=algo_config["value_clipping_mode"],
+        _convert_="partial",
     )
-    runner_config = config["runner"]
 
     eval_config = config["eval"]
 

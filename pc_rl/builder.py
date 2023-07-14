@@ -26,6 +26,39 @@ from pc_rl.models.modules.transformer import (TransformerBlock,
 from pc_rl.models.pg.aux_mae_categorical import AuxMaeCategoricalPgModel
 from pc_rl.models.pg.finetune_categorical import CategoricalPgModel
 from pc_rl.models.pg.finetune_continuous import ContinuousPgModel
+from pc_rl.algos.aux_ppo import AuxPPO
+
+
+def build_aux_ppo(
+    agent: TorchAgent,
+    dataloader: BatchedDataLoader[SamplesForLoss[np.ndarray]],
+    optimizer: Optimizer,
+    learning_rate_scheduler: Optional[_LRScheduler],
+    value_loss_coeff: float,
+    entropy_loss_coeff: float,
+    aux_loss_coeff: float,
+    clip_grad_norm: Optional[float],
+    epochs: int,
+    ratio_clip: float,
+    value_clipping_mode: str,
+    value_clip: Optional[float] = None,
+    kl_divergence_limit: float = np.inf,
+):
+    return AuxPPO(
+        agent=agent,
+        dataloader=dataloader,
+        optimizer=optimizer,
+        learning_rate_scheduler=learning_rate_scheduler,
+        value_loss_coeff=value_loss_coeff,
+        entropy_loss_coeff=entropy_loss_coeff,
+        aux_loss_coeff=aux_loss_coeff,
+        clip_grad_norm=clip_grad_norm,
+        epochs=epochs,
+        ratio_clip=ratio_clip,
+        value_clipping_mode=value_clipping_mode,
+        value_clip=value_clip,
+        kl_divergence_limit=kl_divergence_limit,
+    )
 
 
 def build_ppo(
@@ -42,6 +75,7 @@ def build_ppo(
     value_clip: Optional[float] = None,
     kl_divergence_limit: float = np.inf,
 ):
+    # there is no logic here, but I want to keep all of hydra's instantiate targets in one place
     return PPO(
         agent=agent,
         dataloader=dataloader,

@@ -148,11 +148,10 @@ def build(config: DictConfig):
     device = config.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
     device = torch.device(device)
 
-    embedder_conf = config.model.embedder
-    embedding_size = embedder_conf.embedding_size
-
     transformer_block_factory = instantiate(
-        config.model.transformer_block, embedding_size=embedding_size, _partial_=True
+        config.model.transformer_block,
+        embedding_size=config.model.embedder.embedding_size,
+        _partial_=True,
     )
     transformer_encoder = instantiate(
         config.model.transformer_encoder,

@@ -38,16 +38,15 @@ class AuxPPO(PPO):
         learning_rate_scheduler: Optional[_LRScheduler],
         value_loss_coeff: float,
         entropy_loss_coeff: float,
+        aux_loss_coeff: float,
         clip_grad_norm: Optional[float],
         epochs: int,
         ratio_clip: float,
         value_clipping_mode: str,
         value_clip: Optional[float] = None,
         kl_divergence_limit: float = np.inf,
-        aux_loss_coeff: float = 10.0,
         **kwargs,
     ) -> None:
-        # TODO: maybe it makes sense to add a parameter to weigh the two losses manually
         super().__init__(
             agent,
             dataloader,
