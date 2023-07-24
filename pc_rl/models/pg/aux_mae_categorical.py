@@ -1,11 +1,12 @@
 import torch.nn as nn
 import torch.nn.functional as F
+from parllel.torch.distributions.categorical import DistParams
 from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 
 from pc_rl.agents.aux_categorical import ModelOutputs
 from pc_rl.models.aux_mae import AuxMae
 from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.pg.finetune_categorical import namedtuple_to_batched_data
+from pc_rl.utils.array_dict import dict_to_batched_data
 
 
 class AuxMaeCategoricalPgModel(nn.Module):
@@ -23,7 +24,7 @@ class AuxMaeCategoricalPgModel(nn.Module):
         self.value_mlp = value_mlp
 
     def forward(self, data):
-        pos, batch = namedtuple_to_batched_data(data)
+        pos, batch = dict_to_batched_data(data)
         x, neighborhoods, center_points = self.embedder(pos, batch)
         x, pos_prediction, pos_ground_truth = self.aux_mae(
             x, center_points, neighborhoods
@@ -39,7 +40,7 @@ class AuxMaeCategoricalPgModel(nn.Module):
         )
 
         return ModelOutputs(
-            pi=pi,
+            dist_params=DistParams(probs=pi),
             value=value,
             pos_prediction=pos_prediction,
             ground_truth=pos_ground_truth,

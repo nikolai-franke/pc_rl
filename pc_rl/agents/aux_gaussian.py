@@ -1,48 +1,36 @@
-from dataclasses import dataclass
-from typing import Optional, Union
+from typing import TypedDict
 
 import torch
 import torch.nn as nn
-from parllel.buffers import Buffer, NamedArrayTupleClass, buffer_asarray
-from parllel.handlers.agent import AgentStep
-from parllel.torch.agents.categorical import AgentInfo
-from parllel.torch.algos.ppo import TorchAgent
-from parllel.torch.distributions.gaussian import DistInfoStd, Gaussian
-from parllel.torch.utils import buffer_to_device, torchify_buffer
+from parllel import Array, ArrayDict, ArrayTree, Index, dict_map
+from parllel.torch.distributions.gaussian import DistParams, Gaussian
+from torch import Tensor
+from typing_extensions import NotRequired
 
-AgentPrediction = NamedArrayTupleClass(
-    "MaePgAgentPrediction",
-    [
-        "dist_info",
-        "value",
-        "pos_prediction",
-        "ground_truth",
-    ],
-)
+from pc_rl.agents.pg import AuxPgAgent, AuxPgPrediction
 
 
-@dataclass(frozen=True)
-class ModelOutputs:
-    mean: Buffer
-    log_std: Buffer
-    value: Buffer
-    pos_prediction: Buffer
-    ground_truth: Buffer
+class ModelOutputs(TypedDict):
+    dist_params: DistParams
+    value: NotRequired[Tensor]
+    pos_prediction: Tensor
+    ground_truth: Tensor
 
 
-class MaeCategoricalPgAgent(TorchAgent):
+class MaeGaussianPgAgent(AuxPgAgent):
     def __init__(
         self,
         model: nn.Module,
-        distribution: Categorical,
-        example_obs: Buffer,
-        device: Optional[torch.device] = None,
+        distribution: Gaussian,
+        example_obs: ArrayTree[Array],
+        device: torch.device | None = None,
     ) -> None:
         super().__init__(model, distribution, device)
-        example_obs = buffer_asarray(example_obs)
-        example_obs = torchify_buffer(example_obs)
-        exmple_inputs = (example_obs,)
-        example_inputs = buffer_to_device(exmple_inputs, device=self.device)
+
+        example_obs = example_obs.to_ndarray()
+        example_obs = dict_map(torch.from_numpy, example_obs)
+        example_obs = example_obs.to(device=self.device)
+        example_inputs = (example_obs,)
 
         # TODO: error message
         with torch.no_grad():
@@ -53,34 +41,38 @@ class MaeCategoricalPgAgent(TorchAgent):
 
     @torch.no_grad()
     def step(
-        self, observation: Buffer, *, env_indices: Union[int, slice] = ...
-    ) -> AgentStep:
+        self, observation: ArrayTree[Array], *, env_indices: Index = ...
+    ) -> tuple[ArrayTree[Tensor], ArrayDict[Tensor]]:
+        observation = observation.to_ndarray()
+        observation = dict_map(torch.from_numpy, observation)
+        observation = observation.to(device=self.device)
         model_inputs = (observation,)
-        model_inputs = buffer_to_device(model_inputs, device=self.device)
         model_outputs: ModelOutputs = self.model(*model_inputs)
-        dist_info = DistInfoStd(mean=model_outputs.mean, log_std=model_outputs.log_std)
-        action = self.distribution.sample(dist_info)
-        value = model_outputs.value
-        # TODO: AgentInfo without previous action?
-        agent_info = AgentInfo(dist_info, value, None)
-        agent_step = AgentStep(action=action, agent_info=agent_info)
 
-        return buffer_to_device(agent_step, device="cpu")
+        dist_params = model_outputs["dist_params"]
+        action = self.distribution.sample(dist_params)
+
+        agent_info = ArrayDict({"dist_params": dist_params})
+        if "value" in model_outputs:
+            agent_info["value"] = model_outputs["value"]
+
+        return action.cpu(), agent_info.cpu()
 
     @torch.no_grad()
-    def value(self, observation: Buffer) -> Buffer:
+    def value(self, observation: ArrayTree[Array]) -> Tensor:
+        observation = observation.to_ndarray()
+        observation = dict_map(torch.from_numpy, observation)
+        observation = observation.to(device=self.device)
         model_inputs = (observation,)
-        model_inputs = buffer_to_device(model_inputs, device=self.device)
         model_outputs: ModelOutputs = self.model(*model_inputs)
-        value = model_outputs.value
-        return buffer_to_device(value, device="cpu")
+        assert "value" in model_outputs
+        value = model_outputs["value"]
+        return value.cpu()
 
-    def predict(self, observation: Buffer, agent_info: AgentInfo) -> AgentPrediction:
+    def predict(
+        self, observation: ArrayTree[Tensor], agent_info: ArrayDict[Tensor]
+    ) -> AuxPgPrediction:
+        """Performs forward pass on training data, for algorithm."""
         model_inputs = (observation,)
         model_outputs: ModelOutputs = self.model(*model_inputs)
-        dist_info = DistInfoStd(mean=model_outputs.mean, log_std=model_outputs.log_std)
-        value = model_outputs.value
-        pos_prediction = model_outputs.pos_prediction
-        ground_truth = model_outputs.ground_truth
-        prediction = AgentPrediction(dist_info, value, pos_prediction, ground_truth)
-        return prediction
+        return model_outputs

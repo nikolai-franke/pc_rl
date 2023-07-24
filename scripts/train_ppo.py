@@ -5,26 +5,22 @@ from pathlib import Path
 
 import gymnasium as gym
 import hydra
-import numpy as np
 import parllel.logger as logger
 import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
-from parllel.arrays import Array, buffer_from_dict_example, buffer_from_example
-from parllel.buffers import (AgentSamples, Buffer, EnvSamples, Samples,
-                             buffer_asarray, buffer_method)
+from parllel import Array, ArrayDict, dict_map
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.logger import Verbosity
-from parllel.patterns import (EvalSampler, add_advantage_estimation,
-                              add_bootstrap_value, add_reward_normalization)
+from parllel.patterns import (add_advantage_estimation, add_agent_info,
+                              add_bootstrap_value, add_reward_normalization,
+                              build_cages_and_sample_tree, build_eval_sampler)
 from parllel.runners import OnPolicyRunner
 from parllel.samplers.basic import BasicSampler
 from parllel.torch.agents.categorical import CategoricalPgAgent
 from parllel.torch.agents.gaussian import GaussianPgAgent
-from parllel.torch.algos.ppo import BatchedDataLoader, build_dataloader_buffer
+from parllel.torch.algos.ppo import BatchedDataLoader, build_loss_sample_tree
 from parllel.torch.distributions import Categorical, Gaussian
-from parllel.torch.handler import TorchHandler
-from parllel.torch.utils import buffer_to_device, torchify_buffer
 from parllel.transforms import Compose
 from parllel.transforms.video_recorder import RecordVectorizedVideo
 from parllel.types import BatchSpec
@@ -37,7 +33,6 @@ import wandb
 def build(config: DictConfig):
     # Parllel
     parallel = config.parallel
-    storage = "shared" if parallel else "local"
     discount = config.algo.discount
     batch_spec = BatchSpec(config.batch_T, config.batch_B)
     TrajInfo.set_discount(discount)
@@ -45,112 +40,38 @@ def build(config: DictConfig):
 
     env_factory = instantiate(config.env, _convert_="object", _partial_=True)
 
-    cage_kwargs = dict(
+    cages, sample_tree, metadata = build_cages_and_sample_tree(
         EnvClass=env_factory,
-        env_kwargs={},
+        env_kwargs={"add_obs_to_info_dict": False},
         TrajInfoClass=TrajInfo,
         reset_automatically=True,
+        batch_spec=batch_spec,
+        parallel=parallel,
+        keys_to_skip="observation",
     )
-    example_cage = CageCls(**cage_kwargs)
-    example_cage.random_step_async()
-    action, obs, reward, terminated, truncated, info = example_cage.await_step()  # type: ignore
 
-    spaces = example_cage.spaces
-    obs_space, action_space = spaces.observation, spaces.action
+    obs_space, action_space = metadata.obs_space, metadata.action_space
     discrete = isinstance(action_space, gym.spaces.Discrete)
     AgentClass = CategoricalPgAgent if discrete else GaussianPgAgent
     DistributionClass = Categorical if discrete else Gaussian
 
-    example_cage.close()
-
-    # allocate batch buffer based on examples
-    np_obs = np.asanyarray(obs)
-    if (dtype := np_obs.dtype) == np.float64:
-        dtype = np.float32
-    elif dtype == np.int64:
-        dtype = np.int32
-
-    batch_observation = Array(
-        shape=(128 * 128, 3),
-        dtype=dtype,
+    sample_tree["observation"] = dict_map(
+        Array.from_numpy,
+        metadata.example_obs,
+        feature_shape=obs_space.shape,
         batch_shape=tuple(batch_spec),
         kind="jagged",
-        storage=storage,
+        storage="managed" if parallel else "local",
         padding=1,
     )
-    # in case environment creates rewards of shape (1,) or of integer type,
-    # force to be correct shape and type
-    batch_reward = buffer_from_dict_example(
-        reward,
-        tuple(batch_spec),
-        name="reward",
-        shape=(),
-        dtype=np.float32,
-        storage=storage,
-    )
-    batch_terminated = buffer_from_example(
-        terminated,
-        tuple(batch_spec),
-        shape=(),
-        dtype=bool,
-        storage=storage,
-    )
-    batch_truncated = buffer_from_example(
-        truncated,
-        tuple(batch_spec),
-        shape=(),
-        dtype=bool,
-        storage=storage,
-    )
-    batch_done = buffer_from_example(
-        truncated,
-        tuple(batch_spec),
-        shape=(),
-        dtype=bool,
-        storage=storage,
-        padding=1,
-    )
-    batch_info = buffer_from_dict_example(
-        info, tuple(batch_spec), name="envinfo", storage=storage, padding=1
-    )
-    batch_env = EnvSamples(
-        batch_observation,
-        batch_reward,
-        batch_done,
-        batch_terminated,
-        batch_truncated,
-        batch_info,
-    )
-
-    batch_action = buffer_from_dict_example(
-        action,
-        tuple(batch_spec),
-        name="action",
-        force_32bit="float",
-        storage=storage,
-    )
-    if storage == "shared":
-        cage_kwargs["buffers"] = (
-            batch_action,
-            batch_observation,
-            batch_reward,
-            batch_done,
-            batch_terminated,
-            batch_truncated,
-            batch_info,
-        )
-
-    logger.debug(f"Instantiating {batch_spec.B} environments...")
-    cages = [CageCls(**cage_kwargs) for _ in range(batch_spec.B)]
-    logger.debug("Environments instantiated.")
-
-    spaces = cages[0].spaces
-    obs_space, action_space = spaces.observation, spaces.action
+    sample_tree["observation"][0] = obs_space.sample()
+    example_obs_batch = sample_tree["observation"][0]
 
     n_actions = action_space.n if discrete else action_space.shape[0]
     distribution = DistributionClass(dim=n_actions)  # type: ignore
 
     device = config.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
+    wandb.config.update({"device": device}, allow_val_change=True)
     device = torch.device(device)
 
     transformer_block_factory = instantiate(
@@ -181,33 +102,27 @@ def build(config: DictConfig):
         n_actions=n_actions,
     )
 
-    batch_env.observation[0] = obs_space.sample()
-    example_obs = batch_env.observation[0]
-
     agent = AgentClass(
         model=pg_model,
-        distribution=distribution,
-        example_obs=example_obs,
+        distribution=distribution,  # type: ignore
+        example_obs=example_obs_batch,
         device=device,
     )
-    agent = TorchHandler(agent)
 
-    _, agent_info = agent.step(example_obs)
-    batch_agent_info = buffer_from_example(agent_info, (batch_spec.T,), storage=storage)
-    batch_agent = AgentSamples(batch_action, batch_agent_info)
-    batch_buffer = Samples(batch_agent, batch_env)
+    sample_tree = add_agent_info(sample_tree, agent, example_obs_batch)
 
-    batch_buffer = add_bootstrap_value(batch_buffer)
+    sample_tree = add_bootstrap_value(sample_tree)
+
     batch_transforms, step_transforms = [], []
 
-    batch_buffer, batch_transforms = add_reward_normalization(
-        batch_buffer,
+    sample_tree, batch_transforms = add_reward_normalization(
+        sample_tree,
         batch_transforms,
         discount=discount,
     )
 
-    batch_buffer, batch_transforms = add_advantage_estimation(
-        batch_buffer,
+    sample_tree, batch_transforms = add_advantage_estimation(
+        sample_tree,
         batch_transforms,
         discount=discount,
         gae_lambda=config.algo.gae_lambda,
@@ -218,30 +133,31 @@ def build(config: DictConfig):
         batch_spec=batch_spec,
         envs=cages,
         agent=agent,
-        sample_buffer=batch_buffer,
+        sample_tree=sample_tree,
         max_steps_decorrelate=config.max_steps_decorrelate,
         get_bootstrap_value=True,
         obs_transform=Compose(step_transforms),
         batch_transform=Compose(batch_transforms),
     )
 
-    dataloader_buffer = build_dataloader_buffer(batch_buffer)
+    loss_sample_tree = build_loss_sample_tree(sample_tree)
 
-    def batch_transform(x: Buffer):
-        x = buffer_asarray(x)
-        x = torchify_buffer(x)
-        return buffer_to_device(x, device=device)
+    def batch_transform(tree: ArrayDict[Array]) -> ArrayDict[torch.Tensor]:
+        tree = tree.to_ndarray()  # type: ignore
+        tree = tree.apply(torch.from_numpy)
+        return tree.to(device=device)
 
     dataloader = BatchedDataLoader(
-        buffer=dataloader_buffer,
+        tree=loss_sample_tree,
         sampler_batch_spec=batch_spec,
-        batch_transform=batch_transform,
         n_batches=config.algo.minibatches,
+        batch_transform=batch_transform,
     )
 
     optimizer = torch.optim.Adam(
         agent.model.parameters(),
         lr=config.algo.learning_rate,
+        **config.get("optimizer", {}),
     )
 
     algorithm = instantiate(
@@ -252,119 +168,35 @@ def build(config: DictConfig):
         _convert_="partial",
     )
 
-    eval_cage_kwargs = dict(
+    # TODO: what to do when the eval environments return additional things
+    eval_sampler, eval_sample_tree = build_eval_sampler(
+        sample_tree=sample_tree,
+        agent=agent,
+        CageCls=CageCls,
         EnvClass=env_factory,
         env_kwargs={"add_obs_to_info_dict": True},
-        # env_kwargs={},
         TrajInfoClass=TrajInfo,
-        reset_automatically=True,
-    )
-
-    example_cage = CageCls(**eval_cage_kwargs)
-    example_cage.random_step_async()
-    action, obs, reward, terminated, truncated, info = example_cage.await_step()  # type: ignore
-    example_cage.close()
-
-    step_shape = (1, config.eval.n_eval_envs)
-
-    step_observation = Array(
-        shape=(128 * 128, 3),
-        dtype=dtype,
-        batch_shape=step_shape,
-        kind="jagged",
-        storage=storage,
-        padding=1,
-    )
-    # in case environment creates rewards of shape (1,) or of integer type,
-    # force to be correct shape and type
-    step_reward = buffer_from_dict_example(
-        reward,
-        step_shape,
-        name="reward",
-        shape=(),
-        dtype=np.float32,
-        storage=storage,
-    )
-    step_terminated = buffer_from_example(
-        terminated,
-        step_shape,
-        shape=(),
-        dtype=bool,
-        storage=storage,
-    )
-    step_truncated = buffer_from_example(
-        truncated,
-        step_shape,
-        shape=(),
-        dtype=bool,
-        storage=storage,
-    )
-    step_done = buffer_from_example(
-        truncated,
-        step_shape,
-        shape=(),
-        dtype=bool,
-        storage=storage,
-        padding=1,
-    )
-    step_info = buffer_from_dict_example(
-        info, step_shape, name="envinfo", storage=storage, padding=1
-    )
-
-    step_env = EnvSamples(
-        observation=step_observation,
-        reward=step_reward,
-        done=step_done,
-        terminated=step_terminated,
-        truncated=step_truncated,
-        env_info=step_info,
-    )
-
-    step_action = buffer_from_dict_example(
-        action,
-        step_shape,
-        name="action",
-        force_32bit="float",
-        storage=storage,
-    )
-
-    step_env.observation[0] = obs_space.sample()
-    example_obs = step_env.observation[0]
-    _, agent_info = agent.step(example_obs)
-
-    step_agent_info = buffer_from_example(agent_info, (1,), storage=storage)
-    step_agent = AgentSamples(step_action, step_agent_info)
-    step_buffer = Samples(agent=step_agent, env=step_env)
-
-    if issubclass(CageCls, ProcessCage):
-        eval_cage_kwargs["buffers"] = step_buffer
-
-    eval_envs = [CageCls(**eval_cage_kwargs) for _ in range(config.eval.n_eval_envs)]
-
-    video_recorder = RecordVectorizedVideo(
-        batch_buffer=step_buffer,
-        buffer_key_to_record="env_info.rendering",
-        env_fps=50,
-        record_every_n_steps=1,
-        output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
-        video_length=config.env.max_episode_steps,
-    )
-
-    step_transforms.append(video_recorder)
-
-    if step_transforms is not None:
-        step_transforms = Compose(step_transforms)
-
-    eval_sampler = EvalSampler(
+        n_eval_envs=config.eval.n_eval_envs,
         max_traj_length=config.eval.max_traj_length,
         min_trajectories=config.eval.min_trajectories,
-        envs=eval_envs,
-        agent=agent,
-        step_buffer=step_buffer,
-        obs_transform=step_transforms,
-        deterministic_actions=config.eval.deterministic_actions,
+        step_transforms=step_transforms,
     )
-    # NOTE: end copy
+
+    eval_sample_tree["observation"][0] = obs_space.sample()
+
+    # # TODO: chicken and egg...
+    # video_recorder = RecordVectorizedVideo(
+    #     batch_buffer=eval_sample_tree,
+    #     buffer_key_to_record="env_info.rendering",
+    #     env_fps=50,
+    #     record_every_n_steps=1,
+    #     output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+    #     video_length=config.env.max_episode_steps,
+    # )
+
+    # step_transforms.append(video_recorder)
+    # step_transforms = Compose(step_transforms)
+    # eval_sampler.obs_transform = step_transforms
 
     runner = OnPolicyRunner(
         sampler=sampler,
@@ -384,8 +216,7 @@ def build(config: DictConfig):
         agent.close()
         for cage in cages:
             cage.close()
-        buffer_method(batch_buffer, "close")
-        # buffer_method(step_buffer, "close")
+        sample_tree.close()
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")
@@ -411,7 +242,7 @@ def main(config: DictConfig):
         },
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
         model_save_path="model.pt",
-        verbosity=Verbosity.DEBUG,
+        # verbosity=Verbosity.DEBUG,
     )
     with build(config) as runner:
         runner.run()

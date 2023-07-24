@@ -17,7 +17,7 @@ def build(
     distance_to_target_threshold: float,
     reward_amount_dict: dict,
     create_scene_kwargs: dict,
-    add_obs_to_info_dict: bool = False,
+    add_obs_to_info_dict: bool,
 ):
     assert len(image_shape) == 2
     image_shape = tuple(image_shape)  # type: ignore

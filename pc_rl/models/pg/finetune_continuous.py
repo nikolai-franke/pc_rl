@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
-from parllel.arrays.jagged import PointBatch
 from parllel.torch.agents.gaussian import ModelOutputs
+from parllel.torch.distributions.gaussian import DistParams
 from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 
-from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.finetune_encoder import FinetuneEncoder
+from pc_rl.models.modules.embedder import Embedder
+from pc_rl.utils.array_dict import dict_to_batched_data
 
 
 class ContinuousPgModel(nn.Module):
@@ -48,25 +49,17 @@ class ContinuousPgModel(nn.Module):
         return len(self.mu_mlp(input))
 
     def forward(self, data):
-        pos, batch = namedtuple_to_batched_data(data)
+        pos, batch = dict_to_batched_data(data)
         x, _, center_points = self.embedder(pos, batch)
         x = self.encoder(x, center_points)
         lead_dim, T, B, _ = infer_leading_dims(x, 1)
         obs_flat = x.view(T * B, -1)
-        mu = self.mu_mlp(obs_flat)
+        mean = self.mu_mlp(obs_flat)
         value = self.value_mlp(obs_flat).squeeze(-1)
         log_std = self.log_std.repeat(T * B, 1)
-        mu, value, log_std = restore_leading_dims((mu, value, log_std), lead_dim, T, B)
-        return ModelOutputs(mean=mu, value=value, log_std=log_std)
-
-
-def namedtuple_to_batched_data(
-    namedtup: PointBatch,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    pos, ptr = namedtup.pos, namedtup.ptr
-    num_nodes = ptr[1:] - ptr[:-1]
-    batch = torch.repeat_interleave(
-        torch.arange(len(num_nodes), device=num_nodes.device),
-        repeats=num_nodes,
-    )
-    return pos, batch
+        mean, value, log_std = restore_leading_dims(
+            (mean, value, log_std), lead_dim, T, B
+        )
+        return ModelOutputs(
+            dist_params=DistParams(mean=mean, log_std=log_std), value=value
+        )

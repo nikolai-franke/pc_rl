@@ -1,18 +1,21 @@
 from collections.abc import Callable
+from typing import Optional
 
 import numpy as np
 import torch
 import torch.nn as nn
 from hydra.utils import instantiate
 from parllel.replays import BatchedDataLoader
-from parllel.torch.agents.agent import TorchAgent
-from parllel.torch.algos.ppo import PPO, SamplesForLoss
-from parllel.torch.models import MlpModel, Optional
+from parllel.torch.agents.categorical import PgAgent
+from parllel.torch.algos.ppo import PPO
+from parllel.torch.models import MlpModel
+from torch.functional import Tensor
 from torch.nn import MultiheadAttention
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 from torch_geometric.nn import MLP
 
+from pc_rl.algos.aux_ppo import AuxPPO
 from pc_rl.models.aux_mae import AuxMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.mae import MaskedAutoEncoder
@@ -26,24 +29,23 @@ from pc_rl.models.modules.transformer import (TransformerBlock,
 from pc_rl.models.pg.aux_mae_categorical import AuxMaeCategoricalPgModel
 from pc_rl.models.pg.finetune_categorical import CategoricalPgModel
 from pc_rl.models.pg.finetune_continuous import ContinuousPgModel
-from pc_rl.algos.aux_ppo import AuxPPO
 
 
 def build_aux_ppo(
-    agent: TorchAgent,
-    dataloader: BatchedDataLoader[SamplesForLoss[np.ndarray]],
+    agent: PgAgent,
+    dataloader: BatchedDataLoader[Tensor],
     optimizer: Optimizer,
-    learning_rate_scheduler: Optional[_LRScheduler],
+    learning_rate_scheduler: _LRScheduler | None,
     value_loss_coeff: float,
     entropy_loss_coeff: float,
     aux_loss_coeff: float,
-    clip_grad_norm: Optional[float],
+    clip_grad_norm: float | None,
     epochs: int,
     ratio_clip: float,
     value_clipping_mode: str,
-    value_clip: Optional[float] = None,
+    value_clip: float | None = None,
     kl_divergence_limit: float = np.inf,
-    **kwargs, #ignore additional kwargs
+    **kwargs,  # ignore additional kwargs
 ):
     return AuxPPO(
         agent=agent,
@@ -63,19 +65,19 @@ def build_aux_ppo(
 
 
 def build_ppo(
-    agent: TorchAgent,
-    dataloader: BatchedDataLoader[SamplesForLoss[np.ndarray]],
+    agent: PgAgent,
+    dataloader: BatchedDataLoader[Tensor],
     optimizer: Optimizer,
-    learning_rate_scheduler: Optional[_LRScheduler],
+    learning_rate_scheduler: _LRScheduler | None,
     value_loss_coeff: float,
     entropy_loss_coeff: float,
-    clip_grad_norm: Optional[float],
+    clip_grad_norm: float | None,
     epochs: int,
     ratio_clip: float,
     value_clipping_mode: str,
-    value_clip: Optional[float] = None,
+    value_clip: float | None = None,
     kl_divergence_limit: float = np.inf,
-    **kwargs, # ignore additional kwargs
+    **kwargs,  # ignore additional kwargs
 ):
     # there is no logic here, but I want to keep all of hydra's instantiate targets in one place
     return PPO(
