@@ -7,3 +7,21 @@ transformer_encoder:
   _target_: pc_rl.builder.build_transformer_encoder
   depth: 8
 
+finetune_encoder:
+  _target_: pc_rl.builder.build_finetune_encoder
+  mlp_head_hidden_sizes: [512]
+  mlp_head_out_size: 1024
+  mlp_head_act: relu
+
+pi_mlp_head:
+  _target_: pc_rl.models.sac.q_and_pi_heads.PiMlpHead
+  input_size: 1024
+  hidden_sizes: [256, 128]
+  hidden_nonlinearity: ReLU
+
+q_mlp_head:
+  _target_: pc_rl.models.sac.q_and_pi_heads.QMlpHead
+  input_size: 1024
+  hidden_sizes: [256, 128]
+  hidden_nonlinearity: ReLU
+

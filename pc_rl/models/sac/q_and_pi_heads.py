@@ -17,7 +17,9 @@ class PiMlpHead(nn.Module):
         hidden_sizes: int | Sequence[int] | None,
         hidden_nonlinearity: str,  # type: ignore
     ):
+        super().__init__()
         hidden_nonlinearity: type[nn.Module] = getattr(nn, hidden_nonlinearity)
+        self._action_size = action_size
 
         self.mlp = MlpModel(
             input_size=input_size,
@@ -42,6 +44,7 @@ class QMlpHead(nn.Module):
         hidden_sizes: int | Sequence[int] | None,
         hidden_nonlinearity: str,  # type: ignore
     ):
+        super().__init__()
         hidden_nonlinearity: type[nn.Module] = getattr(nn, hidden_nonlinearity)
 
         self.mlp = MlpModel(
