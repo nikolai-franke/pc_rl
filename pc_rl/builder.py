@@ -1,21 +1,13 @@
 from collections.abc import Callable
 from typing import Optional
 
-import numpy as np
 import torch
 import torch.nn as nn
 from hydra.utils import instantiate
-from parllel.replays import BatchedDataLoader
-from parllel.torch.agents.categorical import PgAgent
-from parllel.torch.algos.ppo import PPO
 from parllel.torch.models import MlpModel
-from torch.functional import Tensor
 from torch.nn import MultiheadAttention
-from torch.optim import Optimizer
-from torch.optim.lr_scheduler import _LRScheduler
 from torch_geometric.nn import MLP
 
-from pc_rl.algos.aux_ppo import AuxPPO
 from pc_rl.models.aux_mae import AuxMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.mae import MaskedAutoEncoder
