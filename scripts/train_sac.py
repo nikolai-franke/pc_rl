@@ -23,7 +23,7 @@ from parllel.types import BatchSpec
 import pc_rl.builder  # for hydra's instantiate
 import wandb
 from pc_rl.agents.sac import SacAgent
-from pc_rl.algos.sac import SAC, PcSac
+from pc_rl.algos.sac import PcSac
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 
 
@@ -138,11 +138,6 @@ def build(config: DictConfig):
     )
 
     replay_buffer_tree = build_replay_buffer_tree(sample_tree)
-    # because we are only using standard Array types which behave the same as
-    # torch Tensors, we can torchify the entire replay buffer here instead of
-    # doing it for each batch individually
-    # replay_buffer_tree = replay_buffer_tree.to_ndarray()
-    # replay_buffer_tree = replay_buffer_tree.apply(torch.from_numpy)
 
     def batch_transform(tree: ArrayDict[Array]) -> ArrayDict[torch.Tensor]:
         tree = tree.to_ndarray()  # type: ignore

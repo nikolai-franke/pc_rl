@@ -2,5 +2,5 @@ defaults:
   - ppo
   - _self_
 
-_target_: pc_rl.builder.build_aux_ppo
+_target_: pc_rl.algos.aux_ppo.AuxPPO
 aux_loss_coeff: 10.0

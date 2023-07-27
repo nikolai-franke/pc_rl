@@ -1,9 +1,12 @@
+from typing import Mapping
+
 import torch
 from parllel import ArrayDict
 from parllel.replays.replay import ReplayBuffer
 from parllel.torch.algos.sac import SAC
 from parllel.torch.utils import valid_mean
 from parllel.types.batch_spec import BatchSpec
+import parllel.logger as logger
 from torch import Tensor
 
 from pc_rl.agents.sac import SacAgent
@@ -17,7 +20,7 @@ class PcSac(SAC):
         batch_spec: BatchSpec,
         agent: SacAgent,
         replay_buffer: ReplayBuffer[ArrayDict[Tensor]],
-        optimizers: dict[str, torch.optim.Optimizer],
+        optimizers: Mapping[str, torch.optim.Optimizer],
         discount: float,
         learning_starts: int,
         replay_ratio: int,  # data_consumption / data_generation
