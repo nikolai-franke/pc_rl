@@ -12,10 +12,11 @@ from omegaconf import DictConfig, OmegaConf
 from parllel import Array, ArrayDict, dict_map
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.logger import Verbosity
-from parllel.patterns import (EvalSampler, build_cages_and_sample_tree)
+from parllel.patterns import build_cages_and_sample_tree
 from parllel.replays.replay import ReplayBuffer
 from parllel.runners import OffPolicyRunner
 from parllel.samplers import BasicSampler
+from parllel.samplers.eval import EvalSampler
 from parllel.torch.algos.sac import build_replay_buffer_tree
 from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
 from parllel.transforms.video_recorder import RecordVectorizedVideo
@@ -241,18 +242,6 @@ def build(config: DictConfig):
         sample_tree=eval_sample_tree,
         obs_transform=video_recorder,
     )
-
-    # eval_sampler, eval_sample_tree = build_eval_sampler(
-    #     sample_tree=sample_tree,
-    #     agent=agent,
-    #     CageCls=CageCls,
-    #     EnvClass=env_factory,
-    #     env_kwargs={"add_obs_to_info_dict": False},
-    #     TrajInfoClass=TrajInfo,
-    #     **config.eval,
-    # )
-
-    # eval_sample_tree["observation"][0] = obs_space.sample()
 
     # create runner
     runner = OffPolicyRunner(
