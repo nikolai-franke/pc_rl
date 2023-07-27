@@ -5,6 +5,7 @@ rl_model:
   _target_: pc_rl.builder.build_continuous_pg_model
   pi_mlp_hidden_sizes: [256, 128]
   pi_mlp_act: Tanh
+  pi_out_act: null
   value_mlp_hidden_sizes: [256, 128]
   value_mlp_act: Tanh
   init_log_std: 0.0

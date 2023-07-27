@@ -16,6 +16,6 @@ runner:
   log_interval_steps: 4096
   eval_interval_steps: 20480
 eval:
-  n_eval_envs: 1
+  n_eval_envs: 4
   max_traj_length: 100
   min_trajectories: 4
