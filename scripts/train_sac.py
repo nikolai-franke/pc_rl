@@ -224,7 +224,6 @@ def build(config: DictConfig):
     )
     eval_sample_tree["observation"][0] = obs_space.sample()
 
-    # TODO: chicken and egg...
     video_recorder = RecordVectorizedVideo(
         batch_buffer=eval_sample_tree,
         buffer_key_to_record="env_info.rendering",
