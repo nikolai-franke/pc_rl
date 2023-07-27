@@ -12,12 +12,13 @@ from omegaconf import DictConfig, OmegaConf
 from parllel import Array, ArrayDict, dict_map
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.logger import Verbosity
-from parllel.patterns import build_cages_and_sample_tree, build_eval_sampler
+from parllel.patterns import (EvalSampler, build_cages_and_sample_tree)
 from parllel.replays.replay import ReplayBuffer
 from parllel.runners import OffPolicyRunner
 from parllel.samplers import BasicSampler
 from parllel.torch.algos.sac import build_replay_buffer_tree
 from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
+from parllel.transforms.video_recorder import RecordVectorizedVideo
 from parllel.types import BatchSpec
 
 import pc_rl.builder  # for hydra's instantiate
@@ -65,6 +66,7 @@ def build(config: DictConfig):
         padding=1,
         full_size=config.algo.replay_length,
     )
+
     sample_tree["observation"][0] = obs_space.sample()
     example_obs_batch = sample_tree["observation"][0]
 
@@ -183,17 +185,74 @@ def build(config: DictConfig):
         **config.algo,
     )
 
-    eval_sampler, eval_sample_tree = build_eval_sampler(
-        sample_tree=sample_tree,
-        agent=agent,
-        CageCls=CageCls,
+    eval_cage_kwargs = dict(
         EnvClass=env_factory,
-        env_kwargs={"add_obs_to_info_dict": False},
+        env_kwargs={"add_obs_to_info_dict": True},
         TrajInfoClass=TrajInfo,
-        **config.eval,
+        reset_automatically=True,
     )
 
+    eval_cages = [CageCls(**eval_cage_kwargs) for _ in range(config.eval.n_eval_envs)]
+    example_cage = CageCls(**eval_cage_kwargs)
+    example_cage.random_step_async()
+    *_, info = example_cage.await_step()
+    example_cage.close()
+
+    eval_tree_keys = [
+        "action",
+        "agent_info",
+        "observation",
+        "reward",
+        "terminated",
+        "truncated",
+        "done",
+        "env_info",
+    ]
+    eval_tree_example = ArrayDict(
+        {key: sample_tree[key] for key in eval_tree_keys if key != "env_info"}
+    )
+    eval_tree_example["env_info"] = dict_map(
+        Array.from_numpy,
+        info,
+        batch_shape=tuple(batch_spec),
+        storage="managed",
+    )
+
+    eval_sample_tree = eval_tree_example.new_array(
+        batch_shape=(1, config.eval.n_eval_envs)
+    )
     eval_sample_tree["observation"][0] = obs_space.sample()
+
+    # TODO: chicken and egg...
+    video_recorder = RecordVectorizedVideo(
+        batch_buffer=eval_sample_tree,
+        buffer_key_to_record="env_info.rendering",
+        env_fps=50,
+        record_every_n_steps=1,
+        output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+        video_length=config.env.max_episode_steps,
+    )
+
+    eval_sampler = EvalSampler(
+        max_traj_length=config.eval.max_traj_length,
+        min_trajectories=config.eval.min_trajectories,
+        envs=eval_cages,
+        agent=agent,
+        sample_tree=eval_sample_tree,
+        obs_transform=video_recorder,
+    )
+
+    # eval_sampler, eval_sample_tree = build_eval_sampler(
+    #     sample_tree=sample_tree,
+    #     agent=agent,
+    #     CageCls=CageCls,
+    #     EnvClass=env_factory,
+    #     env_kwargs={"add_obs_to_info_dict": False},
+    #     TrajInfoClass=TrajInfo,
+    #     **config.eval,
+    # )
+
+    # eval_sample_tree["observation"][0] = obs_space.sample()
 
     # create runner
     runner = OffPolicyRunner(
