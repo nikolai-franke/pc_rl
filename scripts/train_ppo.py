@@ -27,6 +27,7 @@ from parllel.types import BatchSpec
 
 import pc_rl.builder  # import for hydra's instantiate
 import wandb
+from pc_rl.models.finetune_encoder import FinetuneEncoder
 
 
 @contextmanager
@@ -79,6 +80,7 @@ def build(config: DictConfig):
         embedding_size=config.model.embedder.embedding_size,
         _partial_=True,
     )
+
     transformer_encoder = instantiate(
         config.model.transformer_encoder,
         transformer_block_factory=transformer_block_factory,
@@ -87,11 +89,8 @@ def build(config: DictConfig):
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
     embedder = instantiate(config.model.embedder, _convert_="partial")
 
-    finetune_encoder = instantiate(
-        config.model.finetune_encoder,
-        _convert_="partial",
-        transformer_encoder=transformer_encoder,
-        pos_embedder=pos_embedder,
+    finetune_encoder = FinetuneEncoder(
+        pos_embedder=pos_embedder, transformer_encoder=transformer_encoder
     )
 
     pg_model = instantiate(

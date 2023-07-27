@@ -24,6 +24,7 @@ import pc_rl.builder  # for hydra's instantiate
 import wandb
 from pc_rl.agents.sac import SacAgent
 from pc_rl.algos.sac import SAC, PcSac
+from pc_rl.models.finetune_encoder import FinetuneEncoder
 
 
 @contextmanager
@@ -84,20 +85,29 @@ def build(config: DictConfig):
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
     embedder = instantiate(config.model.embedder, _convert_="partial")
 
-    finetune_encoder = instantiate(
-        config.model.finetune_encoder,
-        _convert_="partial",
-        transformer_encoder=transformer_encoder,
-        pos_embedder=pos_embedder,
+    finetune_encoder = FinetuneEncoder(
+        pos_embedder=pos_embedder, transformer_encoder=transformer_encoder
     )
+
+    mlp_input_size = finetune_encoder.out_dim
+
     pi_model = instantiate(
-        config.model.pi_mlp_head, action_size=n_actions, _convert_="partial"
+        config.model.pi_mlp_head,
+        input_size=mlp_input_size,
+        action_size=n_actions,
+        _convert_="partial",
     )
     q1_model = instantiate(
-        config.model.q_mlp_head, action_size=n_actions, _convert_="partial"
+        config.model.q_mlp_head,
+        input_size=mlp_input_size,
+        action_size=n_actions,
+        _convert_="partial",
     )
     q2_model = instantiate(
-        config.model.q_mlp_head, action_size=n_actions, _convert_="partial"
+        config.model.q_mlp_head,
+        input_size=mlp_input_size,
+        action_size=n_actions,
+        _convert_="partial",
     )
 
     model = torch.nn.ModuleDict(

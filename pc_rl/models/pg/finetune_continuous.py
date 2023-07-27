@@ -14,14 +14,14 @@ class ContinuousPgModel(nn.Module):
         self,
         embedder: Embedder,
         encoder: FinetuneEncoder,
-        mu_mlp: nn.Module,
+        pi_mlp: nn.Module,
         value_mlp: nn.Module,
         init_log_std: float,
     ) -> None:
         super().__init__()
         self.embedder = embedder
         self.encoder = encoder
-        self.mu_mlp = mu_mlp
+        self.pi_mlp = pi_mlp
         self.value_mlp = value_mlp
         self._check_mlps()
         action_size = self._get_action_size()
@@ -31,7 +31,7 @@ class ContinuousPgModel(nn.Module):
     def _check_mlps(self):
         input = torch.randn((self.encoder.out_dim,))
         try:
-            self.mu_mlp(input)
+            self.pi_mlp(input)
         except RuntimeError as e:
             raise ValueError(
                 f"The first layer of the Pi MLP must have the same size as the output of the encoder: {self.encoder.out_dim}"
@@ -46,7 +46,7 @@ class ContinuousPgModel(nn.Module):
     @torch.no_grad()
     def _get_action_size(self):
         input = torch.randn((self.encoder.out_dim,))
-        return len(self.mu_mlp(input))
+        return len(self.pi_mlp(input))
 
     def forward(self, data):
         pos, batch = dict_to_batched_data(data)
@@ -54,7 +54,7 @@ class ContinuousPgModel(nn.Module):
         x = self.encoder(x, center_points)
         lead_dim, T, B, _ = infer_leading_dims(x, 1)
         obs_flat = x.view(T * B, -1)
-        mean = self.mu_mlp(obs_flat)
+        mean = self.pi_mlp(obs_flat)
         value = self.value_mlp(obs_flat).squeeze(-1)
         log_std = self.log_std.repeat(T * B, 1)
         mean, value, log_std = restore_leading_dims(

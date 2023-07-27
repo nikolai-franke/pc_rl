@@ -12,34 +12,15 @@ class AuxMae(nn.Module):
         masked_encoder: MaskedEncoder,
         masked_decoder: MaskedDecoder,
         mae_prediction_head: MaePredictionHead,
-        mlp_head: nn.Module,
     ):
         super().__init__()
         self.masked_encoder = masked_encoder
         self.masked_decoder = masked_decoder
         self.mae_prediction_head = mae_prediction_head
-        self.mlp_head = mlp_head
         self.dim = self.masked_encoder.dim
-        self._check_mlp_head()
-        self.out_dim = self._get_out_dim()
+        self.out_dim = 2 * self.dim
         self.cls_token = nn.Parameter(torch.zeros(1, 1, self.dim))
         self.cls_pos = nn.Parameter(torch.randn(1, 1, self.dim))
-
-    def _check_mlp_head(self):
-        with torch.no_grad():
-            input = torch.randn((2 * self.dim,))
-            try:
-                self.mlp_head(input)
-            except RuntimeError as e:
-                raise ValueError(
-                    f"The first layer of the MLP head must have size 2 * embedding_size: {2 * self.dim}"
-                ) from e
-
-    def _get_out_dim(self):
-        with torch.no_grad():
-            input = torch.randn((2 * self.dim,))
-            out = self.mlp_head(input)
-        return out.shape[-1]
 
     def forward(self, x, center_points, neighborhoods):
         # MAE part
@@ -63,7 +44,6 @@ class AuxMae(nn.Module):
         x = torch.cat((cls_tokens, x), dim=1)
         x = self.masked_encoder.transformer_encoder(x, pos)
         x = self.masked_encoder.norm(x)
-        concat_f = torch.cat([x[:, 0], x[:, 1:].max(1)[0]], dim=-1)
-        x_out = self.mlp_head(concat_f)
+        x_out = torch.cat([x[:, 0], x[:, 1:].max(1)[0]], dim=-1)
 
         return x_out, pos_prediction, pos_ground_truth

@@ -180,31 +180,30 @@ def build_continuous_pg_model(
     embedder: Embedder,
     finetune_encoder: FinetuneEncoder,
     n_actions: int,
-    mu_mlp_hidden_sizes: list[int],
-    mu_mlp_act: type[nn.Module] | str,
-    mu_out_act: Optional[type[nn.Module] | str],
+    pi_mlp_hidden_sizes: list[int],
+    pi_mlp_act: type[nn.Module] | str,
+    pi_out_act: Optional[type[nn.Module] | str],
     value_mlp_hidden_sizes: list[int],
     value_mlp_act: type[nn.Module] | str,
     init_log_std: float,
 ):
     input_size = finetune_encoder.out_dim
 
-    mu_hidden_nonlinearity = (
-        getattr(torch.nn, mu_mlp_act) if isinstance(mu_mlp_act, str) else mu_mlp_act
+    pi_hidden_nonlinearity = (
+        getattr(torch.nn, pi_mlp_act) if isinstance(pi_mlp_act, str) else pi_mlp_act
     )
 
-    mu_mlp = MlpModel(
+    pi_mlp = MlpModel(
         input_size=input_size,
-        hidden_sizes=mu_mlp_hidden_sizes,
-        # hidden_nonlinearity=activation_resolver(pi_mlp_act),
-        hidden_nonlinearity=mu_hidden_nonlinearity,
+        hidden_sizes=pi_mlp_hidden_sizes,
+        hidden_nonlinearity=pi_hidden_nonlinearity,
         output_size=n_actions,
     )
-    if mu_out_act is not None:
-        mu_out_nonlinearity = (
-            getattr(torch.nn, mu_out_act) if isinstance(mu_out_act, str) else mu_out_act
+    if pi_out_act is not None:
+        pi_out_nonlinearity = (
+            getattr(torch.nn, pi_out_act) if isinstance(pi_out_act, str) else pi_out_act
         )
-        mu_mlp = nn.Sequential(mu_mlp, mu_out_nonlinearity())
+        pi_mlp = nn.Sequential(pi_mlp, pi_out_nonlinearity())
 
     value_hidden_nonlinearity = (
         getattr(torch.nn, value_mlp_act)
@@ -220,7 +219,7 @@ def build_continuous_pg_model(
     return ContinuousPgModel(
         embedder=embedder,
         encoder=finetune_encoder,
-        mu_mlp=mu_mlp,
+        pi_mlp=pi_mlp,
         value_mlp=value_mlp,
         init_log_std=init_log_std,
     )
@@ -244,7 +243,6 @@ def build_categorical_pg_model(
     pi_mlp = MlpModel(
         input_size=input_size,
         hidden_sizes=pi_mlp_hidden_sizes,
-        # hidden_nonlinearity=activation_resolver(pi_mlp_act),
         hidden_nonlinearity=pi_hidden_nonlinearity,
         output_size=n_actions,
     )
@@ -311,41 +309,15 @@ def build_rl_aux_categorical_pg_model(
     )
 
 
-def build_finetune_encoder(
-    transformer_encoder: TransformerEncoder,
-    pos_embedder: nn.Module,
-    mlp_head_hidden_sizes: list[int],
-    mlp_head_out_size: int,
-    mlp_head_act: type[nn.Module] | str,
-):
-    mlp_head_sizes = [2 * transformer_encoder.dim] + mlp_head_hidden_sizes
-    mlp_head_sizes.append(mlp_head_out_size)
-    mlp_head = MLP(channel_list=mlp_head_sizes, act=mlp_head_act, norm="layer_norm")
-
-    return FinetuneEncoder(
-        transformer_encoder=transformer_encoder,
-        pos_embedder=pos_embedder,
-        mlp_head=mlp_head,
-    )
-
-
 def build_aux_mae(
     masked_encoder: MaskedEncoder,
     masked_decoder: MaskedDecoder,
     mae_prediction_head: MaePredictionHead,
-    mlp_head_hidden_sizes: list[int],
-    mlp_head_out_size: int,
-    mlp_head_act: type[nn.Module] | str,
 ):
-    mlp_head_sizes = [2 * masked_encoder.dim] + mlp_head_hidden_sizes
-    mlp_head_sizes.append(mlp_head_out_size)
-    mlp_head = MLP(channel_list=mlp_head_sizes, act=mlp_head_act, norm="layer_norm")
-
     return AuxMae(
         masked_encoder=masked_encoder,
         masked_decoder=masked_decoder,
         mae_prediction_head=mae_prediction_head,
-        mlp_head=mlp_head,
     )
 
 

@@ -3,9 +3,8 @@ defaults:
 
 rl_model:
   _target_: pc_rl.builder.build_continuous_pg_model
-  mu_mlp_hidden_sizes: [256, 128]
-  mu_mlp_act: Tanh
-  mu_out_act: Tanh
+  pi_mlp_hidden_sizes: [256, 128]
+  pi_mlp_act: Tanh
   value_mlp_hidden_sizes: [256, 128]
   value_mlp_act: Tanh
   init_log_std: 0.0
