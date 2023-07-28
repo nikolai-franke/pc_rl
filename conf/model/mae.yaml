@@ -8,6 +8,10 @@ masked_encoder:
   mask_ratio: 0.6
   mask_type: rand
 
-encoder_depth: 12
-decoder_depth: 6
+transformer_encoder:
+  _target_: pc_rl.builder.build_transformer_encoder
+  depth: 8
 
+transformer_decoder:
+  _target_: pc_rl.builder.build_transformer_decoder
+  depth: 6

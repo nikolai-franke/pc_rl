@@ -2,7 +2,7 @@ import torch
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.callbacks import Callback
 
-from pc_rl.logger_utils import log_point_cloud
+from pc_rl.utils.logger_utils import log_point_cloud
 
 
 def create_full_point_clouds(x, y, neighborhoods, mask, center_points):
