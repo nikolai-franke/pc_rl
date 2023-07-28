@@ -1,5 +1,7 @@
+import sys
 from typing import Optional, Tuple
 
+import parllel.logger as logger
 import torch
 from torch import Tensor
 from torch.nn.utils.rnn import pad_sequence
@@ -39,6 +41,7 @@ class Embedder(MessagePassing):
 
         self.mlp_1 = mlp_1
         self.mlp_2 = mlp_2
+        self.batch_size = 128
 
         assert (
             self.mlp_1.channel_list[-1] * 2 == self.mlp_2.channel_list[0]
@@ -52,9 +55,7 @@ class Embedder(MessagePassing):
         reset(self.mlp_1)
         reset(self.mlp_2)
 
-    def forward(
-        self, pos: Tensor, batch: Tensor  # type: ignore
-    ) -> Tuple[Tensor, Tensor, Tensor]:
+    def forward(self, pos: Tensor, batch: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         """Takes points as input, selects center points via furthest point
         sampling, creates local neighborhoods via k-nearest-neighbors sampling,
         and embeds the local neighborhoods with the two MLPs.
@@ -72,6 +73,12 @@ class Embedder(MessagePassing):
             - neighborhoods - [B, G, N, 3] Tensor containing the neighborhoods in local coordinates (with respect to the neighborhood center)
             - center_points - [B, G, 3] Tensor containing the center points of each neighborhood
         """
+        unique_return = torch.unique(batch, return_counts=True)
+        unique, count = unique_return
+
+        # assert unique == torch.arange(self.batch_size)
+        assert torch.all(count >= 32), f"COUNT: {count}"
+
         center_points_idx = fps(
             pos, batch, ratio=self.sampling_ratio, random_start=self.random_start
         )
@@ -82,7 +89,14 @@ class Embedder(MessagePassing):
             pos, center_points, self.group_size, batch_x=batch, batch_y=batch_y
         )
         edges = torch.stack([to_idx, from_idx], dim=0)
-        x, neighborhoods = self.propagate(edges, pos=(pos, center_points))
+        try:
+            x, neighborhoods = self.propagate(edges, pos=(pos, center_points))
+        except RuntimeError as e:
+            torch.set_printoptions(threshold=sys.maxsize)
+            logger.log(
+                f"POS SHAPE: {pos.shape}\n BATCH SHAPE: {batch.shape}\n POS: {pos}\n BATCH: {batch}\n CENTER POINTS SHAP: {center_points.shape}\n CENTER POITNS: {center_points}\n EDGES SHAPE: {edges.shape}\n EDGES: {edges}"
+            )
+            raise e
 
         # pad and reshape into [B, M, E]
         x = pad_sequence(

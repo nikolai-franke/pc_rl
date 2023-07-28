@@ -153,7 +153,7 @@ def build(config: DictConfig):
         size_T=config["algo"]["replay_length"],
         replay_batch_size=config["algo"]["batch_size"],
         newest_n_samples_invalid=0,
-        oldest_n_samples_invalid=1,
+        oldest_n_samples_invalid=20,
         batch_transform=batch_transform,
     )
 

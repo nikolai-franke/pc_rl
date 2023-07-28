@@ -11,7 +11,7 @@ def build(
     max_episode_steps: int,
     render_mode: str,
     action_type: str,
-    image_shape: list[int],  # list, since yaml does not support tuples
+    image_shape: list[int],
     frame_skip: int,
     time_step: float,
     discrete_action_magnitude: float,

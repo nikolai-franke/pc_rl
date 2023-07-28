@@ -21,4 +21,3 @@ eval:
   n_eval_envs: 4
   max_traj_length: 200
   min_trajectories: 4
-  deterministic_actions: False

@@ -29,7 +29,7 @@ def build_embedder(
     mlp_2_layers: list[int],
     mlp_act: str,
     group_size: int,
-    sampling_ratio: int,
+    sampling_ratio: float,
     random_start: bool,
 ) -> Embedder:
     mlp_1 = MLP(mlp_1_layers, act=mlp_act)

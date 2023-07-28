@@ -1,18 +1,18 @@
 from typing import Mapping
 
-import parllel.logger as logger
 import torch
 from parllel import ArrayDict
 from parllel.replays.replay import ReplayBuffer
 from parllel.torch.algos.sac import SAC
 from parllel.torch.utils import valid_mean
 from parllel.types.batch_spec import BatchSpec
+from pytorch3d.loss import chamfer_distance
 from torch import Tensor
 
 from pc_rl.agents.sac import SacAgent
 
 
-class PcSac(SAC):
+class AuxPcSac(SAC):
     agent: SacAgent
 
     def __init__(
@@ -28,13 +28,14 @@ class PcSac(SAC):
         target_update_interval: int,  # 1000 for hard update, 1 for soft.
         ent_coeff: float,
         clip_grad_norm: float,
+        aux_loss_coeff: float,
         **kwargs,  # ignore additional arguments
     ):
         super().__init__(
             batch_spec=batch_spec,
             agent=agent,
             replay_buffer=replay_buffer,
-            optimizers=optimizers,
+            optimizers=optimizer, # type: ignore
             discount=discount,
             learning_starts=learning_starts,
             replay_ratio=replay_ratio,
@@ -43,6 +44,7 @@ class PcSac(SAC):
             ent_coeff=ent_coeff,
             clip_grad_norm=clip_grad_norm,
         )
+        self.aux_loss_coeff = aux_loss_coeff
 
     def train_once(self, samples: ArrayDict[Tensor]) -> None:
         """
@@ -55,29 +57,13 @@ class PcSac(SAC):
         # compute target Q according to formula
         # r + gamma * (1 - d) * (min Q_targ(s', a') - alpha * log pi(s', a'))
         # where a' ~ pi(.|s')
-        ptr = samples["observation"]["ptr"]
-        num_nodes = ptr[1:] - ptr[:-1]
-        assert len(num_nodes) == self.replay_buffer.batch_size, f"PTR:{ptr}\n NUM NODES: {num_nodes}"
-        assert torch.all(num_nodes > 0), f"{num_nodes}, {ptr}"
-
-        next_ptr = samples["next_observation"]["ptr"]
-        num_nodes = next_ptr[1:] - next_ptr[:-1]
-        assert len(num_nodes) == self.replay_buffer.batch_size, f"PTR: {next_ptr}\n NUM NODES: {num_nodes}"
-        assert torch.all(num_nodes > 0), f"{num_nodes}, {ptr}"
-
         with torch.no_grad():
             next_encoder_out = self.agent.encode(samples["next_observation"])
             next_action, next_log_prob = self.agent.pi(next_encoder_out)
             target_q1, target_q2 = self.agent.target_q(next_encoder_out, next_action)
         min_target_q = torch.min(target_q1, target_q2)
         next_q = min_target_q - self._alpha * next_log_prob
-        try:
-            y = samples["reward"] + self.discount * ~samples["done"] * next_q
-        except RuntimeError as e:
-            logger.warn(
-                    f"REWARD SHAPE: {samples['reward'].shape}\n DONE SHAPE: {samples['done'].shape}\n NEXT Q SHAPE: {next_q.shape}, OBSERVATION SHAPE: {samples['observation'].shape}\n, NEXT OBSERVATION SHAPE: {samples['next_observation'].shape}"
-            )
-            raise e
+        y = samples["reward"] + self.discount * ~samples["done"] * next_q
         encoder_out = self.agent.encode(samples["observation"])
         q1, q2 = self.agent.q(encoder_out.detach(), samples["action"])
         q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
@@ -122,3 +108,4 @@ class PcSac(SAC):
 
         self.algo_log_info["actor_loss"].append(pi_loss.item())
         self.algo_log_info["q1_grad_norm"].append(pi_grad_norm.item())
+
