@@ -1,4 +1,9 @@
 _target_: pc_rl.envs.pick_and_place.build
+
+defaults:
+  - base
+  - _self_
+
 action_type: continuous
 max_episode_steps: 200
 render_mode: headless
