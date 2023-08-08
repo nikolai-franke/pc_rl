@@ -4,6 +4,7 @@ defaults:
   - model: ppo_continuous
   # - env/reach/discrete@env
   - env/grasp_lift_and_touch/base@env
+  - optimizer: ppo
 
 parallel: True
 batch_T: 128

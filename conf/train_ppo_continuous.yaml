@@ -3,6 +3,7 @@ defaults:
   - algo: ppo
   - model: ppo_continuous
   - env/reach/continuous@env
+  - optimizer: ppo
 
 parallel: True
 batch_T: 512

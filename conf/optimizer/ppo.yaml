@@ -1,0 +1,10 @@
+lr: 1e-5
+per_module:
+  embedder:
+    lr: 1e-5
+  encoder:
+    lr: 1e-6
+  pi:
+    lr: 1e-5
+  value:
+    lr: 1e-5

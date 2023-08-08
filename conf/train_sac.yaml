@@ -3,6 +3,7 @@ defaults:
   - algo: sac
   - model: sac
   - env/reach/continuous@env
+  - optimizer: sac
 
 parallel: True
 batch_T: 128

@@ -14,14 +14,13 @@ from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.logger import Verbosity
 from parllel.patterns import build_cages_and_sample_tree
 from parllel.replays.replay import ReplayBuffer
-from parllel.runners import OffPolicyRunner
+from parllel.runners import RLRunner
 from parllel.samplers import BasicSampler
 from parllel.samplers.eval import EvalSampler
-from parllel.torch.algos.sac import build_replay_buffer_tree
+from parllel.torch.algos.sac import SAC, build_replay_buffer_tree
 from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
 from parllel.transforms.video_recorder import RecordVectorizedVideo
 from parllel.types import BatchSpec
-from parllel.torch.algos.sac import SAC
 
 import pc_rl.builder  # for hydra's instantiate
 import wandb
@@ -159,23 +158,32 @@ def build(config: DictConfig):
         batch_transform=batch_transform,
     )
 
+    optimizer_conf = config.get("optimizer", {})
+    per_module_conf = optimizer_conf.pop("per_module", {})
     optimizers = {
         "pi": torch.optim.Adam(
-            itertools.chain(
-                agent.model["embedder"].parameters(),
-                agent.model["encoder"].parameters(),
-                agent.model["pi"].parameters(),
-            ),
-            lr=config.algo.learning_rate,
-            **config.get("optimizer", {}),
+            [
+                {
+                    "params": agent.model["embedder"].parameters(),
+                    **per_module_conf.get("embedder", {}),
+                    "params": agent.model["encoder"].parameters(),
+                    **per_module_conf.get("encoder", {}),
+                    "params": agent.model["pi"].parameters(),
+                    **per_module_conf.get("pi", {}),
+                }
+            ],
+            **optimizer_conf,
         ),
         "q": torch.optim.Adam(
-            itertools.chain(
-                agent.model["q1"].parameters(),
-                agent.model["q2"].parameters(),
-            ),
-            lr=config.algo.learning_rate,
-            **config.get("optimizer", {}),
+            [
+                {
+                    "params": agent.model["q1"].parameters(),
+                    **config.optimizer.get("q", {}),
+                    "params": agent.model["q2"].parameters(),
+                    **config.optimizer.get("q", {}),
+                }
+            ],
+            **optimizer_conf,
         ),
     }
 
@@ -239,14 +247,14 @@ def build(config: DictConfig):
 
     eval_sampler = EvalSampler(
         max_traj_length=config.eval.max_traj_length,
-        min_trajectories=config.eval.min_trajectories,
+        max_trajectories=config.eval.max_trajectories,
         envs=eval_cages,
         agent=agent,
         sample_tree=eval_sample_tree,
     )
 
     # create runner
-    runner = OffPolicyRunner(
+    runner = RLRunner(
         sampler=sampler,
         agent=agent,
         algorithm=algorithm,
@@ -289,7 +297,9 @@ def main(config: DictConfig) -> None:
     logger.init(
         wandb_run=run,
         # this log_dir is used if wandb is disabled (using `wandb disabled`)
-        log_dir=Path(f"log_data/pc_rl/sac/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"),
+        log_dir=Path(
+            f"log_data/pc_rl/sac/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+        ),
         tensorboard=True,
         output_files={
             "txt": "log.txt",

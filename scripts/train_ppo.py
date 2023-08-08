@@ -155,10 +155,22 @@ def build(config: DictConfig):
         batch_transform=batch_transform,
     )
 
+    optimizer_conf = config.get("optimizer", {})
+    per_module_conf = optimizer_conf.pop("per_module", {})
     optimizer = torch.optim.Adam(
-        agent.model.parameters(),
-        lr=config.algo.learning_rate,
-        **config.get("optimizer", {}),
+        [
+            {
+                "params": agent.model.embedder.parameters(),
+                **per_module_conf.get("embedder", {}),
+                "params": agent.model.encoder.parameters(),
+                **per_module_conf.get("encoder", {}),
+                "params": agent.model.pi_mlp.parameters(),
+                **per_module_conf.get("pi", {}),
+                "params": agent.model.value_mlp.parameters(),
+                **per_module_conf.get("value", {}),
+            }
+        ],
+        **optimizer_conf,
     )
 
     algorithm = instantiate(
@@ -246,9 +258,7 @@ def build(config: DictConfig):
         sample_tree.close()
 
 
-@hydra.main(
-    version_base=None, config_path="../conf", config_name="train_ppo"
-)
+@hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")
 def main(config: DictConfig):
     mp.set_start_method("fork")
 
