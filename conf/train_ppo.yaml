@@ -1,8 +1,9 @@
 defaults:
   - _self_
   - algo: ppo
-  - model: ppo_discrete
-  - env/reach/discrete@env
+  - model: ppo_continuous
+  # - env/reach/discrete@env
+  - env/grasp_lift_and_touch/base@env
 
 parallel: True
 batch_T: 128
@@ -16,6 +17,6 @@ runner:
   log_interval_steps: 4096
   eval_interval_steps: 20480
 eval:
-  n_eval_envs: 4
-  max_traj_length: 100
-  min_trajectories: 4
+  n_eval_envs: 2
+  max_traj_length: 200
+  max_trajectories: 2

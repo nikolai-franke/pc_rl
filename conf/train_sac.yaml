@@ -16,4 +16,4 @@ runner:
 eval:
   n_eval_envs: 1
   max_traj_length: 200
-  min_trajectories: 2
+  max_trajectories: 2
