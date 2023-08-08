@@ -1,4 +1,6 @@
 data
+.vscode
+pc_rl.code-workspace
 videos
 log_data
 imgs

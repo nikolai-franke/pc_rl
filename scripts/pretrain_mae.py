@@ -1,10 +1,12 @@
 from pathlib import Path
 
 import hydra
+import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers.wandb import WandbLogger
 from pytorch_lightning.trainer import Trainer
+from torch.optim.adamw import AdamW
 from torch_geometric.data.lightning import LightningDataset
 from torch_geometric.datasets import ModelNet, ShapeNet
 from torch_geometric.transforms import (Compose, FixedPoints, GridSampling,
@@ -34,6 +36,7 @@ def main(config: DictConfig):
     )
 
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
+    
 
     masked_encoder = instantiate(
         config.model.masked_encoder,
@@ -61,6 +64,7 @@ def main(config: DictConfig):
         masked_decoder=masked_decoder,
         mae_prediction_head=mae_prediction_head,
         learning_rate=config.learning_rate,
+        weight_decay=config.weight_decay,
     )
 
     transforms = []

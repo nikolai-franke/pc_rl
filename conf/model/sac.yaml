@@ -9,11 +9,11 @@ transformer_encoder:
 
 pi_mlp_head:
   _target_: pc_rl.models.sac.q_and_pi_heads.PiMlpHead
-  hidden_sizes: [256, 128]
-  hidden_nonlinearity: ReLU
+  hidden_sizes: [256, 256]
+  hidden_nonlinearity: Tanh
 
 q_mlp_head:
   _target_: pc_rl.models.sac.q_and_pi_heads.QMlpHead
-  hidden_sizes: [256, 128]
-  hidden_nonlinearity: ReLU
+  hidden_sizes: [256, 256]
+  hidden_nonlinearity: Tanh
 

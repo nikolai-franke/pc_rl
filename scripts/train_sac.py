@@ -21,6 +21,7 @@ from parllel.torch.algos.sac import build_replay_buffer_tree
 from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
 from parllel.transforms.video_recorder import RecordVectorizedVideo
 from parllel.types import BatchSpec
+from parllel.torch.algos.sac import SAC
 
 import pc_rl.builder  # for hydra's instantiate
 import wandb
@@ -60,10 +61,11 @@ def build(config: DictConfig):
     sample_tree["observation"] = dict_map(
         Array.from_numpy,
         metadata.example_obs,
-        feature_shape=obs_space.shape,
         batch_shape=tuple(batch_spec),
+        max_mean_num_elem=obs_space.shape[0],
+        feature_shape=obs_space.shape[1:],
         kind="jagged",
-        storage="managed" if parallel else "local",
+        storage="shared" if parallel else "local",
         padding=1,
         full_size=config.algo.replay_length,
     )
@@ -153,7 +155,7 @@ def build(config: DictConfig):
         size_T=config["algo"]["replay_length"],
         replay_batch_size=config["algo"]["batch_size"],
         newest_n_samples_invalid=0,
-        oldest_n_samples_invalid=20,
+        oldest_n_samples_invalid=1,
         batch_transform=batch_transform,
     )
 
@@ -178,7 +180,7 @@ def build(config: DictConfig):
     }
 
     # create algorithm
-    algorithm = PcSac(
+    algorithm = SAC(
         batch_spec=batch_spec,
         agent=agent,
         replay_buffer=replay_buffer,
@@ -188,7 +190,7 @@ def build(config: DictConfig):
 
     eval_cage_kwargs = dict(
         EnvClass=env_factory,
-        env_kwargs={"add_obs_to_info_dict": True},
+        env_kwargs={"add_obs_to_info_dict": False},
         TrajInfoClass=TrajInfo,
         reset_automatically=True,
     )
@@ -216,7 +218,9 @@ def build(config: DictConfig):
         Array.from_numpy,
         info,
         batch_shape=tuple(batch_spec),
-        storage="managed",
+        storage="shared" if parallel else "local",
+        feature_shape=obs_space.shape[1:],
+        full_size=config.algo.replay_length,
     )
 
     eval_sample_tree = eval_tree_example.new_array(
@@ -224,14 +228,14 @@ def build(config: DictConfig):
     )
     eval_sample_tree["observation"][0] = obs_space.sample()
 
-    video_recorder = RecordVectorizedVideo(
-        batch_buffer=eval_sample_tree,
-        buffer_key_to_record="env_info.rendering",
-        env_fps=50,
-        record_every_n_steps=1,
-        output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
-        video_length=config.env.max_episode_steps,
-    )
+    # video_recorder = RecordVectorizedVideo(
+    #     batch_buffer=eval_sample_tree,
+    #     buffer_key_to_record="env_info.rendering",
+    #     env_fps=50,
+    #     record_every_n_steps=1,
+    #     output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+    #     video_length=config.env.max_episode_steps,
+    # )
 
     eval_sampler = EvalSampler(
         max_traj_length=config.eval.max_traj_length,
@@ -239,7 +243,6 @@ def build(config: DictConfig):
         envs=eval_cages,
         agent=agent,
         sample_tree=eval_sample_tree,
-        obs_transform=video_recorder,
     )
 
     # create runner
@@ -286,7 +289,7 @@ def main(config: DictConfig) -> None:
     logger.init(
         wandb_run=run,
         # this log_dir is used if wandb is disabled (using `wandb disabled`)
-        log_dir=Path(f"log_data/pc_rl/sac/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+        log_dir=Path(f"log_data/pc_rl/sac/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"),
         tensorboard=True,
         output_files={
             "txt": "log.txt",

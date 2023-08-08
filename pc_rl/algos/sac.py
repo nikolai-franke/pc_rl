@@ -72,7 +72,7 @@ class PcSac(SAC):
         min_target_q = torch.min(target_q1, target_q2)
         next_q = min_target_q - self._alpha * next_log_prob
         try:
-            y = samples["reward"] + self.discount * ~samples["done"] * next_q
+            y = samples["reward"] + self.discount * ~samples["terminated"] * next_q
         except RuntimeError as e:
             logger.warn(
                     f"REWARD SHAPE: {samples['reward'].shape}\n DONE SHAPE: {samples['done'].shape}\n NEXT Q SHAPE: {next_q.shape}, OBSERVATION SHAPE: {samples['observation'].shape}\n, NEXT OBSERVATION SHAPE: {samples['next_observation'].shape}"
