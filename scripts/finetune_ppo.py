@@ -29,6 +29,7 @@ from parllel.types import BatchSpec
 import pc_rl.builder  # import for hydra's instantiate
 import wandb
 from pc_rl.models.finetune_encoder import FinetuneEncoder
+from pc_rl.models.mae import MaskedAutoEncoder
 
 
 @contextmanager
@@ -93,12 +94,29 @@ def build(config: DictConfig):
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
     embedder = instantiate(config.model.embedder, _convert_="partial")
 
-    # load weights from checkpoints
-    transformer_encoder.load_state_dict(
-        checkpoint["masked_encoder"]["transformer_encoder"]
+    finetune_encoder = FinetuneEncoder(
+        pos_embedder=pos_embedder, transformer_encoder=transformer_encoder
     )
-    pos_embedder.load_state_dict(checkpoint["masked_encoder"]["pos_embedder"])
-    embedder.load_state_dict(checkpoint["embedder"])
+
+    model_weights = checkpoint["state_dict"]
+    transformer_encoder_weights = {
+        key.replace("masked_encoder.transformer_encoder.", ""): model_weights[key]
+        for key in model_weights
+        if key.startswith("masked_encoder.transformer_encoder")
+    }
+    pos_embedder_weights = {
+        key.replace("masked_encoder.pos_embedder.", ""): model_weights[key]
+        for key in model_weights
+        if key.startswith("masked_encoder.pos_embedder")
+    }
+    embedder_weights = {
+        key.replace("embedder.", ""): model_weights[key]
+        for key in model_weights
+        if key.startswith("embedder")
+    }
+    transformer_encoder.load_state_dict(transformer_encoder_weights)
+    pos_embedder.load_state_dict(pos_embedder_weights)
+    embedder.load_state_dict(embedder_weights)
 
     finetune_encoder = FinetuneEncoder(
         pos_embedder=pos_embedder, transformer_encoder=transformer_encoder
@@ -273,9 +291,7 @@ def build(config: DictConfig):
         sample_tree.close()
 
 
-@hydra.main(
-    version_base=None, config_path="../conf", config_name="train_ppo_continuous"
-)
+@hydra.main(version_base=None, config_path="../conf", config_name="finetune_ppo")
 def main(config: DictConfig):
     mp.set_start_method("fork")
     run = wandb.init(
