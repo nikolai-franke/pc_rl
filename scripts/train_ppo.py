@@ -160,7 +160,7 @@ def build(config: DictConfig):
         optimizer_conf, resolve=True, throw_on_missing=True
     )
 
-    per_module_conf = optimizer_conf.pop("per_module", {})
+    per_module_conf = optimizer_conf.pop("per_module", {}) # type: ignore
     optimizer = torch.optim.Adam(
         [
             {

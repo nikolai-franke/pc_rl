@@ -1,4 +1,3 @@
-import itertools
 import multiprocessing as mp
 from contextlib import contextmanager
 from datetime import datetime
@@ -25,7 +24,6 @@ from parllel.types import BatchSpec
 import pc_rl.builder  # for hydra's instantiate
 import wandb
 from pc_rl.agents.sac import SacAgent
-from pc_rl.algos.sac import PcSac
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 
 
@@ -159,7 +157,10 @@ def build(config: DictConfig):
     )
 
     optimizer_conf = config.get("optimizer", {})
-    per_module_conf = optimizer_conf.pop("per_module", {})
+    optimizer_conf = OmegaConf.to_container(
+        optimizer_conf, resolve=True, throw_on_missing=True
+    )
+    per_module_conf = optimizer_conf.pop("per_module", {}) # type: ignore
     optimizers = {
         "pi": torch.optim.Adam(
             [
