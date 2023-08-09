@@ -29,7 +29,6 @@ from parllel.types import BatchSpec
 import pc_rl.builder  # import for hydra's instantiate
 import wandb
 from pc_rl.models.finetune_encoder import FinetuneEncoder
-from pc_rl.models.mae import MaskedAutoEncoder
 
 
 @contextmanager
@@ -93,10 +92,6 @@ def build(config: DictConfig):
 
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
     embedder = instantiate(config.model.embedder, _convert_="partial")
-
-    finetune_encoder = FinetuneEncoder(
-        pos_embedder=pos_embedder, transformer_encoder=transformer_encoder
-    )
 
     model_weights = checkpoint["state_dict"]
     transformer_encoder_weights = {

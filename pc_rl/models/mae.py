@@ -2,7 +2,6 @@ import pytorch_lightning as pl
 import torch
 from pytorch3d.loss import chamfer_distance
 from torch import Tensor
-from torch.optim.adamw import AdamW
 
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
@@ -27,9 +26,9 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.mae_prediction_head = mae_prediction_head
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
-        self.optimizer = AdamW(
-            self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
-        )
+        # self.optimizer = AdamW(
+        #     self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
+        # )
 
     def forward(self, pos: Tensor, batch: Tensor):
         x, neighborhoods, center_points = self.embedder(pos, batch)
@@ -87,4 +86,6 @@ class MaskedAutoEncoder(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+        return torch.optim.AdamW(
+            self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
+        )
