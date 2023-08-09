@@ -15,6 +15,7 @@ from torch_geometric.transforms import (Compose, FixedPoints, GridSampling,
 
 import pc_rl.builder  # for hydra's instantiate
 from pc_rl.callbacks.log_pointclouds import LogPointCloudCallback
+from pc_rl.datasets.in_memory import PcInMemoryDataset
 from pc_rl.models.mae import MaskedAutoEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
@@ -36,7 +37,6 @@ def main(config: DictConfig):
     )
 
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
-    
 
     masked_encoder = instantiate(
         config.model.masked_encoder,
@@ -76,8 +76,6 @@ def main(config: DictConfig):
         )
     elif downsampling_method == "voxel_grid":
         transforms.append(GridSampling(config.dataset.grid_size))
-    else:
-        raise NotImplementedError
 
     transforms.append(RandomRotate(180, 0))
     transforms.append(RandomRotate(180, 1))
@@ -107,6 +105,10 @@ def main(config: DictConfig):
             transform=transform,
             split="val",
         )
+    elif config.dataset.name == "reach":
+        dataset = PcInMemoryDataset(root=path, transform=transform)
+        validation_dataset = dataset[int(0.9 * len(dataset)) :]
+        dataset = dataset[: int(0.9 * len(dataset))]
     else:
         raise NotImplementedError
 
