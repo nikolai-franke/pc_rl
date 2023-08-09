@@ -14,7 +14,7 @@ from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.logger import Verbosity
 from parllel.patterns import (add_advantage_estimation, add_agent_info,
                               add_bootstrap_value, add_reward_normalization,
-                              build_cages_and_sample_tree, build_eval_sampler)
+                              build_cages_and_sample_tree)
 from parllel.runners import RLRunner
 from parllel.samplers.basic import BasicSampler
 from parllel.samplers.eval import EvalSampler
@@ -159,8 +159,7 @@ def build(config: DictConfig):
     optimizer_conf = OmegaConf.to_container(
         optimizer_conf, resolve=True, throw_on_missing=True
     )
-
-    per_module_conf = optimizer_conf.pop("per_module", {}) # type: ignore
+    per_module_conf = optimizer_conf.pop("per_module", {})  # type: ignore
     optimizer = torch.optim.Adam(
         [
             {
@@ -262,14 +261,15 @@ def build(config: DictConfig):
         sample_tree.close()
 
 
-@hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")
+@hydra.main(
+    version_base=None, config_path="../conf", config_name="train_ppo_continuous"
+)
 def main(config: DictConfig):
     mp.set_start_method("fork")
-
     run = wandb.init(
         anonymous="must",
         project="pc_rl",
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
         sync_tensorboard=True,
         save_code=True,
         # mode="disabled",
@@ -283,7 +283,7 @@ def main(config: DictConfig):
             "txt": "log.txt",
             # "csv": "progress.csv",
         },
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
         model_save_path="model.pt",
         # verbosity=Verbosity.DEBUG,
     )

@@ -15,7 +15,7 @@ from parllel.logger import Verbosity
 from parllel.patterns import (add_advantage_estimation, add_agent_info,
                               add_bootstrap_value, add_reward_normalization,
                               build_cages_and_sample_tree)
-from parllel.runners import OnPolicyRunner
+from parllel.runners import RLRunner
 from parllel.samplers.basic import BasicSampler
 from parllel.samplers.eval import EvalSampler
 from parllel.torch.agents.categorical import CategoricalPgAgent
@@ -62,10 +62,11 @@ def build(config: DictConfig):
     sample_tree["observation"] = dict_map(
         Array.from_numpy,
         metadata.example_obs,
-        feature_shape=obs_space.shape,
+        feature_shape=obs_space.shape[1:],
+        max_mean_num_elem=obs_space.shape[0],
         batch_shape=tuple(batch_spec),
         kind="jagged",
-        storage="managed" if parallel else "local",
+        storage="shared" if parallel else "local",
         padding=1,
     )
     sample_tree["observation"][0] = obs_space.sample()
@@ -166,10 +167,25 @@ def build(config: DictConfig):
         batch_transform=batch_transform,
     )
 
+    optimizer_conf = config.get("optimizer", {})
+    optimizer_conf = OmegaConf.to_container(
+        optimizer_conf, resolve=True, throw_on_missing=True
+    )
+    per_module_conf = optimizer_conf.pop("per_module", {})  # type: ignore
     optimizer = torch.optim.Adam(
-        agent.model.parameters(),
-        lr=config.algo.learning_rate,
-        **config.get("optimizer", {}),
+        [
+            {
+                "params": agent.model.embedder.parameters(),
+                **per_module_conf.get("embedder", {}),
+                "params": agent.model.encoder.parameters(),
+                **per_module_conf.get("encoder", {}),
+                "params": agent.model.pi_mlp.parameters(),
+                **per_module_conf.get("pi", {}),
+                "params": agent.model.value_mlp.parameters(),
+                **per_module_conf.get("value", {}),
+            }
+        ],
+        **optimizer_conf,
     )
 
     algorithm = instantiate(
@@ -210,7 +226,7 @@ def build(config: DictConfig):
         Array.from_numpy,
         info,
         batch_shape=tuple(batch_spec),
-        storage="managed",
+        storage="shared",
     )
 
     eval_sample_tree = eval_tree_example.new_array(
@@ -229,14 +245,14 @@ def build(config: DictConfig):
 
     eval_sampler = EvalSampler(
         max_traj_length=config.eval.max_traj_length,
-        min_trajectories=config.eval.min_trajectories,
+        max_trajectories=config.eval.max_trajectories,
         envs=eval_cages,
         agent=agent,
         sample_tree=eval_sample_tree,
         obs_transform=video_recorder,
     )
 
-    runner = OnPolicyRunner(
+    runner = RLRunner(
         sampler=sampler,
         eval_sampler=eval_sampler,
         agent=agent,
