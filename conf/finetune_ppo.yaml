@@ -1,5 +1,5 @@
 defaults:
-  - train_ppo_continuous
+  - train_ppo
 
 model_path: ???
 freeze_encoder: False
