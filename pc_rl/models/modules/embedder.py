@@ -94,7 +94,7 @@ class Embedder(MessagePassing):
         except RuntimeError as e:
             torch.set_printoptions(threshold=sys.maxsize)
             logger.log(
-                f"POS SHAPE: {pos.shape}\n BATCH SHAPE: {batch.shape}\n POS: {pos}\n BATCH: {batch}\n CENTER POINTS SHAP: {center_points.shape}\n CENTER POITNS: {center_points}\n EDGES SHAPE: {edges.shape}\n EDGES: {edges}"
+                f"POS SHAPE: {pos.shape}\n BATCH SHAPE: {batch.shape}\n CENTER POINTS SHAP: {center_points.shape}\n EDGES SHAPE: {edges.shape}\n"
             )
             raise e
 
