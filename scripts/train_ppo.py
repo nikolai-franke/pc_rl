@@ -156,6 +156,10 @@ def build(config: DictConfig):
     )
 
     optimizer_conf = config.get("optimizer", {})
+    optimizer_conf = OmegaConf.to_container(
+        optimizer_conf, resolve=True, throw_on_missing=True
+    )
+
     per_module_conf = optimizer_conf.pop("per_module", {})
     optimizer = torch.optim.Adam(
         [
