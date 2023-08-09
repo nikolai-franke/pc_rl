@@ -1,12 +1,22 @@
+from typing import TypedDict
+
 import torch.nn as nn
 import torch.nn.functional as F
 from parllel.torch.distributions.categorical import DistParams
 from parllel.torch.utils import infer_leading_dims, restore_leading_dims
+from torch import Tensor
+from typing_extensions import NotRequired
 
-from pc_rl.agents.aux_categorical import ModelOutputs
 from pc_rl.models.aux_mae import AuxMae
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.utils.array_dict import dict_to_batched_data
+
+
+class ModelOutputs(TypedDict):
+    dist_params: DistParams
+    value: NotRequired[Tensor]
+    pos_prediction: Tensor
+    ground_truth: Tensor
 
 
 class AuxMaeCategoricalPgModel(nn.Module):
