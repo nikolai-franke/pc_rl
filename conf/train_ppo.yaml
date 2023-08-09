@@ -2,8 +2,7 @@ defaults:
   - _self_
   - algo: ppo
   - model: ppo_continuous
-  # - env/reach/discrete@env
-  - env/grasp_lift_and_touch@env
+  - env: grasp_lift_and_touch
   - optimizer: ppo
 
 parallel: True
