@@ -195,7 +195,7 @@ def build_categorical_pg_model(
     )
 
 
-def build_rl_aux_categorical_pg_model(
+def build_aux_categorical_pg_model(
     embedder: Embedder,
     aux_mae: AuxMae,
     n_actions: int,
@@ -233,18 +233,6 @@ def build_rl_aux_categorical_pg_model(
         aux_mae=aux_mae,
         pi_mlp=pi_mlp,
         value_mlp=value_mlp,
-    )
-
-
-def build_aux_mae(
-    masked_encoder: MaskedEncoder,
-    masked_decoder: MaskedDecoder,
-    mae_prediction_head: MaePredictionHead,
-):
-    return AuxMae(
-        masked_encoder=masked_encoder,
-        masked_decoder=masked_decoder,
-        mae_prediction_head=mae_prediction_head,
     )
 
 
