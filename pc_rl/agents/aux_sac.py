@@ -1,8 +1,10 @@
 import torch
-from parllel.torch.agents.agent import TorchAgent
+from parllel import ArrayDict, ArrayTree, Index, dict_map
 from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
+from torch import Tensor
 
 from pc_rl.agents.sac import PcSacAgent
+from pc_rl.utils.array_dict import dict_to_batched_data
 
 
 class AuxSacAgent(PcSacAgent):
@@ -21,3 +23,15 @@ class AuxSacAgent(PcSacAgent):
             learning_starts=learning_starts,
             pretrain_std=pretrain_std,
         )
+
+    @torch.no_grad()
+    def step(
+        self, observation: ArrayTree[Tensor], *, env_indices: Index = ...
+    ) -> tuple[Tensor, ArrayDict[Tensor]]:
+        observation = observation.to_ndarray()
+        observation = dict_map(torch.from_numpy, observation)
+        observation = observation.to(device=self.device)
+        encoding, *_ = self.encode(observation)
+        dist_params = self.model["pi"](encoding)
+        action = self.distribution.sample(dist_params)
+        return action.cpu(), ArrayDict()

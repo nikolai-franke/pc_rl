@@ -35,7 +35,7 @@ class AuxPcSac(SAC):
             batch_spec=batch_spec,
             agent=agent,
             replay_buffer=replay_buffer,
-            optimizers=optimizer, # type: ignore
+            optimizers=optimizer,  # type: ignore
             discount=discount,
             learning_starts=learning_starts,
             replay_ratio=replay_ratio,
@@ -64,7 +64,9 @@ class AuxPcSac(SAC):
         min_target_q = torch.min(target_q1, target_q2)
         next_q = min_target_q - self._alpha * next_log_prob
         y = samples["reward"] + self.discount * ~samples["done"] * next_q
-        encoder_out = self.agent.encode(samples["observation"])
+        encoder_out, pos_prediction, ground_truth = self.agent.encode(
+            samples["observation"]
+        )
         q1, q2 = self.agent.q(encoder_out.detach(), samples["action"])
         q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
 
@@ -94,6 +96,19 @@ class AuxPcSac(SAC):
         min_q = torch.min(q1, q2)
         pi_losses = self._alpha * log_prob - min_q
         pi_loss = valid_mean(pi_losses)
+        self.algo_log_info["actor_loss"].append(pi_loss.item())
+
+        B, M, *_ = pos_prediction.shape
+        pos_prediction = pos_prediction.reshape(B * M, -1, 3)
+        ground_truth = ground_truth.reshape(B * M, -1, 3)
+
+        mae_loss = chamfer_distance(
+            pos_prediction, ground_truth, point_reduction="sum"
+        )[0]
+        self.algo_log_info["mae_loss"].append(mae_loss.item())
+        pi_loss += (
+            mae_loss * self.aux_loss_coeff
+            )  # Encoder is updated by the Pi optimizer # TODO: only one optimizer
 
         # update Pi model parameters according to pi loss
         self.optimizers["pi"].zero_grad()
@@ -106,6 +121,4 @@ class AuxPcSac(SAC):
         # unfreeze Q models for next training iteration
         self.agent.freeze_q_models(False)
 
-        self.algo_log_info["actor_loss"].append(pi_loss.item())
         self.algo_log_info["q1_grad_norm"].append(pi_grad_norm.item())
-
