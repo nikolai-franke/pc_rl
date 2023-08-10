@@ -21,6 +21,7 @@ def build(
     phase_any_rewards: dict,
     phase_pick_rewards: dict,
     phase_place_rewards: dict,
+    randomize_torus_position: bool,
     create_scene_kwargs: dict = {},
 ):
     assert len(image_shape) == 2
@@ -35,6 +36,7 @@ def build(
         image_shape=image_shape,
         frame_skip=frame_skip,
         time_step=time_step,
+        randomize_torus_position=randomize_torus_position,
         reward_amount_dict={
             Phase.ANY: phase_any_rewards,
             Phase.PICK: phase_pick_rewards,

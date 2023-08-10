@@ -30,4 +30,5 @@ phase_place_rewards:
   torus_distance_to_active_pegs: 0.0
   delta_torus_distance_to_active_pegs: -100.0
 
+randomize_torus_position: True
 
