@@ -5,7 +5,6 @@ from pathlib import Path
 
 import gymnasium as gym
 import hydra
-import numpy as np
 import parllel.logger as logger
 import torch
 from hydra.utils import instantiate
@@ -15,9 +14,11 @@ from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.logger import Verbosity
 from parllel.patterns import (add_advantage_estimation, add_agent_info,
                               add_bootstrap_value, add_reward_normalization,
-                              build_cages_and_sample_tree, build_eval_sampler)
-from parllel.runners import OnPolicyRunner
+                              build_cages_and_sample_tree)
+from parllel.runners import RLRunner
 from parllel.samplers.basic import BasicSampler
+from parllel.samplers.eval import EvalSampler
+from parllel.torch.agents.categorical import CategoricalPgAgent
 from parllel.torch.agents.gaussian import GaussianPgAgent
 from parllel.torch.algos.ppo import BatchedDataLoader, build_loss_sample_tree
 from parllel.torch.distributions import Categorical, Gaussian
@@ -27,8 +28,6 @@ from parllel.types import BatchSpec
 
 import pc_rl.builder  # import for hydra's instantiate
 import wandb
-from pc_rl.agents.aux_categorical import MaeCategoricalPgAgent
-from pc_rl.algos.aux_ppo import AuxPPO
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 
@@ -43,7 +42,7 @@ def build(config: DictConfig):
     TrajInfo.set_discount(discount)
     CageCls = ProcessCage if parallel else SerialCage
 
-    env_factory = instantiate(config["env"], _convert_="object", _partial_=True)
+    env_factory = instantiate(config.env, _convert_="object", _partial_=True)
 
     cages, sample_tree, metadata = build_cages_and_sample_tree(
         EnvClass=env_factory,
@@ -57,13 +56,17 @@ def build(config: DictConfig):
 
     obs_space, action_space = metadata.obs_space, metadata.action_space
     discrete = isinstance(action_space, gym.spaces.Discrete)
+    AgentClass = CategoricalPgAgent if discrete else GaussianPgAgent
+    DistributionClass = Categorical if discrete else Gaussian
+
     sample_tree["observation"] = dict_map(
         Array.from_numpy,
         metadata.example_obs,
-        feature_shape=obs_space.shape,
+        feature_shape=obs_space.shape[1:],
+        max_mean_num_elem=obs_space.shape[0],
         batch_shape=tuple(batch_spec),
         kind="jagged",
-        storage="managed" if parallel else "local",
+        storage=storage,
         padding=1,
     )
 
@@ -71,14 +74,11 @@ def build(config: DictConfig):
     example_obs_batch = sample_tree["observation"][0]
 
     n_actions = action_space.n if discrete else action_space.shape[0]
-    distribution = Gaussian(dim=n_actions)
+    distribution = DistributionClass(dim=n_actions)
 
     device = config.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
     wandb.config.update({"device": device}, allow_val_change=True)
     device = torch.device(device)
-
-    sample_tree["observation"][0] = obs_space.sample()
-    example_obs_batch = sample_tree["observation"][0]
 
     transformer_block_factory = instantiate(
         config.model.transformer_block,
@@ -130,9 +130,9 @@ def build(config: DictConfig):
         n_actions=n_actions,
     )
 
-    agent = GaussianPgAgent(
+    agent = AgentClass(
         model=aux_mae_pg_model,
-        distribution=distribution,
+        distribution=distribution,  # type: ignore
         example_obs=example_obs_batch,
         device=device,
     )
@@ -181,11 +181,36 @@ def build(config: DictConfig):
         batch_transform=batch_transform,
     )
 
-    optimizer = torch.optim.Adam(
-        agent.model.parameters(),
-        lr=config.algo.learning_rate,
-        **config.get("optimizer", {}),
+    optimizer_conf = config.get("optimizer", {})
+    optimizer_conf = OmegaConf.to_container(
+        optimizer_conf, resolve=True, throw_on_missing=True
     )
+    per_module_conf = optimizer_conf.pop("per_module", {})  # type: ignore
+
+    per_parameter_options = [
+        {
+            "params": agent.model.embedder.parameters(),
+            **per_module_conf.get("embedder", {}),
+        },
+        {
+            "params": agent.model.encoder.parameters(),
+            **per_module_conf.get("aux_mae", {}),
+        },
+        {
+            "params": agent.model.pi_mlp.parameters(),
+            **per_module_conf.get("pi", {}),
+        },
+        {
+            "params": agent.model.value_mlp.parameters(),
+            **per_module_conf.get("value", {}),
+        },
+    ]
+    if not discrete:
+        per_parameter_options.append(
+            {"params:": agent.model.log_std, **per_module_conf.get("log_std", {})},
+        )
+
+    optimizer = torch.optim.Adam(per_parameter_options, **optimizer_conf)
 
     algorithm = instantiate(
         config.algo,
@@ -195,38 +220,63 @@ def build(config: DictConfig):
         _convert_="partial",
     )
 
-    eval_sampler, eval_sample_tree = build_eval_sampler(
-        sample_tree=sample_tree,
-        agent=agent,
-        CageCls=CageCls,
+    eval_cage_kwargs = dict(
         EnvClass=env_factory,
         env_kwargs={"add_obs_to_info_dict": True},
         TrajInfoClass=TrajInfo,
-        n_eval_envs=config.eval.n_eval_envs,
-        max_traj_length=config.eval.max_traj_length,
-        min_trajectories=config.eval.min_trajectories,
-        step_transforms=step_transforms,
+        reset_automatically=True,
     )
 
+    eval_cages = [CageCls(**eval_cage_kwargs) for _ in range(config.eval.n_eval_envs)]
+    example_cage = CageCls(**eval_cage_kwargs)
+    example_cage.random_step_async()
+    *_, info = example_cage.await_step()
+    example_cage.close()
+
+    eval_tree_keys = [
+        "action",
+        "agent_info",
+        "observation",
+        "reward",
+        "terminated",
+        "truncated",
+        "done",
+        "env_info",
+    ]
+    eval_tree_example = ArrayDict(
+        {key: sample_tree[key] for key in eval_tree_keys if key != "env_info"}
+    )
+    eval_tree_example["env_info"] = dict_map(
+        Array.from_numpy,
+        info,
+        batch_shape=tuple(batch_spec),
+        storage=storage,
+    )
+
+    eval_sample_tree = eval_tree_example.new_array(
+        batch_shape=(1, config.eval.n_eval_envs)
+    )
     eval_sample_tree["observation"][0] = obs_space.sample()
 
+    video_recorder = RecordVectorizedVideo(
+        batch_buffer=eval_sample_tree,
+        buffer_key_to_record="env_info.rendering",
+        env_fps=50,
+        record_every_n_steps=1,
+        output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+        video_length=config.env.max_episode_steps,
+    )
 
-    # video_recorder = RecordVectorizedVideo(
-    #     batch_buffer=step_buffer,
-    #     buffer_key_to_record="env_info.rendering",
-    #     env_fps=50,
-    #     record_every_n_steps=1,
-    #     output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
-    #     video_length=config.env.max_episode_steps,
-    # )
+    eval_sampler = EvalSampler(
+        max_traj_length=config.eval.max_traj_length,
+        max_trajectories=config.eval.max_trajectories,
+        envs=eval_cages,
+        agent=agent,
+        sample_tree=eval_sample_tree,
+        obs_transform=video_recorder,
+    )
 
-    # step_transforms.append(video_recorder)
-
-    # if step_transforms is not None:
-    #     step_transforms = Compose(step_transforms)
-
-
-    runner = OnPolicyRunner(
+    runner = RLRunner(
         sampler=sampler,
         eval_sampler=eval_sampler,
         agent=agent,
@@ -270,7 +320,7 @@ def main(config: DictConfig):
         },
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
         model_save_path="model.pt",
-        verbosity=Verbosity.DEBUG,
+        # verbosity=Verbosity.DEBUG,
     )
     with build(config) as runner:
         runner.run()

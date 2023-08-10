@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import numpy as np
 
 import hydra
@@ -9,7 +10,6 @@ import pc_rl.builder  # for hydra's instantiate
 
 
 def build(config: DictConfig):
-    print(config.env)
     env = instantiate(config.env, _convert_="object")
     return env
 
@@ -17,9 +17,8 @@ def build(config: DictConfig):
 @hydra.main(version_base=None, config_path="../conf", config_name="record_dataset")
 def main(config: DictConfig):
     env = build(config)
-    print(env)
     save_path = Path(__file__).parent.parent.resolve() / config.save_path
-    print(save_path)
+    os.makedirs(save_path, exist_ok=True)
     finished = False
     obs_counter = 0
     while not finished:

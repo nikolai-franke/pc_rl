@@ -68,11 +68,12 @@ def build(config: DictConfig):
         storage=storage,
         padding=1,
     )
+
     sample_tree["observation"][0] = obs_space.sample()
     example_obs_batch = sample_tree["observation"][0]
 
     n_actions = action_space.n if discrete else action_space.shape[0]
-    distribution = DistributionClass(dim=n_actions)  # type: ignore
+    distribution = DistributionClass(dim=n_actions)
 
     device = config.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
     wandb.config.update({"device": device}, allow_val_change=True)
@@ -160,23 +161,31 @@ def build(config: DictConfig):
         optimizer_conf, resolve=True, throw_on_missing=True
     )
     per_module_conf = optimizer_conf.pop("per_module", {})  # type: ignore
-    optimizer = torch.optim.Adam(
-        [
-            {
-                "params": agent.model.embedder.parameters(),
-                **per_module_conf.get("embedder", {}),
-                "params": agent.model.encoder.parameters(),
-                **per_module_conf.get("encoder", {}),
-                "params": agent.model.pi_mlp.parameters(),
-                **per_module_conf.get("pi", {}),
-                "params": agent.model.value_mlp.parameters(),
-                **per_module_conf.get("value", {}),
-                "params:": agent.model.log_std,
-                **per_module_conf.get("log_std", {})
-            }
-        ],
-        **optimizer_conf,
-    )
+
+    per_parameter_options = [
+        {
+            "params": agent.model.embedder.parameters(),
+            **per_module_conf.get("embedder", {}),
+        },
+        {
+            "params": agent.model.encoder.parameters(),
+            **per_module_conf.get("encoder", {}),
+        },
+        {
+            "params": agent.model.pi_mlp.parameters(),
+            **per_module_conf.get("pi", {}),
+        },
+        {
+            "params": agent.model.value_mlp.parameters(),
+            **per_module_conf.get("value", {}),
+        },
+    ]
+    if not discrete:
+        per_parameter_options.append(
+            {"params:": agent.model.log_std, **per_module_conf.get("log_std", {})},
+        )
+
+    optimizer = torch.optim.Adam(per_parameter_options, **optimizer_conf)
 
     algorithm = instantiate(
         config.algo,
@@ -263,15 +272,14 @@ def build(config: DictConfig):
         sample_tree.close()
 
 
-@hydra.main(
-    version_base=None, config_path="../conf", config_name="train_ppo"
-)
+@hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")
 def main(config: DictConfig):
     mp.set_start_method("fork")
+
     run = wandb.init(
         anonymous="must",
         project="pc_rl",
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
+        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
         sync_tensorboard=True,
         save_code=True,
         # mode="disabled",
@@ -285,7 +293,7 @@ def main(config: DictConfig):
             "txt": "log.txt",
             # "csv": "progress.csv",
         },
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
+        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
         model_save_path="model.pt",
         # verbosity=Verbosity.DEBUG,
     )
