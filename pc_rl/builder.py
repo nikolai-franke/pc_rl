@@ -3,17 +3,13 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from hydra.utils import instantiate
 from parllel.torch.models import MlpModel
 from torch.nn import MultiheadAttention
 from torch_geometric.nn import MLP
 
 from pc_rl.models.aux_mae import AuxMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
-from pc_rl.models.mae import MaskedAutoEncoder
 from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
-from pc_rl.models.modules.masked_decoder import MaskedDecoder
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
 from pc_rl.models.modules.transformer import (TransformerBlock,
                                               TransformerDecoder,
