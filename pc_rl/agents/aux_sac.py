@@ -2,10 +2,10 @@ import torch
 from parllel.torch.agents.agent import TorchAgent
 from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
 
-from pc_rl.agents.sac import SacAgent
+from pc_rl.agents.sac import PcSacAgent
 
 
-class AuxSacAgent(SacAgent):
+class AuxSacAgent(PcSacAgent):
     def __init__(
         self,
         model: torch.nn.ModuleDict,

@@ -9,16 +9,16 @@ from parllel.types.batch_spec import BatchSpec
 from pytorch3d.loss import chamfer_distance
 from torch import Tensor
 
-from pc_rl.agents.sac import SacAgent
+from pc_rl.agents.sac import PcSacAgent
 
 
 class AuxPcSac(SAC):
-    agent: SacAgent
+    agent: PcSacAgent
 
     def __init__(
         self,
         batch_spec: BatchSpec,
-        agent: SacAgent,
+        agent: PcSacAgent,
         replay_buffer: ReplayBuffer[ArrayDict[Tensor]],
         optimizers: Mapping[str, torch.optim.Optimizer],
         discount: float,
