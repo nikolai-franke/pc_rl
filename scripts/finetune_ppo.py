@@ -196,6 +196,8 @@ def build(config: DictConfig):
                 **per_module_conf.get("pi", {}),
                 "params": agent.model.value_mlp.parameters(),
                 **per_module_conf.get("value", {}),
+                "params:": agent.model.log_std,
+                **per_module_conf.get("log_std", {}),
             }
         ],
         **optimizer_conf,

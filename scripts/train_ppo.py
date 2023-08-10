@@ -35,6 +35,7 @@ from pc_rl.models.finetune_encoder import FinetuneEncoder
 def build(config: DictConfig):
     # Parllel
     parallel = config.parallel
+    storage = "shared" if parallel else "local"
     discount = config.algo.discount
     batch_spec = BatchSpec(config.batch_T, config.batch_B)
     TrajInfo.set_discount(discount)
@@ -64,7 +65,7 @@ def build(config: DictConfig):
         max_mean_num_elem=obs_space.shape[0],
         batch_shape=tuple(batch_spec),
         kind="jagged",
-        storage="shared" if parallel else "local",
+        storage=storage,
         padding=1,
     )
     sample_tree["observation"][0] = obs_space.sample()
@@ -111,7 +112,6 @@ def build(config: DictConfig):
     )
 
     sample_tree = add_agent_info(sample_tree, agent, example_obs_batch)
-
     sample_tree = add_bootstrap_value(sample_tree)
 
     batch_transforms, step_transforms = [], []
@@ -171,6 +171,8 @@ def build(config: DictConfig):
                 **per_module_conf.get("pi", {}),
                 "params": agent.model.value_mlp.parameters(),
                 **per_module_conf.get("value", {}),
+                "params:": agent.model.log_std,
+                **per_module_conf.get("log_std", {})
             }
         ],
         **optimizer_conf,
@@ -214,7 +216,7 @@ def build(config: DictConfig):
         Array.from_numpy,
         info,
         batch_shape=tuple(batch_spec),
-        storage="shared",
+        storage=storage,
     )
 
     eval_sample_tree = eval_tree_example.new_array(
@@ -262,7 +264,7 @@ def build(config: DictConfig):
 
 
 @hydra.main(
-    version_base=None, config_path="../conf", config_name="train_ppo_continuous"
+    version_base=None, config_path="../conf", config_name="train_ppo"
 )
 def main(config: DictConfig):
     mp.set_start_method("fork")
