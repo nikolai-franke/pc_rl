@@ -1,4 +1,7 @@
 defaults:
   - aux_ppo_base
   - rl_model: ppo_discrete
+  - _self_
 
+rl_model:
+  _target_: pc_rl.builder.build_aux_categorical_pg_model

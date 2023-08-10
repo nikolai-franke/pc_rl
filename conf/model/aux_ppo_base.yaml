@@ -16,9 +16,3 @@ masked_decoder:
   transformer_decoder:
     _target_: pc_rl.builder.build_transformer_decoder
     depth: 4
-
-aux_mae:
-  _target_: pc_rl.builder.build_aux_mae
-  mlp_head_hidden_sizes: [512]
-  mlp_head_out_size: 1024
-  mlp_head_act: relu
