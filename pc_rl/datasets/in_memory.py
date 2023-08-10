@@ -25,7 +25,7 @@ class PcInMemoryDataset(InMemoryDataset):
         for file_path in self.file_paths:
             data = torch.from_numpy(np.load(file_path)).float()
             data_list.append(Data(pos=data[:, :3]))
-        
+
         if self.pre_filter is not None:
             data_list = [data for data in data_list if self.pre_filter(data)]
 
@@ -34,4 +34,3 @@ class PcInMemoryDataset(InMemoryDataset):
 
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
-
