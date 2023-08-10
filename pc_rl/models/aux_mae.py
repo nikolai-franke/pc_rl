@@ -23,17 +23,21 @@ class AuxMae(nn.Module):
         self.cls_pos = nn.Parameter(torch.randn(1, 1, self.dim))
 
     def forward(self, x, center_points, neighborhoods):
-        # MAE part
-        x_vis, ae_mask = self.masked_encoder(x, center_points)
-        pos_recovered, padding_mask = self.masked_decoder(x_vis, ae_mask, center_points)
-        pos_recovered = self.mae_prediction_head(pos_recovered)
-        B, M, G, _ = pos_recovered.shape
-        padding_mask = padding_mask.view(B, -1, 1, 1).expand(-1, -1, G, 3)
-        padding_mask = padding_mask[ae_mask]
-        pos_ground_truth = neighborhoods[ae_mask].reshape(B * M, -1, 3)
-        pos_prediction = pos_recovered.reshape(B * M, -1, 3)
-        pos_prediction[padding_mask] = 0.0
-        pos_ground_truth[padding_mask] = 0.0
+        pos_prediction = pos_ground_truth = None
+        if self.training:  # we don't need the autoencoder during sampling/evaluation
+            # MAE part
+            x_vis, ae_mask = self.masked_encoder(x, center_points)
+            pos_recovered, padding_mask = self.masked_decoder(
+                x_vis, ae_mask, center_points
+            )
+            pos_recovered = self.mae_prediction_head(pos_recovered)
+            B, M, G, _ = pos_recovered.shape
+            padding_mask = padding_mask.view(B, -1, 1, 1).expand(-1, -1, G, 3)
+            padding_mask = padding_mask[ae_mask]
+            pos_ground_truth = neighborhoods[ae_mask].reshape(B * M, -1, 3)
+            pos_prediction = pos_recovered.reshape(B * M, -1, 3)
+            pos_prediction[padding_mask] = 0.0
+            pos_ground_truth[padding_mask] = 0.0
 
         # classification part
         cls_tokens = self.cls_token.expand(x.shape[0], -1, -1)
