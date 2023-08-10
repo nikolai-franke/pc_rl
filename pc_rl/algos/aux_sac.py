@@ -56,6 +56,9 @@ class AuxPcSac(SAC):
         """
         # compute target Q according to formula
         # r + gamma * (1 - d) * (min Q_targ(s', a') - alpha * log pi(s', a'))
+        encoder_out, pos_prediction, ground_truth = self.agent.encode(
+            samples["observation"]
+        )
         # where a' ~ pi(.|s')
         with torch.no_grad():
             next_encoder_out = self.agent.encode(samples["next_observation"])
@@ -64,9 +67,6 @@ class AuxPcSac(SAC):
         min_target_q = torch.min(target_q1, target_q2)
         next_q = min_target_q - self._alpha * next_log_prob
         y = samples["reward"] + self.discount * ~samples["done"] * next_q
-        encoder_out, pos_prediction, ground_truth = self.agent.encode(
-            samples["observation"]
-        )
         q1, q2 = self.agent.q(encoder_out.detach(), samples["action"])
         q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
 
