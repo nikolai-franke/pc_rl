@@ -1,3 +1,4 @@
 defaults:
   - aux_ppo_base
-  - rl_model: ppo_continuous.rl_model
+  - rl_model: ppo_continuous
+
