@@ -19,6 +19,7 @@ from pc_rl.models.modules.transformer import (TransformerBlock,
                                               TransformerDecoder,
                                               TransformerEncoder)
 from pc_rl.models.pg.aux_mae_categorical import AuxMaeCategoricalPgModel
+from pc_rl.models.pg.aux_mae_continuous import AuxMaeContinuousPgModel
 from pc_rl.models.pg.finetune_categorical import CategoricalPgModel
 from pc_rl.models.pg.finetune_continuous import ContinuousPgModel
 
@@ -233,6 +234,49 @@ def build_aux_categorical_pg_model(
         aux_mae=aux_mae,
         pi_mlp=pi_mlp,
         value_mlp=value_mlp,
+    )
+
+
+def build_aux_continuous_pg_model(
+    embedder: Embedder,
+    aux_mae: AuxMae,
+    n_actions: int,
+    pi_mlp_hidden_sizes: list[int],
+    pi_mlp_act: type[nn.Module] | str,
+    value_mlp_hidden_sizes: list[int],
+    value_mlp_act: type[nn.Module] | str,
+    init_log_std: float,
+):
+    input_size = aux_mae.out_dim
+    pi_hidden_nonlinearity = (
+        getattr(torch.nn, pi_mlp_act) if isinstance(pi_mlp_act, str) else pi_mlp_act
+    )
+    pi_mlp = MlpModel(
+        input_size=input_size,
+        hidden_sizes=pi_mlp_hidden_sizes,
+        # hidden_nonlinearity=activation_resolver(pi_mlp_act),
+        hidden_nonlinearity=pi_hidden_nonlinearity,
+        output_size=n_actions,
+    )
+
+    value_hidden_nonlinearity = (
+        getattr(torch.nn, value_mlp_act)
+        if isinstance(value_mlp_act, str)
+        else value_mlp_act
+    )
+    value_mlp = MlpModel(
+        input_size=input_size,
+        hidden_sizes=value_mlp_hidden_sizes,
+        hidden_nonlinearity=value_hidden_nonlinearity,
+        output_size=1,
+    )
+
+    return AuxMaeContinuousPgModel(
+        embedder=embedder,
+        aux_mae=aux_mae,
+        pi_mlp=pi_mlp,
+        value_mlp=value_mlp,
+        init_log_std=init_log_std,
     )
 
 
