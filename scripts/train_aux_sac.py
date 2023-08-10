@@ -23,7 +23,7 @@ from parllel.types import BatchSpec
 
 import pc_rl.builder  # for hydra's instantiate
 import wandb
-from pc_rl.agents.sac import AuxPcSacAgent
+from pc_rl.agents.aux_sac import AuxPcSacAgent
 from pc_rl.models.aux_mae import AuxMae
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
@@ -267,14 +267,14 @@ def build(config: DictConfig):
     )
     eval_sample_tree["observation"][0] = obs_space.sample()
 
-    # video_recorder = RecordVectorizedVideo(
-    #     batch_buffer=eval_sample_tree,
-    #     buffer_key_to_record="env_info.rendering",
-    #     env_fps=50,
-    #     record_every_n_steps=1,
-    #     output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
-    #     video_length=config.env.max_episode_steps,
-    # )
+    video_recorder = RecordVectorizedVideo(
+        batch_buffer=eval_sample_tree,
+        buffer_key_to_record="env_info.rendering",
+        env_fps=50,
+        record_every_n_steps=1,
+        output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+        video_length=config.env.max_episode_steps,
+    )
 
     eval_sampler = EvalSampler(
         max_traj_length=config.eval.max_traj_length,
@@ -282,6 +282,7 @@ def build(config: DictConfig):
         envs=eval_cages,
         agent=agent,
         sample_tree=eval_sample_tree,
+        obs_transform=video_recorder,
     )
 
     # create runner

@@ -193,8 +193,8 @@ def build(config: DictConfig):
             **per_module_conf.get("embedder", {}),
         },
         {
-            "params": agent.model.encoder.parameters(),
-            **per_module_conf.get("aux_mae", {}),
+            "params": agent.model.aux_mae.parameters(),
+            **per_module_conf.get("encoder", {}),
         },
         {
             "params": agent.model.pi_mlp.parameters(),
