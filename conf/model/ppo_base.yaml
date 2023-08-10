@@ -1,8 +1,8 @@
 defaults:
-  - _self_
   - pos_embedder : default
   - embedder: default
   - transformer_block: default
+  - _self_
 
 transformer_encoder:
   _target_: pc_rl.builder.build_transformer_encoder
