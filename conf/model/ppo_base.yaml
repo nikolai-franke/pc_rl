@@ -4,7 +4,6 @@ defaults:
   - embedder: default
   - transformer_block: default
 
-
 transformer_encoder:
   _target_: pc_rl.builder.build_transformer_encoder
   depth: 8

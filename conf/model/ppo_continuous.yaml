@@ -9,4 +9,3 @@ rl_model:
   value_mlp_hidden_sizes: [256, 128]
   value_mlp_act: Tanh
   init_log_std: 0.0
-

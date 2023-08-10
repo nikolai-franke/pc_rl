@@ -1,10 +1,3 @@
 defaults:
   - aux_ppo_base
-
-rl_model:
-  _target_: pc_rl.builder.build_rl_aux_categorical_pg_model
-  pi_mlp_hidden_sizes: [256, 128]
-  pi_mlp_act: Tanh
-  value_mlp_hidden_sizes: [256, 128]
-  value_mlp_act: Tanh
-
+  - rl_model: ppo_discrete.rl_model

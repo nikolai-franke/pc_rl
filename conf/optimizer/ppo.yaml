@@ -6,5 +6,7 @@ per_module:
     lr: 1e-6
   pi:
     lr: 1e-4
+  log_std:
+    lr: 1e-4
   value:
     lr: 1e-4

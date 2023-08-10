@@ -2,6 +2,7 @@ defaults:
   - pos_embedder : default
   - embedder: default
   - transformer_block: default
+  - _self_
 
 masked_encoder:
   _target_: pc_rl.builder.build_masked_encoder
@@ -21,5 +22,3 @@ aux_mae:
   mlp_head_hidden_sizes: [512]
   mlp_head_out_size: 1024
   mlp_head_act: relu
-
-

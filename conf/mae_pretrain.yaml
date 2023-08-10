@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - dataset: shapenet
+  - dataset: reach
   - model: mae
 
 batch_size: 128
