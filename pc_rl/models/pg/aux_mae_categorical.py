@@ -30,8 +30,8 @@ class AuxMaeCategoricalPgModel(nn.Module):
         super().__init__()
         self.embedder = embedder
         self.aux_mae = aux_mae
-        self.pi_mlp = pi_mlp
-        self.value_mlp = value_mlp
+        self.pi = pi_mlp
+        self.value = value_mlp
 
     def forward(self, data):
         pos, batch = dict_to_batched_data(data)
@@ -42,9 +42,9 @@ class AuxMaeCategoricalPgModel(nn.Module):
 
         lead_dim, B, T, _ = infer_leading_dims(x, 1)
         x = x.view(T * B, -1)
-        pi = self.pi_mlp(x)
+        pi = self.pi(x)
         pi = F.softmax(pi, dim=-1)
-        value = self.value_mlp(x).squeeze(-1)
+        value = self.value(x).squeeze(-1)
         pi, value, pos_prediction, pos_ground_truth = restore_leading_dims(
             (pi, value, pos_prediction, pos_ground_truth), lead_dim, T, B
         )

@@ -17,7 +17,7 @@ class AuxPPO(PPO):
     def __init__(
         self,
         agent: AuxPgAgent,
-        dataloader: BatchedDataLoader[Tensor],
+        dataloader: BatchedDataLoader[ArrayDict[Tensor]],
         optimizer: Optimizer,
         learning_rate_scheduler: _LRScheduler | None,
         value_loss_coeff: float,
@@ -61,12 +61,11 @@ class AuxPPO(PPO):
         pos_prediction = pos_prediction.reshape(B * M, -1, 3)
         ground_truth = ground_truth.reshape(B * M, -1, 3)
 
-        mae_loss = (
-            chamfer_distance(pos_prediction, ground_truth, point_reduction="sum")[0]
-            * self.aux_loss_coeff
-        )
+        mae_loss = chamfer_distance(
+            pos_prediction, ground_truth, point_reduction="sum"
+        )[0]
 
-        loss += mae_loss
+        loss += mae_loss * self.aux_loss_coeff
 
         self.algo_log_info["mae_loss"].append(mae_loss.item())
 
