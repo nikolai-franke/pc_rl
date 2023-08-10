@@ -23,7 +23,7 @@ from parllel.types import BatchSpec
 
 import pc_rl.builder  # for hydra's instantiate
 import wandb
-from pc_rl.agents.sac import SacAgent
+from pc_rl.agents.sac import PcSacAgent
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 
 
@@ -123,7 +123,7 @@ def build(config: DictConfig):
     )
 
     # instantiate agent
-    agent = SacAgent(
+    agent = PcSacAgent(
         model=model,
         distribution=distribution,
         device=device,

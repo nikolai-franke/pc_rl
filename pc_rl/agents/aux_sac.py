@@ -4,7 +4,6 @@ from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
 from torch import Tensor
 
 from pc_rl.agents.sac import PcSacAgent
-from pc_rl.utils.array_dict import dict_to_batched_data
 
 
 class AuxSacAgent(PcSacAgent):
