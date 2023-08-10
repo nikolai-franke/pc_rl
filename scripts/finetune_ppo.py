@@ -185,23 +185,31 @@ def build(config: DictConfig):
         optimizer_conf, resolve=True, throw_on_missing=True
     )
     per_module_conf = optimizer_conf.pop("per_module", {})  # type: ignore
-    optimizer = torch.optim.Adam(
-        [
-            {
-                "params": agent.model.embedder.parameters(),
-                **per_module_conf.get("embedder", {}),
-                "params": agent.model.encoder.parameters(),
-                **per_module_conf.get("encoder", {}),
-                "params": agent.model.pi_mlp.parameters(),
-                **per_module_conf.get("pi", {}),
-                "params": agent.model.value_mlp.parameters(),
-                **per_module_conf.get("value", {}),
-                "params:": agent.model.log_std,
-                **per_module_conf.get("log_std", {}),
-            }
-        ],
-        **optimizer_conf,
-    )
+
+    per_parameter_options = [
+        {
+            "params": agent.model.embedder.parameters(),
+            **per_module_conf.get("embedder", {}),
+        },
+        {
+            "params": agent.model.encoder.parameters(),
+            **per_module_conf.get("encoder", {}),
+        },
+        {
+            "params": agent.model.pi_mlp.parameters(),
+            **per_module_conf.get("pi", {}),
+        },
+        {
+            "params": agent.model.value_mlp.parameters(),
+            **per_module_conf.get("value", {}),
+        },
+    ]
+    if not discrete:
+        per_parameter_options.append(
+            {"params": agent.model.log_std, **per_module_conf.get("log_std", {})}
+        )
+
+    optimizer = torch.optim.Adam(per_parameter_options, **optimizer_conf)
 
     algorithm = instantiate(
         config.algo,

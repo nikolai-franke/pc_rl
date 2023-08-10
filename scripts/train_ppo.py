@@ -182,7 +182,7 @@ def build(config: DictConfig):
     ]
     if not discrete:
         per_parameter_options.append(
-            {"params:": agent.model.log_std, **per_module_conf.get("log_std", {})},
+            {"params": agent.model.log_std, **per_module_conf.get("log_std", {})}
         )
 
     optimizer = torch.optim.Adam(per_parameter_options, **optimizer_conf)

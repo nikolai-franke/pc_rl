@@ -28,6 +28,7 @@ from parllel.types import BatchSpec
 
 import pc_rl.builder  # import for hydra's instantiate
 import wandb
+from pc_rl.models.aux_mae import AuxMae
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 
@@ -109,14 +110,13 @@ def build(config: DictConfig):
         transformer_decoder=transformer_decoder,
         pos_embedder=pos_embedder,
     )
+
     mae_prediction_head = MaePredictionHead(
         dim=config.model.embedder.embedding_size,
         group_size=config.model.embedder.group_size,
     )
 
-    aux_mae = instantiate(
-        config.model.aux_mae,
-        _convert_="partial",
+    aux_mae = AuxMae(
         masked_encoder=masked_encoder,
         masked_decoder=masked_decoder,
         mae_prediction_head=mae_prediction_head,
@@ -207,7 +207,7 @@ def build(config: DictConfig):
     ]
     if not discrete:
         per_parameter_options.append(
-            {"params:": agent.model.log_std, **per_module_conf.get("log_std", {})},
+            {"params": agent.model.log_std, **per_module_conf.get("log_std", {})},
         )
 
     optimizer = torch.optim.Adam(per_parameter_options, **optimizer_conf)
