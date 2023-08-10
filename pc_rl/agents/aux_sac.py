@@ -30,7 +30,7 @@ class AuxPcSacAgent(PcSacAgent):
         observation = observation.to_ndarray()
         observation = dict_map(torch.from_numpy, observation)
         observation = observation.to(device=self.device)
-        encoding, *_ = self.encode(observation)
+        encoding, *_ = self.encode(observation) # TODO: maybe use two separate encode() methods, one for sampling and one for training
         dist_params = self.model["pi"](encoding)
         action = self.distribution.sample(dist_params)
         return action.cpu(), ArrayDict()
