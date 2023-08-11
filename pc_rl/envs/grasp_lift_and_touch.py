@@ -4,10 +4,10 @@ from gymnasium.wrappers.time_limit import TimeLimit
 from sofa_env.scenes.grasp_lift_touch.grasp_lift_touch_env import (
     ActionType, CollisionEffect, GraspLiftTouchEnv, ObservationType, Phase,
     RenderMode)
-from sofa_env.wrappers.point_cloud import \
-    PointCloudFromDepthImageObservationWrapper
 
 from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
+from pc_rl.envs.point_cloud_wrapper import \
+    PointCloudFromDepthImageObservationWrapper
 
 
 def build(
