@@ -266,6 +266,7 @@ def build(config: DictConfig):
         record_every_n_steps=1,
         output_dir=Path(config.video_path),
         video_length=config.env.max_episode_steps,
+        use_wandb=True,
     )
 
     eval_sampler = EvalSampler(
