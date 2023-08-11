@@ -1,2 +1,3 @@
 [tool.pyright]
 reportGeneralTypeIssues = "warning"
+exlude = ["**/wandb", "**/outputs", "**/log_data", "**/imgs"]
