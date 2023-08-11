@@ -1,4 +1,6 @@
 import multiprocessing as mp
+import sys
+import traceback
 import os
 from contextlib import contextmanager
 from datetime import datetime
@@ -276,43 +278,46 @@ def build(config: DictConfig):
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")
 def main(config: DictConfig):
-    mp.set_start_method("fork")
-    if config.use_slurm:
-        os.system("wandb enabled")
-        tmp = Path(os.environ.get("TMP"))
-        video_path = (
-            tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d_%H-%M')}"
+    try:
+        run = wandb.init(
+            project="pc_rl",
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+            sync_tensorboard=True,
+            save_code=True,
+            reinit=True,
+            # mode="enabled",
         )
-    else:
-        video_path = (
-            Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d_%H-%M')}"
+        mp.set_start_method("fork")
+        if config.use_slurm:
+            os.system("wandb enabled")
+            tmp = Path(os.environ.get("TMP"))
+            video_path = (
+                tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-')}/{run.id}"
+            )
+        else:
+            video_path = (
+                Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-')}/{run.id}"
+            )
+        config.update({"video_path": video_path})
+        logger.init(
+            wandb_run=run,
+            # this log_dir is used if wandb is disabled (using `wandb disabled`)
+            log_dir=Path(f"log_data/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+            tensorboard=True,
+            output_files={
+                "txt": "log.txt",
+                # "csv": "progress.csv",
+            },
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+            model_save_path="model.pt",
+            # verbosity=Verbosity.DEBUG,
         )
-    config.update({"video_path": video_path})
-
-    run = wandb.init(
-        anonymous="must",
-        project="pc_rl",
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
-        sync_tensorboard=True,
-        save_code=True,
-        # mode="enabled",
-    )
-    logger.init(
-        wandb_run=run,
-        # this log_dir is used if wandb is disabled (using `wandb disabled`)
-        log_dir=Path(f"log_data/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
-        tensorboard=True,
-        output_files={
-            "txt": "log.txt",
-            # "csv": "progress.csv",
-        },
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
-        model_save_path="model.pt",
-        # verbosity=Verbosity.DEBUG,
-    )
-    with build(config) as runner:
-        runner.run()
-    run.finish()
+        with build(config) as runner:
+            runner.run()
+        run.finish()
+    except Exception:
+        traceback.print_exc(file=sys.stderr)
+        raise
 
 
 if __name__ == "__main__":
