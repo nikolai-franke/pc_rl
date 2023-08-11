@@ -1,12 +1,12 @@
-lr: 1e-5
+lr: 1e-6
 per_module:
   embedder:
     lr: 1e-5
   encoder:
     lr: 1e-6
-  pi:
-    lr: 1e-4
+  pi_mlp:
+    lr: 1e-5
   log_std:
-    lr: 1e-4
-  value:
-    lr: 1e-4
+    lr: 1e-5
+  value_mlp:
+    lr: 1e-5
