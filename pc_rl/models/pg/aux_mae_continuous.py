@@ -32,8 +32,8 @@ class AuxMaeContinuousPgModel(nn.Module):
         super().__init__()
         self.embedder = embedder
         self.aux_mae = aux_mae
-        self.pi = pi_mlp
-        self.value = value_mlp
+        self.pi_mlp = pi_mlp
+        self.value_mlp = value_mlp
         self._check_mlps()
         action_size = self._get_action_size()
         self.log_std = nn.Parameter(torch.full((action_size,), init_log_std))
@@ -42,13 +42,13 @@ class AuxMaeContinuousPgModel(nn.Module):
     def _check_mlps(self):
         input = torch.randn((self.aux_mae.out_dim,))
         try:
-            self.pi(input)
+            self.pi_mlp(input)
         except RuntimeError as e:
             raise ValueError(
                 f"The first layer of the Pi MLP must have the same size as the output of the encoder: {self.encoder.out_dim}"
             ) from e
         try:
-            self.value(input)
+            self.value_mlp(input)
         except RuntimeError as e:
             raise ValueError(
                 f"The first layer of the Value MLP must have the same size as the output of the encoder: {self.encoder.out_dim}"
@@ -57,7 +57,7 @@ class AuxMaeContinuousPgModel(nn.Module):
     @torch.no_grad()
     def _get_action_size(self):
         input = torch.randn((self.aux_mae.out_dim,))
-        return len(self.pi(input))
+        return len(self.pi_mlp(input))
 
     def forward(self, data):
         pos, batch = dict_to_batched_data(data)
@@ -68,9 +68,9 @@ class AuxMaeContinuousPgModel(nn.Module):
 
         lead_dim, B, T, _ = infer_leading_dims(x, 1)
         x = x.view(T * B, -1)
-        mean = self.pi(x)
+        mean = self.pi_mlp(x)
         mean = F.softmax(mean, dim=-1)
-        value = self.value(x).squeeze(-1)
+        value = self.value_mlp(x).squeeze(-1)
         log_std = self.log_std.repeat(T * B, 1)
         mean, value, log_std, pos_prediction, pos_ground_truth = restore_leading_dims(
             (mean, value, log_std, pos_prediction, pos_ground_truth), lead_dim, T, B

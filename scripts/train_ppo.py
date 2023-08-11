@@ -1,4 +1,5 @@
 import multiprocessing as mp
+import os
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -29,7 +30,6 @@ from parllel.types import BatchSpec
 import pc_rl.builder  # import for hydra's instantiate
 import wandb
 from pc_rl.models.finetune_encoder import FinetuneEncoder
-import os
 
 
 @contextmanager
@@ -174,11 +174,11 @@ def build(config: DictConfig):
         },
         {
             "params": agent.model.pi_mlp.parameters(),
-            **per_module_conf.get("pi", {}),
+            **per_module_conf.get("pi_mlp", {}),
         },
         {
             "params": agent.model.value_mlp.parameters(),
-            **per_module_conf.get("value", {}),
+            **per_module_conf.get("value_mlp", {}),
         },
     ]
     if not discrete:
@@ -276,14 +276,18 @@ def build(config: DictConfig):
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")
 def main(config: DictConfig):
+    mp.set_start_method("fork")
     if config.use_slurm:
         os.system("wandb enabled")
         tmp = Path(os.environ.get("TMP"))
-        video_path = tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d_%H-%M')}"
-        config.update({"video_path": video_path})
-
-
-    mp.set_start_method("fork")
+        video_path = (
+            tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d_%H-%M')}"
+        )
+    else:
+        video_path = (
+            Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d_%H-%M')}"
+        )
+    config.update({"video_path": video_path})
 
     run = wandb.init(
         anonymous="must",

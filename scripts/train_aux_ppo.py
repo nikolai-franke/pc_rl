@@ -1,4 +1,5 @@
 import multiprocessing as mp
+import os
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -198,16 +199,16 @@ def build(config: DictConfig):
         },
         {
             "params": agent.model.pi_mlp.parameters(),
-            **per_module_conf.get("pi", {}),
+            **per_module_conf.get("pi_mlp", {}),
         },
         {
             "params": agent.model.value_mlp.parameters(),
-            **per_module_conf.get("value", {}),
+            **per_module_conf.get("value_mlp", {}),
         },
     ]
     if not discrete:
         per_parameter_options.append(
-            {"params": agent.model.log_std, **per_module_conf.get("log_std", {})},
+            {"params": agent.model.log_std, **per_module_conf.get("log_std", {})}
         )
 
     optimizer = torch.optim.Adam(per_parameter_options, **optimizer_conf)
@@ -263,7 +264,7 @@ def build(config: DictConfig):
         buffer_key_to_record="env_info.rendering",
         env_fps=50,
         record_every_n_steps=1,
-        output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+        output_dir=Path(config.video_path),
         video_length=config.env.max_episode_steps,
     )
 
@@ -300,6 +301,17 @@ def build(config: DictConfig):
 @hydra.main(version_base=None, config_path="../conf", config_name="train_aux_ppo")
 def main(config: DictConfig):
     mp.set_start_method("fork")
+    if config.use_slurm:
+        os.system("wandb enabled")
+        tmp = Path(os.environ.get("TMP"))
+        video_path = (
+            tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d_%H-%M')}"
+        )
+    else:
+        video_path = (
+            Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d_%H-%M')}"
+        )
+    config.update({"video_path": video_path})
 
     run = wandb.init(
         anonymous="must",
