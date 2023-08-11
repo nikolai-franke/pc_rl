@@ -29,6 +29,7 @@ from parllel.types import BatchSpec
 import pc_rl.builder  # import for hydra's instantiate
 import wandb
 from pc_rl.models.finetune_encoder import FinetuneEncoder
+import os
 
 
 @contextmanager
@@ -238,8 +239,9 @@ def build(config: DictConfig):
         buffer_key_to_record="env_info.rendering",
         env_fps=50,
         record_every_n_steps=1,
-        output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+        output_dir=Path(config.video_path),
         video_length=config.env.max_episode_steps,
+        use_wandb=True,
     )
 
     eval_sampler = EvalSampler(
@@ -274,6 +276,13 @@ def build(config: DictConfig):
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")
 def main(config: DictConfig):
+    if config.use_slurm:
+        os.system("wandb enabled")
+        tmp = Path(os.environ.get("TMP"))
+        video_path = tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d_%H-%M')}"
+        config.update({"video_path": video_path})
+
+
     mp.set_start_method("fork")
 
     run = wandb.init(
@@ -282,7 +291,7 @@ def main(config: DictConfig):
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
         sync_tensorboard=True,
         save_code=True,
-        # mode="disabled",
+        # mode="enabled",
     )
     logger.init(
         wandb_run=run,
