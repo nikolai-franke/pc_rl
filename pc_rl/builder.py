@@ -239,6 +239,7 @@ def build_aux_continuous_pg_model(
     n_actions: int,
     pi_mlp_hidden_sizes: list[int],
     pi_mlp_act: type[nn.Module] | str,
+    pi_out_act: Optional[type[nn.Module] | str],
     value_mlp_hidden_sizes: list[int],
     value_mlp_act: type[nn.Module] | str,
     init_log_std: float,
@@ -254,6 +255,12 @@ def build_aux_continuous_pg_model(
         hidden_nonlinearity=pi_hidden_nonlinearity,
         output_size=n_actions,
     )
+
+    if pi_out_act is not None:
+        pi_out_nonlinearity = (
+            getattr(torch.nn, pi_out_act) if isinstance(pi_out_act, str) else pi_out_act
+        )
+        pi_mlp = nn.Sequential(pi_mlp, pi_out_nonlinearity())
 
     value_hidden_nonlinearity = (
         getattr(torch.nn, value_mlp_act)

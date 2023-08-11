@@ -4,5 +4,5 @@ defaults:
   - _self_
 
 rl_model:
-  _target_: pc_rl.builder.build_aux_categorical_pg_model
+  _target_: pc_rl.builder.build_aux_continuous_pg_model
 
