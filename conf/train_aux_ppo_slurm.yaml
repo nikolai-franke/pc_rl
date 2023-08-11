@@ -1,0 +1,7 @@
+defaults:
+  - train_aux_ppo
+  - slurm
+  - _self_
+
+use_slurm: True
+
