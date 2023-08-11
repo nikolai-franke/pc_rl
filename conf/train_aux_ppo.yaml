@@ -2,6 +2,7 @@ defaults:
   - algo: ppo
   - model: aux_ppo_continuous
   - env: grasp_lift_and_touch
+  - optimizer: ppo
   - _self_
 
 parallel: True
