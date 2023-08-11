@@ -5,6 +5,7 @@ import os
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+from hydra.core.hydra_config import HydraConfig
 
 import gymnasium as gym
 import hydra
@@ -299,6 +300,11 @@ def main(config: DictConfig):
                 Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-')}/{run.id}"
             )
         config.update({"video_path": video_path})
+        num_gpus = HydraConfig.get().launcher.gpus_per_node
+        gpu_id = HydraConfig.get().job.num % num_gpus
+        config.update({"device": f"cuda:{gpu_id}"})
+        wandb.config.update(config)
+
         logger.init(
             wandb_run=run,
             # this log_dir is used if wandb is disabled (using `wandb disabled`)
