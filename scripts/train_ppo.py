@@ -240,7 +240,7 @@ def build(config: DictConfig):
         env_fps=50,
         record_every_n_steps=1,
         output_dir=Path(config.video_path),
-        video_length=config.env.max_episode_steps,
+        video_length=config.eval.max_traj_length,
         use_wandb=True,
     )
 

@@ -1,9 +1,9 @@
 defaults:
-  - _self_
   - algo: ppo
   - model: ppo_continuous
-  - env: grasp_lift_and_touch
+  - env: reach
   - optimizer: ppo
+  - _self_
 
 parallel: True
 batch_T: 128
@@ -20,3 +20,6 @@ eval:
   n_eval_envs: 4
   max_traj_length: 200
   max_trajectories: 4
+
+use_slurm: False
+video_path: ???
