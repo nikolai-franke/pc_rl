@@ -3,5 +3,7 @@ defaults:
   - slurm
   - _self_
 
+batch_T: 512
+batch_B: 40
 use_slurm: True
 
