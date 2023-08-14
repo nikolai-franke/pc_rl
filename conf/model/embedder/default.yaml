@@ -4,6 +4,6 @@ group_size: 32
 mlp_1_layers: [3, 128, 256]
 mlp_2_layers: [512, 512]
 mlp_act: relu
-sampling_ratio: 0.03125
+sampling_ratio: 0.0375
 random_start: True
 
