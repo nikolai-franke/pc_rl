@@ -7,7 +7,6 @@ batch_T: 128
 batch_B: 8
 use_slurm: True
 
-
 # sweep pararmeters
 hydra:
   sweeper:

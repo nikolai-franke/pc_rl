@@ -303,7 +303,6 @@ def main(config: DictConfig):
         num_gpus = HydraConfig.get().launcher.gpus_per_node
         gpu_id = HydraConfig.get().job.num % num_gpus
         config.update({"device": f"cuda:{gpu_id}"})
-        wandb.config.update(config)
 
         logger.init(
             wandb_run=run,
