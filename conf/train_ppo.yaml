@@ -13,7 +13,7 @@ reward_clip_max: 5
 max_steps_decorrelate: 0
 device: null
 runner:
-  n_steps: 8388608
+  n_steps: 10_000_000
   log_interval_steps: 4096
   eval_interval_steps: 20480
 eval:

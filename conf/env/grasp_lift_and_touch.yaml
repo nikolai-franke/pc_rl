@@ -4,6 +4,11 @@ defaults:
   - base
   - _self_
 
+# base overrides
+max_episode_steps: 500
+frame_skip: 2
+time_step: 0.05
+
 discrete_action_magnitude: 100.0
 goal_tolerance: 0.02
 start_in_phase: touch
@@ -14,8 +19,8 @@ phase_any_rewards:
   collision_cauter_gallbladder: -0.1
   collision_cauter_liver: -0.1
   collision_griper_livver: -0.1
-  distance_cauter_target: -0.1
-  delta_distance_cauter_target: -0.5
+  distance_cauter_target: -0.5
+  delta_distance_cauter_target: -1.0
   target_visible: 0.0
   gallbladder_is_grasped: 20.0
   new_grasp_on_gallbladder: 10.0
