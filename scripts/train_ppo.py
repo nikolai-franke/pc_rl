@@ -293,11 +293,11 @@ def main(config: DictConfig):
             os.system("wandb enabled")
             tmp = Path(os.environ.get("TMP"))
             video_path = (
-                tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-')}/{run.id}"
+                tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
             )
         else:
             video_path = (
-                Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-')}/{run.id}"
+                Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
             )
         config.update({"video_path": video_path})
         num_gpus = HydraConfig.get().launcher.gpus_per_node
