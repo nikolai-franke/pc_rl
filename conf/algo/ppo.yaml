@@ -3,7 +3,7 @@ discount: 0.99
 gae_lambda: 0.9
 normalize_advantage: True
 epochs: 2
-minibatches: 4
+minibatches: 8
 ratio_clip: 0.1
 value_clipping_mode: "none"
 value_loss_coeff: 0.5
