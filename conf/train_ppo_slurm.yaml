@@ -14,4 +14,4 @@ hydra:
       # optimizer: ppo,ppo_basic
       model.transformer_encoder.depth: 6,8
       model.rl_model.pi_out_act: null,Tanh
-      model.embedder: default,small_groups
+      model/embedder: default,small_groups
