@@ -2,7 +2,7 @@ _target_: parllel.torch.algos.ppo.PPO
 discount: 0.99
 gae_lambda: 0.9
 normalize_advantage: True
-epochs: 4
+epochs: 2
 minibatches: 4
 ratio_clip: 0.1
 value_clipping_mode: "none"
