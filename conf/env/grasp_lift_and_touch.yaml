@@ -19,7 +19,7 @@ phase_any_rewards:
   target_visible: 0.0
   gallbladder_is_grasped: 20.0
   new_grasp_on_gallbladder: 10.0
-  lost_grasp_on_gallbladder: 10.0
+  lost_grasp_on_gallbladder: -10.0
   active_grasping_springs: 0.0
   delta_active_grasping_springs: 0.0
   gripper_pulls_gallbladder_out: 0.005
