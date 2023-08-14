@@ -307,11 +307,10 @@ def main(config: DictConfig):
         logger.init(
             wandb_run=run,
             # this log_dir is used if wandb is disabled (using `wandb disabled`)
-            log_dir=Path(f"log_data/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+            # log_dir=Path(f"log_data/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
             tensorboard=True,
             output_files={
-                "txt": "log.txt",
-                # "csv": "progress.csv",
+                "txt": Path("log.txt"),
             },
             config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
             model_save_path="model.pt",
