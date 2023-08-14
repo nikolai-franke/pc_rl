@@ -3,7 +3,7 @@ defaults:
   - slurm
   - _self_
 
-batch_T: 64
+batch_T: 128
 batch_B: 8
 use_slurm: True
 
@@ -11,7 +11,10 @@ use_slurm: True
 hydra:
   sweeper:
     params:
-      # optimizer: ppo,ppo_basic
-      # model.transformer_encoder.depth: 6,8
+      optimizer: ppo,ppo_basic
+      model.transformer_encoder.depth: 6,8
       model.rl_model.pi_out_act: null,Tanh
       # model/embedder: default,small_groups
+  sweep:
+    dir: $TMP/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
