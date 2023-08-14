@@ -8,6 +8,7 @@ defaults:
 max_episode_steps: 500
 frame_skip: 2
 time_step: 0.05
+image_shape: [64, 64]
 
 discrete_action_magnitude: 100.0
 goal_tolerance: 0.02

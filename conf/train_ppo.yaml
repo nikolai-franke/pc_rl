@@ -14,8 +14,8 @@ max_steps_decorrelate: 0
 device: null
 runner:
   n_steps: 10_000_000
-  log_interval_steps: 4096
-  eval_interval_steps: 20480
+  log_interval_steps: 1024
+  eval_interval_steps: 10240
 eval:
   n_eval_envs: 1
   max_traj_length: 500
