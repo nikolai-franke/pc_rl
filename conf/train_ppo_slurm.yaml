@@ -3,6 +3,15 @@ defaults:
   - slurm
   - _self_
 
-batch_T: 256
+batch_T: 128
 batch_B: 8
 use_slurm: True
+
+
+# sweep pararmeters
+hydra:
+  sweeper:
+    params:
+      optimizer: ppo,ppo_basic
+      model.transformer_encoder.depth: 6,8
+      model.rl_model.pi_out_act: null,Tanh

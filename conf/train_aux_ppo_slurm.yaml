@@ -4,4 +4,12 @@ defaults:
   - _self_
 
 use_slurm: True
+env: grasp_lift_and_touch
 
+# sweep pararmeters
+hydra:
+  sweeper:
+    params:
+      optimizer: ppo,ppo_basic
+      model.transformer_encoder.depth: 6,8
+      model.rl_model.pi_out_act: null,Tanh
