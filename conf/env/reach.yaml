@@ -6,6 +6,7 @@ defaults:
 
 discrete_action_magnitude: 100.0
 distance_to_target_threshold: 0.02
+
 reward_amount_dict:
   distance_to_target: -0.0
   delta_distance_to_target: -10.0

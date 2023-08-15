@@ -253,7 +253,7 @@ def build(config: DictConfig):
         envs=eval_cages,
         agent=agent,
         sample_tree=eval_sample_tree,
-        # obs_transform=video_recorder,
+        obs_transform=video_recorder,
     )
 
     runner = RLRunner(
@@ -280,6 +280,7 @@ def build(config: DictConfig):
 @hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")
 def main(config: DictConfig):
     mp.set_start_method("forkserver")
+    # try...except block so we get error messages when using submitit
     try:
         run = wandb.init(
             project="pc_rl",
@@ -320,6 +321,7 @@ def main(config: DictConfig):
         with build(config) as runner:
             runner.run()
         run.finish()
+
     except Exception:
         traceback.print_exc(file=sys.stderr)
         raise

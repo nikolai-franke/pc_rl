@@ -1,0 +1,28 @@
+_target_: pc_rl.envs.thread_in_hole.build
+
+defaults:
+  - base
+  - _self_
+
+discrete_action_magnitude: 100.0
+camera_reset_noise: null
+hole_rotation_reset_noise: null
+hole_position_reset_noise: null
+
+reward_amount_dict:
+  thread_tip_distance_to_hole: -0.1
+  delta_thread_tip_distance_to_hole: -0.1
+  thread_center_distance_to_hole: -0.0
+  delta_thread_center_distance_to_hole: -0.0
+  thread_points_distance_to_hole: -0.0
+  delta_thread_points_distance_to_hole: -0.0
+  unstable_deformation: -0.0
+  thread_velocity: -0.0
+  gripper_velocity: -0.0
+  successful_task: 100.0
+  action_violated_cartesian_workspace: -0.0
+  action_violated_state_limits: -0.0
+  ratio_rope_in_hole: 0.1
+  delta_ratio_rope_in_hole: 1.0
+  gripper_collisions: -0.1
+
