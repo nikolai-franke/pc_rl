@@ -33,7 +33,6 @@ from parllel.types import BatchSpec
 import pc_rl.builder  # import for hydra's instantiate
 import wandb
 from pc_rl.models.finetune_encoder import FinetuneEncoder
-from pc_rl.models.dummy import DummyModel
 
 
 @contextmanager
@@ -101,8 +100,6 @@ def build(config: DictConfig):
     finetune_encoder = FinetuneEncoder(
         pos_embedder=pos_embedder, transformer_encoder=transformer_encoder
     )
-
-    model = DummyModel(action_space=action_space, observation_space=obs_space, T=config.batch_T, B=config.batch_B)
 
     pg_model = instantiate(
         config.model.rl_model,
@@ -283,45 +280,49 @@ def build(config: DictConfig):
 @hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")
 def main(config: DictConfig):
     mp.set_start_method("forkserver")
-    run = wandb.init(
-        project="pc_rl",
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
-        sync_tensorboard=True,
-        save_code=True,
-        reinit=True,
-        # mode="enabled",
-    )
-    if config.use_slurm:
-        os.system("wandb enabled")
-        tmp = Path(os.environ.get("TMP"))
-        video_path = (
-            tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+    try:
+        run = wandb.init(
+            project="pc_rl",
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+            sync_tensorboard=True,
+            save_code=True,
+            reinit=True,
+            # mode="enabled",
         )
-        num_gpus = HydraConfig.get().launcher.gpus_per_node
-        gpu_id = HydraConfig.get().job.num % num_gpus
-        config.update({"device": f"cuda:{gpu_id}"})
-    else:
-        video_path = (
-            Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+        if config.use_slurm:
+            os.system("wandb enabled")
+            tmp = Path(os.environ.get("TMP"))
+            video_path = (
+                tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+            )
+            num_gpus = HydraConfig.get().launcher.gpus_per_node
+            gpu_id = HydraConfig.get().job.num % num_gpus
+            config.update({"device": f"cuda:{gpu_id}"})
+        else:
+            video_path = (
+                Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+            )
+        config.update({"video_path": video_path})
+
+        logger.init(
+            wandb_run=run,
+            # this log_dir is used if wandb is disabled (using `wandb disabled`)
+            # log_dir=Path(f"log_data/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+            tensorboard=True,
+            output_files={
+                "txt": Path("log.txt"),
+            },
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+            model_save_path="model.pt",
+            # verbosity=Verbosity.DEBUG,
         )
-    config.update({"video_path": video_path})
 
-    logger.init(
-        wandb_run=run,
-        # this log_dir is used if wandb is disabled (using `wandb disabled`)
-        # log_dir=Path(f"log_data/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
-        tensorboard=True,
-        output_files={
-            "txt": Path("log.txt"),
-        },
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
-        model_save_path="model.pt",
-        # verbosity=Verbosity.DEBUG,
-    )
-
-    with build(config) as runner:
-        runner.run()
-    run.finish()
+        with build(config) as runner:
+            runner.run()
+        run.finish()
+    except Exception:
+        traceback.print_exc(file=sys.stderr)
+        raise
 
 
 if __name__ == "__main__":
