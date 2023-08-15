@@ -1,7 +1,9 @@
 import pytorch_lightning as pl
 import torch
 from pytorch3d.loss import chamfer_distance
+from pc_rl.utils.sinkhorn import sinkhorn
 from torch import Tensor
+from geomloss import SamplesLoss
 
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
@@ -26,6 +28,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.mae_prediction_head = mae_prediction_head
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+        self.loss = SamplesLoss("sinkhorn")
         # self.optimizer = AdamW(
         #     self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         # )
@@ -52,11 +55,16 @@ class MaskedAutoEncoder(pl.LightningModule):
         prediction[padding_mask] = 0.0
         ground_truth[padding_mask] = 0.0
 
-        loss = chamfer_distance(prediction, ground_truth, point_reduction="sum")[0]
+        # loss = chamfer_distance(prediction, ground_truth, point_reduction="sum")[0]
+        # loss = 0
+        # for p, g in zip(prediction, ground_truth):
+        #     loss += sinkhorn(p, g)[0]
+        loss = torch.sum(self.loss(prediction, ground_truth))
 
-        self.log("train/loss", loss, batch_size=B)
+        self.log("train/loss", loss.item(), batch_size=B)
         return loss
 
+    @torch.no_grad()
     def validation_step(self, data, batch_idx):
         (
             self.test_prediction,
@@ -79,10 +87,15 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.test_prediction[self.test_padding_mask] = 0.0
         self.test_ground_truth[self.test_padding_mask] = 0.0
 
-        loss = chamfer_distance(
-            self.test_prediction, self.test_ground_truth, point_reduction="sum"
-        )[0]
-        self.log("val/loss", loss, batch_size=B)
+        # loss = chamfer_distance(
+        #     self.test_prediction, self.test_ground_truth, point_reduction="sum"
+        # )[0]
+
+        # loss = 0
+        # for p, g in zip(self.test_prediction, self.test_ground_truth):
+        #     loss += sinkhorn(p, g)[0]
+        loss = torch.sum(self.loss(self.test_prediction, self.test_ground_truth))
+        self.log("val/loss", loss.item(), batch_size=B)
         return loss
 
     def configure_optimizers(self):
