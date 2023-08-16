@@ -1,8 +1,11 @@
 import multiprocessing as mp
+import sys
+import traceback
 import os
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+from hydra.core.hydra_config import HydraConfig
 
 import gymnasium as gym
 import hydra
@@ -302,42 +305,50 @@ def build(config: DictConfig):
 @hydra.main(version_base=None, config_path="../conf", config_name="train_aux_ppo")
 def main(config: DictConfig):
     mp.set_start_method("forkserver")
-    if config.use_slurm:
-        os.system("wandb enabled")
-        tmp = Path(os.environ.get("TMP"))
-        video_path = (
-            tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d_%H-%M')}"
+    # try...except block so we get error messages when using submitit
+    try:
+        run = wandb.init(
+            project="pc_rl",
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+            sync_tensorboard=True,
+            save_code=True,
+            reinit=True,
         )
-    else:
-        video_path = (
-            Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d_%H-%M')}"
-        )
-    config.update({"video_path": video_path})
+        if config.use_slurm:
+            os.system("wandb enabled")
+            tmp = Path(os.environ.get("TMP"))
+            video_path = (
+                tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+            )
+            num_gpus = HydraConfig.get().launcher.gpus_per_node
+            gpu_id = HydraConfig.get().job.num % num_gpus
+            config.update({"device": f"cuda:{gpu_id}"})
+        else:
+            video_path = (
+                Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+            )
+        config.update({"video_path": video_path})
 
-    run = wandb.init(
-        anonymous="must",
-        project="pc_rl",
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
-        sync_tensorboard=True,
-        save_code=True,
-        # mode="disabled",
-    )
-    logger.init(
-        wandb_run=run,
-        # this log_dir is used if wandb is disabled (using `wandb disabled`)
-        log_dir=Path(f"log_data/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
-        tensorboard=True,
-        output_files={
-            "txt": "log.txt",
-            # "csv": "progress.csv",
-        },
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
-        model_save_path="model.pt",
-        # verbosity=Verbosity.DEBUG,
-    )
-    with build(config) as runner:
-        runner.run()
-    run.finish()
+        logger.init(
+            wandb_run=run,
+            # this log_dir is used if wandb is disabled (using `wandb disabled`)
+            # log_dir=Path(f"log_data/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
+            tensorboard=True,
+            output_files={
+                "txt": Path("log.txt"),
+            },
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+            model_save_path="model.pt",
+            # verbosity=Verbosity.DEBUG,
+        )
+
+        with build(config) as runner:
+            runner.run()
+        run.finish()
+
+    except Exception:
+        traceback.print_exc(file=sys.stderr)
+        raise
 
 
 if __name__ == "__main__":

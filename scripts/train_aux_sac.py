@@ -19,7 +19,7 @@ from parllel.replays.replay import ReplayBuffer
 from parllel.runners import RLRunner
 from parllel.samplers import BasicSampler
 from parllel.samplers.eval import EvalSampler
-from parllel.torch.algos.sac import SAC, build_replay_buffer_tree
+from parllel.torch.algos.sac import build_replay_buffer_tree
 from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
 from parllel.transforms.video_recorder import RecordVectorizedVideo
 from parllel.types import BatchSpec
@@ -223,13 +223,12 @@ def build(config: DictConfig):
         ),
     }
 
-    # create algorithm
-    algorithm = SAC(
-        batch_spec=batch_spec,
+    algorithm = instantiate(
+        config.algo,
         agent=agent,
         replay_buffer=replay_buffer,
         optimizers=optimizers,
-        **config.algo,
+        _convert_="partial",
     )
 
     eval_cage_kwargs = dict(

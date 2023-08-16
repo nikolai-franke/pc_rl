@@ -13,7 +13,7 @@ from pc_rl.agents.sac import PcSacAgent
 from pc_rl.utils.aux_loss import get_loss_fn
 
 
-class AuxPcSac(SAC):
+class AuxPcSAC(SAC):
     agent: PcSacAgent
 
     def __init__(
