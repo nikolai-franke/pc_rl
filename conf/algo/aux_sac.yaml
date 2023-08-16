@@ -3,5 +3,6 @@ defaults:
   - _self_
 
 _target_: pc_rl.algos.aux_sac.AuxPcSAC
-aux_loss_coeff: 100.0
+aux_loss_coeff: 10.0
+aux_loss: sinkhorn
 
