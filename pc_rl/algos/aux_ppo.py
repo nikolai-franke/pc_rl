@@ -2,6 +2,7 @@ from typing import Literal
 
 import numpy as np
 import torch
+from geomloss import SamplesLoss
 from parllel import ArrayDict
 from parllel.replays import BatchedDataLoader
 from parllel.torch.algos.ppo import PPO
@@ -11,6 +12,7 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
 from pc_rl.agents.pg import AuxPgAgent, AuxPgPrediction
+from pc_rl.utils.aux_loss import get_loss_fn
 
 
 class AuxPPO(PPO):
@@ -29,6 +31,7 @@ class AuxPPO(PPO):
         value_clipping_mode: Literal["none", "ratio", "delta", "delta_max"],
         value_clip: float | None = None,
         kl_divergence_limit: float = np.inf,
+        aux_loss: Literal["chamfer", "sinkhorn"] = "chamfer",
         **kwargs,
     ) -> None:
         super().__init__(
@@ -46,6 +49,7 @@ class AuxPPO(PPO):
             kl_divergence_limit,
             **kwargs,
         )
+        self.aux_loss_fn = get_loss_fn(aux_loss)
         self.aux_loss_coeff = aux_loss_coeff
         self.agent = agent
 
@@ -61,9 +65,7 @@ class AuxPPO(PPO):
         pos_prediction = pos_prediction.reshape(B * M, -1, 3)
         ground_truth = ground_truth.reshape(B * M, -1, 3)
 
-        mae_loss = chamfer_distance(
-            pos_prediction, ground_truth, point_reduction="sum"
-        )[0]
+        mae_loss = self.aux_loss_fn(pos_prediction, ground_truth)
 
         loss += mae_loss * self.aux_loss_coeff
 

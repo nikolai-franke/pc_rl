@@ -1,14 +1,14 @@
+from typing import Literal
+
 import pytorch_lightning as pl
 import torch
-from pytorch3d.loss import chamfer_distance
-from pc_rl.utils.sinkhorn import sinkhorn
 from torch import Tensor
-from geomloss import SamplesLoss
 
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
+from pc_rl.utils.aux_loss import get_loss_fn
 
 
 class MaskedAutoEncoder(pl.LightningModule):
@@ -20,6 +20,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         mae_prediction_head: MaePredictionHead,
         learning_rate: float,
         weight_decay: float,
+        aux_loss: Literal["chamfer", "sinkhorn"],
     ):
         super().__init__()
         self.embedder = embedder
@@ -28,10 +29,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.mae_prediction_head = mae_prediction_head
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
-        self.loss = SamplesLoss("sinkhorn")
-        # self.optimizer = AdamW(
-        #     self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
-        # )
+        self.loss_fn = get_loss_fn(aux_loss)
 
     def forward(self, pos: Tensor, batch: Tensor):
         x, neighborhoods, center_points = self.embedder(pos, batch)
@@ -55,11 +53,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         prediction[padding_mask] = 0.0
         ground_truth[padding_mask] = 0.0
 
-        # loss = chamfer_distance(prediction, ground_truth, point_reduction="sum")[0]
-        # loss = 0
-        # for p, g in zip(prediction, ground_truth):
-        #     loss += sinkhorn(p, g)[0]
-        loss = torch.sum(self.loss(prediction, ground_truth))
+        loss = self.loss_fn(prediction, ground_truth)
 
         self.log("train/loss", loss.item(), batch_size=B)
         return loss
@@ -86,15 +80,8 @@ class MaskedAutoEncoder(pl.LightningModule):
 
         self.test_prediction[self.test_padding_mask] = 0.0
         self.test_ground_truth[self.test_padding_mask] = 0.0
+        loss = self.loss_fn(self.test_prediction, self.test_ground_truth)
 
-        # loss = chamfer_distance(
-        #     self.test_prediction, self.test_ground_truth, point_reduction="sum"
-        # )[0]
-
-        # loss = 0
-        # for p, g in zip(self.test_prediction, self.test_ground_truth):
-        #     loss += sinkhorn(p, g)[0]
-        loss = torch.sum(self.loss(self.test_prediction, self.test_ground_truth))
         self.log("val/loss", loss.item(), batch_size=B)
         return loss
 

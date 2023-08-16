@@ -1,4 +1,4 @@
-from typing import Mapping
+from typing import Literal, Mapping
 
 import torch
 from parllel import ArrayDict
@@ -10,6 +10,7 @@ from pytorch3d.loss import chamfer_distance
 from torch import Tensor
 
 from pc_rl.agents.sac import PcSacAgent
+from pc_rl.utils.aux_loss import get_loss_fn
 
 
 class AuxPcSac(SAC):
@@ -29,6 +30,7 @@ class AuxPcSac(SAC):
         ent_coeff: float,
         clip_grad_norm: float,
         aux_loss_coeff: float,
+        aux_loss: Literal["chamfer", "sinkhorn"] = "chamfer",
         **kwargs,  # ignore additional arguments
     ):
         super().__init__(
@@ -44,6 +46,7 @@ class AuxPcSac(SAC):
             ent_coeff=ent_coeff,
             clip_grad_norm=clip_grad_norm,
         )
+        self.aux_loss_fn = get_loss_fn(aux_loss)
         self.aux_loss_coeff = aux_loss_coeff
 
     def train_once(self, samples: ArrayDict[Tensor]) -> None:
@@ -102,13 +105,11 @@ class AuxPcSac(SAC):
         pos_prediction = pos_prediction.reshape(B * M, -1, 3)
         ground_truth = ground_truth.reshape(B * M, -1, 3)
 
-        mae_loss = chamfer_distance(
-            pos_prediction, ground_truth, point_reduction="sum"
-        )[0]
+        mae_loss = self.aux_loss_fn(pos_prediction, ground_truth)
         self.algo_log_info["mae_loss"].append(mae_loss.item())
         pi_loss += (
             mae_loss * self.aux_loss_coeff
-            )  # Encoder is updated by the Pi optimizer # TODO: only one optimizer
+        )  # Encoder is updated by the Pi optimizer # TODO: only one optimizer
 
         # update Pi model parameters according to pi loss
         self.optimizers["pi"].zero_grad()
