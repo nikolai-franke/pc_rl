@@ -1,4 +1,7 @@
 import multiprocessing as mp
+import os
+import sys
+import traceback
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +25,7 @@ from parllel.transforms.video_recorder import RecordVectorizedVideo
 from parllel.types import BatchSpec
 
 import pc_rl.builder  # for hydra's instantiate
+import pc_rl.models.sac.q_and_pi_heads
 import wandb
 from pc_rl.agents.aux_sac import AuxPcSacAgent
 from pc_rl.models.aux_mae import AuxMae
@@ -36,6 +40,7 @@ def build(config: DictConfig):
     batch_spec = BatchSpec(config.batch_T, config.batch_B)
     TrajInfo.set_discount(discount)
     CageCls = ProcessCage if parallel else SerialCage
+    storage = "shared" if parallel else "local"
 
     env_factory = instantiate(config.env, _convert_="object", _partial_=True)
 
@@ -64,7 +69,7 @@ def build(config: DictConfig):
         max_mean_num_elem=obs_space.shape[0],
         feature_shape=obs_space.shape[1:],
         kind="jagged",
-        storage="shared" if parallel else "local",
+        storage=storage,
         padding=1,
         full_size=config.algo.replay_length,
     )
@@ -193,7 +198,7 @@ def build(config: DictConfig):
                     **per_module_conf.get("embedder", {}),
                 },
                 {
-                    "params": agent.model["aux_mae"].parameters(),
+                    "params": agent.model["encoder"].parameters(),
                     **per_module_conf.get("encoder", {}),
                 },
                 {
@@ -229,7 +234,7 @@ def build(config: DictConfig):
 
     eval_cage_kwargs = dict(
         EnvClass=env_factory,
-        env_kwargs={"add_obs_to_info_dict": False},
+        env_kwargs={"add_obs_to_info_dict": True},
         TrajInfoClass=TrajInfo,
         reset_automatically=True,
     )
@@ -257,9 +262,7 @@ def build(config: DictConfig):
         Array.from_numpy,
         info,
         batch_shape=tuple(batch_spec),
-        storage="shared" if parallel else "local",
-        feature_shape=obs_space.shape[1:],
-        full_size=config.algo.replay_length,
+        storage=storage,
     )
 
     eval_sample_tree = eval_tree_example.new_array(
@@ -272,8 +275,9 @@ def build(config: DictConfig):
         buffer_key_to_record="env_info.rendering",
         env_fps=50,
         record_every_n_steps=1,
-        output_dir=Path(f"videos/pc_rl/{datetime.now().strftime('%Y-%m-%d_%H-%M')}"),
-        video_length=config.env.max_episode_steps,
+        output_dir=Path(config.video_path),
+        video_length=config.eval.max_traj_length,
+        use_wandb=True,
     )
 
     eval_sampler = EvalSampler(
@@ -292,7 +296,9 @@ def build(config: DictConfig):
         algorithm=algorithm,
         batch_spec=batch_spec,
         eval_sampler=eval_sampler,
-        **config["runner"],
+        n_steps=config.runner.n_steps,
+        log_interval_steps=config.runner.log_interval_steps,
+        eval_interval_steps=config.runner.eval_interval_steps,
     )
 
     try:
@@ -314,38 +320,59 @@ def build(config: DictConfig):
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_sac")
 def main(config: DictConfig) -> None:
-    mp.set_start_method("fork")
+    mp.set_start_method("forkserver")
+    # try...except block so we get error messages when using submitit
+    try:
+        run = wandb.init(
+            project="pc_rl",
+            tags=["continuous", "sac", "aux"],
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+            sync_tensorboard=True,  # auto-upload any values logged to tensorboard
+            save_code=True,  # save script used to start training, git commit, and patch
+            reinit=True,
+        )
 
-    run = wandb.init(
-        anonymous="must",  # for this example, send to wandb dummy account
-        project="pc_rl",
-        tags=["continuous", "state-based", "sac", "feedforward"],
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
-        sync_tensorboard=True,  # auto-upload any values logged to tensorboard
-        save_code=True,  # save script used to start training, git commit, and patch
-        # mode="disabled",
-    )
+        if config.use_slurm:  # TODO: check if launcher starts with submitit
+            os.system("wandb enabled")
+            tmp = Path(os.environ.get("TMP"))
+            video_path = (
+                tmp
+                / config.video_path
+                / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+            )
+            num_gpus = HydraConfig.get().launcher.gpus_per_node
+            gpu_id = HydraConfig.get().job.num % num_gpus
+            config.update({"device": f"cuda:{gpu_id}"})
+        else:
+            video_path = (
+                Path(config.video_path)
+                / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+            )
+        config.update({"video_path": video_path})
 
-    logger.init(
-        wandb_run=run,
-        # this log_dir is used if wandb is disabled (using `wandb disabled`)
-        log_dir=Path(
-            f"log_data/pc_rl/sac/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
-        ),
-        tensorboard=True,
-        output_files={
-            "txt": "log.txt",
-            # "csv": "progress.csv",
-        },
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
-        model_save_path="model.pt",
-        # verbosity=Verbosity.DEBUG,
-    )
+        logger.init(
+            wandb_run=run,
+            # this log_dir is used if wandb is disabled (using `wandb disabled`)
+            log_dir=Path(
+                f"log_data/pc_rl/sac/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+            ),
+            tensorboard=True,
+            output_files={
+                "txt": "log.txt",
+                # "csv": "progress.csv",
+            },
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+            model_save_path="model.pt",
+            # verbosity=Verbosity.DEBUG,
+        )
 
-    with build(config) as runner:
-        runner.run()
+        with build(config) as runner:
+            runner.run()
 
-    run.finish()
+        run.finish()
+    except Exception:
+        traceback.print_exc(file=sys.stderr)
+        raise
 
 
 if __name__ == "__main__":

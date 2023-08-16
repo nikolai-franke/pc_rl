@@ -301,7 +301,7 @@ def build(config: DictConfig):
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_aux_ppo")
 def main(config: DictConfig):
-    mp.set_start_method("fork")
+    mp.set_start_method("forkserver")
     if config.use_slurm:
         os.system("wandb enabled")
         tmp = Path(os.environ.get("TMP"))

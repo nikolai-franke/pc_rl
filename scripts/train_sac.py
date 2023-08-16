@@ -1,6 +1,6 @@
 import multiprocessing as mp
-import sys
 import os
+import sys
 import traceback
 from contextlib import contextmanager
 from datetime import datetime
@@ -165,18 +165,22 @@ def build(config: DictConfig):
     optimizer_conf = OmegaConf.to_container(
         optimizer_conf, resolve=True, throw_on_missing=True
     )
-    per_module_conf = optimizer_conf.pop("per_module", {}) # type: ignore
+    per_module_conf = optimizer_conf.pop("per_module", {})  # type: ignore
     optimizers = {
         "pi": torch.optim.Adam(
             [
                 {
                     "params": agent.model["embedder"].parameters(),
                     **per_module_conf.get("embedder", {}),
+                },
+                {
                     "params": agent.model["encoder"].parameters(),
                     **per_module_conf.get("encoder", {}),
+                },
+                {
                     "params": agent.model["pi"].parameters(),
                     **per_module_conf.get("pi", {}),
-                }
+                },
             ],
             **optimizer_conf,
         ),
@@ -185,9 +189,11 @@ def build(config: DictConfig):
                 {
                     "params": agent.model["q1"].parameters(),
                     **config.optimizer.get("q", {}),
+                },
+                {
                     "params": agent.model["q2"].parameters(),
                     **config.optimizer.get("q", {}),
-                }
+                },
             ],
             **optimizer_conf,
         ),
@@ -302,18 +308,21 @@ def main(config: DictConfig) -> None:
             reinit=True,
         )
 
-        if config.use_slurm:
+        if config.use_slurm:  # TODO: check if launcher starts with submitit
             os.system("wandb enabled")
             tmp = Path(os.environ.get("TMP"))
             video_path = (
-                tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+                tmp
+                / config.video_path
+                / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
             )
             num_gpus = HydraConfig.get().launcher.gpus_per_node
             gpu_id = HydraConfig.get().job.num % num_gpus
             config.update({"device": f"cuda:{gpu_id}"})
         else:
             video_path = (
-                Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+                Path(config.video_path)
+                / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
             )
         config.update({"video_path": video_path})
 
