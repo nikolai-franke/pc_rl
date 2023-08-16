@@ -288,7 +288,6 @@ def main(config: DictConfig):
             sync_tensorboard=True,
             save_code=True,
             reinit=True,
-            # mode="enabled",
         )
         if config.use_slurm:
             os.system("wandb enabled")

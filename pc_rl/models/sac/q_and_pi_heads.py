@@ -6,7 +6,7 @@ from parllel.torch.models import MlpModel
 from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 from torch import Tensor
 
-from pc_rl.agents.sac import PiModelOutputs, QModelOutputs
+from parllel.torch.agents.sac_agent import PiModelOutputs, QModelOutputs
 
 
 class PiMlpHead(nn.Module):

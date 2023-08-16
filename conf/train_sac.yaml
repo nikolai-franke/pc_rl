@@ -1,20 +1,23 @@
 defaults:
-  - _self_
   - algo: sac
   - model: sac
-  - env/reach/continuous@env
+  - env: reach
   - optimizer: sac
+  - _self_
 
 parallel: True
-batch_T: 128
+batch_T: 16
 batch_B: 8
 max_steps_decorrelate: 0
 device: null
 runner:
   n_steps: 4194304
   log_interval_steps: 1024
-  # eval_interval_steps: 10240
+  eval_interval_steps: 10240
 eval:
-  n_eval_envs: 1
+  n_eval_envs: 4
   max_traj_length: 200
-  max_trajectories: 2
+  max_trajectories: 4
+
+use_slurm: False
+video_path: videos
