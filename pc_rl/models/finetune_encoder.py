@@ -19,7 +19,7 @@ class FinetuneEncoder(nn.Module):
         self.cls_token = nn.Parameter(torch.zeros(1, 1, self.dim))
         self.cls_pos = nn.Parameter(torch.randn(1, 1, self.dim))
 
-    def forward(self, x, center_points):
+    def forward(self, x, center_points, _):
         cls_tokens = self.cls_token.expand(x.shape[0], -1, -1)
         cls_pos = self.cls_pos.expand(x.shape[0], -1, -1)
         pos = self.pos_embedder(center_points)
