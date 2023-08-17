@@ -1,13 +1,13 @@
 defaults:
-  - algo: sac
-  - model: sac
+  - algo: aux_sac
+  - model: aux_sac
   - env: reach
   - optimizer: basic
   - _self_
 
 parallel: True
 batch_T: 16
-batch_B: 8
+batch_B: 12
 max_steps_decorrelate: 0
 device: null
 runner:
@@ -21,3 +21,4 @@ eval:
 
 use_slurm: False
 video_path: videos
+

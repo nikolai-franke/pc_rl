@@ -2,7 +2,7 @@ defaults:
   - algo: ppo
   - model: ppo_continuous
   - env: reach
-  - optimizer: ppo_basic
+  - optimizer: basic
   - _self_
 
 parallel: True

@@ -4,9 +4,18 @@ defaults:
   - transformer_block: default
   - _self_
 
-transformer_encoder:
-  _target_: pc_rl.builder.build_transformer_encoder
-  depth: 8
+masked_encoder:
+  _target_: pc_rl.builder.build_masked_encoder
+  mask_ratio: 0.6
+  mask_type: rand
+  transformer_encoder:
+    _target_: pc_rl.builder.build_transformer_encoder
+    depth: 8
+
+masked_decoder:
+  transformer_decoder:
+    _target_: pc_rl.builder.build_transformer_decoder
+    depth: 4
 
 pi_mlp_head:
   _target_: pc_rl.models.sac.q_and_pi_heads.PiMlpHead
@@ -17,4 +26,5 @@ q_mlp_head:
   _target_: pc_rl.models.sac.q_and_pi_heads.QMlpHead
   hidden_sizes: [256, 256]
   hidden_nonlinearity: Tanh
+
 
