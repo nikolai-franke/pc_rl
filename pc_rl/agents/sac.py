@@ -20,6 +20,6 @@ class PcSacAgent(SacAgent):
 
     def encode(self, observation: ArrayTree[Tensor]) -> Tensor:
         pos, batch = dict_to_batched_data(observation)
-        x, _, center_points = self.model["embedder"](pos, batch)
-        encoder_out = self.model["encoder"](x, center_points)
+        x, neighborhoods, center_points = self.model["embedder"](pos, batch)
+        encoder_out = self.model["encoder"](x, center_points, neighborhoods)
         return encoder_out
