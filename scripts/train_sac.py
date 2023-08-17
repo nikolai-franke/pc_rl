@@ -9,6 +9,7 @@ from pathlib import Path
 import hydra
 import parllel.logger as logger
 import torch
+from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from parllel import Array, ArrayDict, dict_map
@@ -102,6 +103,7 @@ def build(config: DictConfig):
         config.model.pi_mlp_head,
         input_size=mlp_input_size,
         action_size=n_actions,
+        action_space=action_space,
         _convert_="partial",
     )
     q1_model = instantiate(
@@ -302,7 +304,7 @@ def main(config: DictConfig) -> None:
         run = wandb.init(
             project="pc_rl",
             tags=["continuous", "sac"],
-            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
             sync_tensorboard=True,  # auto-upload any values logged to tensorboard
             save_code=True,  # save script used to start training, git commit, and patch
             reinit=True,
@@ -310,11 +312,11 @@ def main(config: DictConfig) -> None:
 
         if config.use_slurm:  # TODO: check if launcher starts with submitit
             os.system("wandb enabled")
-            tmp = Path(os.environ.get("TMP"))
+            tmp = Path(os.environ.get("TMP"))  # type: ignore
             video_path = (
                 tmp
                 / config.video_path
-                / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+                / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"  # type: ignore
             )
             num_gpus = HydraConfig.get().launcher.gpus_per_node
             gpu_id = HydraConfig.get().job.num % num_gpus
@@ -322,7 +324,7 @@ def main(config: DictConfig) -> None:
         else:
             video_path = (
                 Path(config.video_path)
-                / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+                / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"  # type: ignore
             )
         config.update({"video_path": video_path})
 
@@ -336,8 +338,8 @@ def main(config: DictConfig) -> None:
             output_files={
                 "txt": "log.txt",
                 # "csv": "progress.csv",
-            },
-            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+            },  # type: ignore
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
             model_save_path="model.pt",
             # verbosity=Verbosity.DEBUG,
         )

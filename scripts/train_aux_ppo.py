@@ -309,23 +309,23 @@ def main(config: DictConfig):
     try:
         run = wandb.init(
             project="pc_rl",
-            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True), # type: ignore
             sync_tensorboard=True,
             save_code=True,
             reinit=True,
         )
         if config.use_slurm:
             os.system("wandb enabled")
-            tmp = Path(os.environ.get("TMP"))
+            tmp = Path(os.environ.get("TMP")) # type: ignore
             video_path = (
-                tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+                    tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}" # type: ignore
             )
             num_gpus = HydraConfig.get().launcher.gpus_per_node
             gpu_id = HydraConfig.get().job.num % num_gpus
             config.update({"device": f"cuda:{gpu_id}"})
         else:
             video_path = (
-                Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"
+                    Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}" # type: ignore
             )
         config.update({"video_path": video_path})
 
@@ -337,14 +337,14 @@ def main(config: DictConfig):
             output_files={
                 "txt": Path("log.txt"),
             },
-            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),
-            model_save_path="model.pt",
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True), # type: ignore
+            model_save_path=Path("model.pt"),
             # verbosity=Verbosity.DEBUG,
         )
 
         with build(config) as runner:
             runner.run()
-        run.finish()
+        run.finish() # type: ignore
 
     except Exception:
         traceback.print_exc(file=sys.stderr)
