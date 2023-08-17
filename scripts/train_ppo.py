@@ -272,9 +272,13 @@ def build(config: DictConfig):
     finally:
         sampler.close()
         agent.close()
+        eval_sampler.close()
         for cage in cages:
             cage.close()
+        for eval_cage in eval_cages:
+            eval_cage.close()
         sample_tree.close()
+        eval_sample_tree.close()
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")

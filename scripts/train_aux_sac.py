@@ -87,7 +87,7 @@ def build(config: DictConfig):
         _partial_=True,
     )
     transformer_encoder = instantiate(
-        config.model.transformer_encoder,
+        config.model.masked_encoder.transformer_encoder,
         transformer_block_factory=transformer_block_factory,
     )
 
@@ -98,6 +98,7 @@ def build(config: DictConfig):
 
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
     embedder = instantiate(config.model.embedder, _convert_="partial")
+
     masked_encoder = instantiate(
         config.model.masked_encoder,
         transformer_encoder=transformer_encoder,
@@ -228,6 +229,7 @@ def build(config: DictConfig):
         agent=agent,
         replay_buffer=replay_buffer,
         optimizers=optimizers,
+        batch_spec=batch_spec,
         _convert_="partial",
     )
 
@@ -304,20 +306,18 @@ def build(config: DictConfig):
         yield runner
 
     finally:
-        eval_cages = eval_sampler.envs
-        eval_sampler.close()
-        for cage in eval_cages:
-            cage.close()
-        eval_sample_tree.close()
-
         sampler.close()
         agent.close()
+        eval_sampler.close()
         for cage in cages:
             cage.close()
+        for eval_cage in eval_cages:
+            eval_cage.close()
         sample_tree.close()
+        eval_sample_tree.close()
 
 
-@hydra.main(version_base=None, config_path="../conf", config_name="train_sac")
+@hydra.main(version_base=None, config_path="../conf", config_name="train_aux_sac")
 def main(config: DictConfig) -> None:
     mp.set_start_method("forkserver")
     # try...except block so we get error messages when using submitit
