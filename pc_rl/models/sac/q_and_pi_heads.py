@@ -14,12 +14,14 @@ class PiMlpHead(nn.Module):
         self,
         input_size: int,
         action_size: int,
+        action_space,
         hidden_sizes: int | Sequence[int] | None,
         hidden_nonlinearity: str,  # type: ignore
     ):
         super().__init__()
         hidden_nonlinearity: type[nn.Module] = getattr(nn, hidden_nonlinearity)
         self._action_size = action_size
+        self.action_space = action_space
 
         self.mlp = MlpModel(
             input_size=input_size,
