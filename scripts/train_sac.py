@@ -97,7 +97,7 @@ def build(config: DictConfig):
         pos_embedder=pos_embedder, transformer_encoder=transformer_encoder
     )
 
-    mlp_input_size = finetune_encoder.out_dim
+    mlp_input_size = finetune_encoder.dim
 
     pi_model = instantiate(
         config.model.pi_mlp_head,

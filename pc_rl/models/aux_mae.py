@@ -18,7 +18,6 @@ class AuxMae(nn.Module):
         self.masked_decoder = masked_decoder
         self.mae_prediction_head = mae_prediction_head
         self.dim = self.masked_encoder.dim
-        self.out_dim = 2 * self.dim
         self.cls_token = nn.Parameter(torch.zeros(1, 1, self.dim))
         self.cls_pos = nn.Parameter(torch.randn(1, 1, self.dim))
 
@@ -48,6 +47,5 @@ class AuxMae(nn.Module):
         x = torch.cat((cls_tokens, x), dim=1)
         x = self.masked_encoder.transformer_encoder(x, pos)
         x = self.masked_encoder.norm(x)
-        x_out = torch.cat([x[:, 0], x[:, 1:].max(1)[0]], dim=-1)
 
-        return x_out, pos_prediction, pos_ground_truth
+        return x[:, 0], pos_prediction, pos_ground_truth

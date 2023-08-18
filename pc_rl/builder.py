@@ -111,7 +111,7 @@ def build_continuous_pg_model(
     value_mlp_act: type[nn.Module] | str,
     init_log_std: float,
 ):
-    input_size = finetune_encoder.out_dim
+    input_size = finetune_encoder.dim
 
     pi_hidden_nonlinearity = (
         getattr(torch.nn, pi_mlp_act) if isinstance(pi_mlp_act, str) else pi_mlp_act
@@ -158,7 +158,7 @@ def build_categorical_pg_model(
     value_mlp_hidden_sizes: list[int],
     value_mlp_act: type[nn.Module] | str,
 ):
-    input_size = finetune_encoder.out_dim
+    input_size = finetune_encoder.dim
 
     pi_hidden_nonlinearity = (
         getattr(torch.nn, pi_mlp_act) if isinstance(pi_mlp_act, str) else pi_mlp_act
@@ -201,7 +201,7 @@ def build_aux_categorical_pg_model(
     value_mlp_hidden_sizes: list[int],
     value_mlp_act: type[nn.Module] | str,
 ):
-    input_size = aux_mae.out_dim
+    input_size = aux_mae.dim
     pi_hidden_nonlinearity = (
         getattr(torch.nn, pi_mlp_act) if isinstance(pi_mlp_act, str) else pi_mlp_act
     )
@@ -244,7 +244,7 @@ def build_aux_continuous_pg_model(
     value_mlp_act: type[nn.Module] | str,
     init_log_std: float,
 ):
-    input_size = aux_mae.out_dim
+    input_size = aux_mae.dim
     pi_hidden_nonlinearity = (
         getattr(torch.nn, pi_mlp_act) if isinstance(pi_mlp_act, str) else pi_mlp_act
     )

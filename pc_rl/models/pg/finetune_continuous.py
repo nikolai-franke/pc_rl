@@ -29,23 +29,23 @@ class ContinuousPgModel(nn.Module):
 
     @torch.no_grad()
     def _check_mlps(self):
-        input = torch.randn((self.encoder.out_dim,))
+        input = torch.randn((self.encoder.dim,))
         try:
             self.pi_mlp(input)
         except RuntimeError as e:
             raise ValueError(
-                f"The first layer of the Pi MLP must have the same size as the output of the encoder: {self.encoder.out_dim}"
+                f"The first layer of the Pi MLP must have the same size as the output of the encoder: {self.encoder.dim}"
             ) from e
         try:
             self.value_mlp(input)
         except RuntimeError as e:
             raise ValueError(
-                f"The first layer of the Value MLP must have the same size as the output of the encoder: {self.encoder.out_dim}"
+                f"The first layer of the Value MLP must have the same size as the output of the encoder: {self.encoder.dim}"
             ) from e
 
     @torch.no_grad()
     def _get_action_size(self):
-        input = torch.randn((self.encoder.out_dim,))
+        input = torch.randn((self.encoder.dim,))
         return len(self.pi_mlp(input))
 
     def forward(self, data):

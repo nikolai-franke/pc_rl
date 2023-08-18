@@ -122,12 +122,13 @@ def build(config: DictConfig):
         masked_decoder=masked_decoder,
         mae_prediction_head=mae_prediction_head,
     )
-    mlp_input_size = aux_mae.out_dim
+    mlp_input_size = aux_mae.dim
 
     pi_model = instantiate(
         config.model.pi_mlp_head,
         input_size=mlp_input_size,
         action_size=n_actions,
+        action_space=action_space,
         _convert_="partial",
     )
     q1_model = instantiate(
@@ -332,7 +333,7 @@ def main(config: DictConfig) -> None:
             reinit=True,
         )
 
-        if config.use_slurm:  # TODO: check if launcher starts with submitit
+        if config.use_slurm:  # TODO: replace explicit bool with checking for submitit launcher
             os.system("wandb enabled")
             tmp = Path(os.environ.get("TMP"))  # type: ignore
             video_path = (
