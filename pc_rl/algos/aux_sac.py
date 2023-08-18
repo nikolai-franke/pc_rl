@@ -1,3 +1,4 @@
+from itertools import chain
 from typing import Literal, Mapping
 
 import torch
@@ -6,7 +7,6 @@ from parllel.replays.replay import ReplayBuffer
 from parllel.torch.algos.sac import SAC
 from parllel.torch.utils import valid_mean
 from parllel.types.batch_spec import BatchSpec
-from pytorch3d.loss import chamfer_distance
 from torch import Tensor
 
 from pc_rl.agents.sac import PcSacAgent
@@ -24,13 +24,14 @@ class AuxPcSAC(SAC):
         optimizers: Mapping[str, torch.optim.Optimizer],
         discount: float,
         learning_starts: int,
-        replay_ratio: int,  # data_consumption / data_generation
-        target_update_tau: float,  # tau=1 for hard update.
+        replay_ratio: int,  # data_consumption / data_generation target_update_tau: float,  # tau=1 for hard update.
+        target_update_tau: float,
         target_update_interval: int,  # 1000 for hard update, 1 for soft.
-        ent_coeff: float,
+        ent_coeff: float | None,
         clip_grad_norm: float,
         aux_loss_coeff: float,
         aux_loss: Literal["chamfer", "sinkhorn"] = "chamfer",
+        ent_coeff_lr: float | None = None,
         **kwargs,  # ignore additional arguments
     ):
         super().__init__(
@@ -44,6 +45,7 @@ class AuxPcSAC(SAC):
             target_update_tau=target_update_tau,
             target_update_interval=target_update_interval,
             ent_coeff=ent_coeff,
+            ent_coeff_lr=ent_coeff_lr,
             clip_grad_norm=clip_grad_norm,
         )
         self.aux_loss_fn = get_loss_fn(aux_loss)
@@ -62,13 +64,31 @@ class AuxPcSAC(SAC):
         encoder_out, pos_prediction, ground_truth = self.agent.encode(
             samples["observation"]
         )
+        new_action, log_prob = self.agent.pi(
+            encoder_out
+        )  # NOTE: reordering is necessary
+        log_prob = log_prob.reshape(-1, 1)  # TODO: why?
+
+        if self.ent_coeff_optimizer is not None:
+            ent_coeff = torch.exp(self._log_ent_coeff.detach())
+            ent_coeff_loss = -(
+                self._log_ent_coeff * (log_prob + self.target_entropy).detach()
+            ).mean()
+            self.ent_coeff_optimizer.zero_grad()
+            ent_coeff_loss.backward()
+            self.ent_coeff_optimizer.step()
+            self.algo_log_info["ent_ceff_loss"].append(ent_coeff_loss.item())
+        else:
+            ent_coeff = self._ent_coeff
+
+        self.algo_log_info["ent_coeff"].append(ent_coeff.item())
         # where a' ~ pi(.|s')
         with torch.no_grad():
             next_encoder_out, *_ = self.agent.encode(samples["next_observation"])
             next_action, next_log_prob = self.agent.pi(next_encoder_out)
             target_q1, target_q2 = self.agent.target_q(next_encoder_out, next_action)
         min_target_q = torch.min(target_q1, target_q2)
-        next_q = min_target_q - self._alpha * next_log_prob
+        next_q = min_target_q - ent_coeff * next_log_prob
         y = samples["reward"] + self.discount * ~samples["terminated"] * next_q
         q1, q2 = self.agent.q(encoder_out.detach(), samples["action"])
         q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
@@ -77,10 +97,12 @@ class AuxPcSAC(SAC):
         self.optimizers["q"].zero_grad()
         q_loss.backward()
         q1_grad_norm = torch.nn.utils.clip_grad_norm_(
-            self.agent.model["q1"].parameters(), self.clip_grad_norm
+            self.agent.model["q1"].parameters(),
+            self.clip_grad_norm,
         )
         q2_grad_norm = torch.nn.utils.clip_grad_norm_(
-            self.agent.model["q2"].parameters(), self.clip_grad_norm
+            self.agent.model["q2"].parameters(),
+            self.clip_grad_norm,
         )
         self.optimizers["q"].step()
 
@@ -94,10 +116,9 @@ class AuxPcSAC(SAC):
         # train policy model by maximizing the predicted Q value
         # maximize (min Q(s, a) - alpha * log pi(a, s))
         # where a ~ pi(.|s)
-        new_action, log_prob = self.agent.pi(encoder_out)
-        q1, q2 = self.agent.q(encoder_out, new_action)
+        q1, q2 = self.agent.q(encoder_out.detach(), new_action)
         min_q = torch.min(q1, q2)
-        pi_losses = self._alpha * log_prob - min_q
+        pi_losses = ent_coeff * log_prob - min_q
         pi_loss = valid_mean(pi_losses)
         self.algo_log_info["actor_loss"].append(pi_loss.item())
 
@@ -115,7 +136,12 @@ class AuxPcSAC(SAC):
         self.optimizers["pi"].zero_grad()
         pi_loss.backward()
         pi_grad_norm = torch.nn.utils.clip_grad_norm_(
-            self.agent.model["pi"].parameters(), self.clip_grad_norm
+            chain(
+                self.agent.model["pi"].parameters(),
+                self.agent.model["embedder"].parameters(),
+                self.agent.model["encoder"].parameters(),
+            ),
+            self.clip_grad_norm,
         )
         self.optimizers["pi"].step()
 
