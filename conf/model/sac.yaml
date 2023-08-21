@@ -6,7 +6,7 @@ defaults:
 
 transformer_encoder:
   _target_: pc_rl.builder.build_transformer_encoder
-  depth: 8
+  depth: 1
 
 pi_mlp_head:
   _target_: pc_rl.models.sac.q_and_pi_heads.PiMlpHead

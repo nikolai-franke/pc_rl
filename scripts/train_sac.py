@@ -181,11 +181,6 @@ def build(config: DictConfig):
                     "params": agent.model["pi"].parameters(),
                     **per_module_conf.get("pi", {}),
                 },
-            ],
-            **optimizer_conf,
-        ),
-        "q": torch.optim.Adam(
-            [
                 {
                     "params": agent.model["embedder"].parameters(),
                     **per_module_conf.get("embedder", {}),
@@ -194,6 +189,11 @@ def build(config: DictConfig):
                     "params": agent.model["encoder"].parameters(),
                     **per_module_conf.get("encoder", {}),
                 },
+            ],
+            **optimizer_conf,
+        ),
+        "q": torch.optim.Adam(
+            [
                 {
                     "params": agent.model["q1"].parameters(),
                     **config.optimizer.get("q", {}),
@@ -302,7 +302,7 @@ def build(config: DictConfig):
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_sac")
 def main(config: DictConfig) -> None:
-    mp.set_start_method("fork")
+    # mp.set_start_method("fork")
     # try...except block so we get error messages when using submitit
     try:
         run = wandb.init(

@@ -2,12 +2,12 @@ defaults:
   - algo: sac
   - model: sac
   - env: reach
-  - optimizer: sac
+  - optimizer: basic
   - _self_
 
 parallel: True
 batch_T: 128
-batch_B: 22
+batch_B: 10
 max_steps_decorrelate: 0
 device: null
 runner:

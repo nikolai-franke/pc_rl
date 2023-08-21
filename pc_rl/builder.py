@@ -9,7 +9,6 @@ from parllel.torch.models import MlpModel
 from torch.nn import MultiheadAttention
 from torch_geometric.nn import MLP
 
-from pc_rl.models.aux_mae import AuxMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
