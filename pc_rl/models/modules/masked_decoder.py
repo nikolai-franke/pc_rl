@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import torch
 import torch.nn as nn
 
@@ -47,5 +49,3 @@ class MaskedDecoder(nn.Module):
         )
 
         return x_recovered, padding_mask
-
-

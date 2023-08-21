@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from itertools import chain
 from typing import Literal, Mapping
 
@@ -65,12 +67,12 @@ class AuxPcSAC(SAC):
             samples["observation"]
         )
         new_action, log_prob = self.agent.pi(
-            encoder_out
+            encoder_out.detach()
         )  # NOTE: reordering is necessary
         log_prob = log_prob.reshape(-1, 1)  # TODO: why?
 
         if self.ent_coeff_optimizer is not None:
-            ent_coeff = torch.exp(self._log_ent_coeff.detach())
+            entropy_coeff = torch.exp(self._log_ent_coeff.detach())
             ent_coeff_loss = -(
                 self._log_ent_coeff * (log_prob + self.target_entropy).detach()
             ).mean()
@@ -79,19 +81,33 @@ class AuxPcSAC(SAC):
             self.ent_coeff_optimizer.step()
             self.algo_log_info["ent_ceff_loss"].append(ent_coeff_loss.item())
         else:
-            ent_coeff = self._ent_coeff
+            entropy_coeff = self._ent_coeff
 
-        self.algo_log_info["ent_coeff"].append(ent_coeff.item())
+        self.algo_log_info["ent_coeff"].append(entropy_coeff.item())
         # where a' ~ pi(.|s')
         with torch.no_grad():
-            next_encoder_out, *_ = self.agent.encode(samples["next_observation"])
+            next_encoder_out, *_ = self.agent.target_encode(samples["next_observation"])
             next_action, next_log_prob = self.agent.pi(next_encoder_out)
             target_q1, target_q2 = self.agent.target_q(next_encoder_out, next_action)
-        min_target_q = torch.min(target_q1, target_q2)
-        next_q = min_target_q - ent_coeff * next_log_prob
-        y = samples["reward"] + self.discount * ~samples["terminated"] * next_q
-        q1, q2 = self.agent.q(encoder_out.detach(), samples["action"])
-        q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
+            min_target_q = torch.min(target_q1, target_q2)
+            entropy_bonus = -entropy_coeff * next_log_prob
+            y = samples["reward"] + self.discount * ~samples["terminated"] * (
+                min_target_q + entropy_bonus
+            )
+
+        q1, q2 = self.agent.q(encoder_out, samples["action"])
+
+        B, M, *_ = pos_prediction.shape
+        pos_prediction = pos_prediction.reshape(B * M, -1, 3)
+        ground_truth = ground_truth.reshape(B * M, -1, 3)
+
+        mae_loss = self.aux_loss_fn(pos_prediction, ground_truth)
+        q_loss = (
+            0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
+            + mae_loss * self.aux_loss_coeff
+        )
+
+        self.algo_log_info["mae_loss"].append(mae_loss.item())
 
         # update Q model parameters according to Q loss
         self.optimizers["q"].zero_grad()
@@ -109,6 +125,10 @@ class AuxPcSAC(SAC):
         self.algo_log_info["critic_loss"].append(q_loss.item())
         self.algo_log_info["q1_grad_norm"].append(q1_grad_norm.item())
         self.algo_log_info["q2_grad_norm"].append(q2_grad_norm.item())
+        self.algo_log_info["ent_coeff"].append(entropy_coeff.item())
+        self.algo_log_info["mean_ent_bonus"].append(entropy_bonus.mean().item())
+        self.algo_log_info["max_target_q"].append(min_target_q.max().item())
+        self.algo_log_info["min_target_q"].append(min_target_q.min().item())
 
         # freeze Q models while optimizing policy model
         self.agent.freeze_q_models(True)
@@ -118,29 +138,15 @@ class AuxPcSAC(SAC):
         # where a ~ pi(.|s)
         q1, q2 = self.agent.q(encoder_out.detach(), new_action)
         min_q = torch.min(q1, q2)
-        pi_losses = ent_coeff * log_prob - min_q
+        pi_losses = entropy_coeff * log_prob - min_q
         pi_loss = valid_mean(pi_losses)
         self.algo_log_info["actor_loss"].append(pi_loss.item())
-
-        B, M, *_ = pos_prediction.shape
-        pos_prediction = pos_prediction.reshape(B * M, -1, 3)
-        ground_truth = ground_truth.reshape(B * M, -1, 3)
-
-        mae_loss = self.aux_loss_fn(pos_prediction, ground_truth)
-        self.algo_log_info["mae_loss"].append(mae_loss.item())
-        pi_loss += (
-            mae_loss * self.aux_loss_coeff
-        )  # Encoder is updated by the Pi optimizer # TODO: only one optimizer
 
         # update Pi model parameters according to pi loss
         self.optimizers["pi"].zero_grad()
         pi_loss.backward()
         pi_grad_norm = torch.nn.utils.clip_grad_norm_(
-            chain(
-                self.agent.model["pi"].parameters(),
-                self.agent.model["embedder"].parameters(),
-                self.agent.model["encoder"].parameters(),
-            ),
+            self.agent.model["pi"].parameters(),
             self.clip_grad_norm,
         )
         self.optimizers["pi"].step()
@@ -148,4 +154,4 @@ class AuxPcSAC(SAC):
         # unfreeze Q models for next training iteration
         self.agent.freeze_q_models(False)
 
-        self.algo_log_info["q1_grad_norm"].append(pi_grad_norm.item())
+        self.algo_log_info["pi_grad_norm"].append(pi_grad_norm.item())

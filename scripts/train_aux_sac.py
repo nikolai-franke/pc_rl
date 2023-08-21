@@ -60,7 +60,7 @@ def build(config: DictConfig):
 
     distribution = SquashedGaussian(
         dim=n_actions,
-        scale=action_space.high[0],
+        scale=action_space.high[0] * 3,
     )
 
     sample_tree["observation"] = dict_map(
@@ -197,14 +197,6 @@ def build(config: DictConfig):
         "pi": torch.optim.Adam(
             [
                 {
-                    "params": agent.model["embedder"].parameters(),
-                    **per_module_conf.get("embedder", {}),
-                },
-                {
-                    "params": agent.model["encoder"].parameters(),
-                    **per_module_conf.get("encoder", {}),
-                },
-                {
                     "params": agent.model["pi"].parameters(),
                     **per_module_conf.get("pi", {}),
                 },
@@ -220,6 +212,14 @@ def build(config: DictConfig):
                 {
                     "params": agent.model["q2"].parameters(),
                     **config.optimizer.get("q", {}),
+                },
+                {
+                    "params": agent.model["embedder"].parameters(),
+                    **per_module_conf.get("embedder", {}),
+                },
+                {
+                    "params": agent.model["encoder"].parameters(),
+                    **per_module_conf.get("encoder", {}),
                 },
             ],
             **optimizer_conf,
@@ -321,7 +321,7 @@ def build(config: DictConfig):
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_aux_sac")
 def main(config: DictConfig) -> None:
-    mp.set_start_method("forkserver")
+    mp.set_start_method("fork")
     # try...except block so we get error messages when using submitit
     try:
         run = wandb.init(
@@ -333,7 +333,9 @@ def main(config: DictConfig) -> None:
             reinit=True,
         )
 
-        if config.use_slurm:  # TODO: replace explicit bool with checking for submitit launcher
+        if (
+            config.use_slurm
+        ):  # TODO: replace explicit bool with checking for submitit launcher
             os.system("wandb enabled")
             tmp = Path(os.environ.get("TMP"))  # type: ignore
             video_path = (
@@ -370,7 +372,7 @@ def main(config: DictConfig) -> None:
         with build(config) as runner:
             runner.run()
 
-        run.finish() # type: ignore
+        run.finish()  # type: ignore
     except Exception:
         traceback.print_exc(file=sys.stderr)
         raise

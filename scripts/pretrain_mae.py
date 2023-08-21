@@ -16,7 +16,8 @@ from torch_geometric.transforms import (Compose, FixedPoints, GridSampling,
 import pc_rl.builder  # for hydra's instantiate
 from pc_rl.callbacks.log_pointclouds import LogPointCloudCallback
 from pc_rl.datasets.in_memory import PcInMemoryDataset
-from pc_rl.models.mae import MaskedAutoEncoder
+# from pc_rl.models.mae import MaskedAutoEncoder
+from pc_rl.models.contrastive_mae import MaskedAutoEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 
@@ -65,6 +66,7 @@ def main(config: DictConfig):
         mae_prediction_head=mae_prediction_head,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
+        aux_loss="sinkhorn",
     )
 
     transforms = []

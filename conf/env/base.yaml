@@ -1,5 +1,5 @@
 action_type: continuous
-max_episode_steps: 200
+max_episode_steps: 100
 render_mode: headless
 image_shape: [128, 128]
 frame_skip: 1

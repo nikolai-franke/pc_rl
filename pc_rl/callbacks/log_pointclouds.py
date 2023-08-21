@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import torch
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.callbacks import Callback

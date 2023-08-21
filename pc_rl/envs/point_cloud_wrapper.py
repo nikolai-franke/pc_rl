@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 from typing import Callable, List, Optional, Type
 
 import gymnasium as gym
 import numpy as np
 import open3d as o3d
 from gymnasium import spaces
-
 from sofa_env.base import RenderMode, SofaEnv
 from sofa_env.utils.camera import (determine_look_at, get_focal_length,
                                    vertical_to_horizontal_fov)
@@ -327,4 +328,3 @@ class PointCloudObservationWrapper(gym.ObservationWrapper):
                 point_cloud = function(point_cloud)
 
         return point_cloud
-

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import torch
 from parllel import ArrayDict
 from torch import Tensor

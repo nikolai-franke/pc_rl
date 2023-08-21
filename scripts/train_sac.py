@@ -58,7 +58,7 @@ def build(config: DictConfig):
 
     distribution = SquashedGaussian(
         dim=n_actions,
-        scale=action_space.high[0],
+        scale=action_space.high[0] * 3,
     )
 
     sample_tree["observation"] = dict_map(
@@ -90,6 +90,12 @@ def build(config: DictConfig):
         transformer_block_factory=transformer_block_factory,
     )
 
+    pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
+    embedder = instantiate(config.model.embedder, _convert_="partial")
+
+    finetune_encoder = FinetuneEncoder(
+        pos_embedder=pos_embedder, transformer_encoder=transformer_encoder
+    )
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
     embedder = instantiate(config.model.embedder, _convert_="partial")
 
@@ -156,8 +162,8 @@ def build(config: DictConfig):
     replay_buffer = ReplayBuffer(
         tree=replay_buffer_tree,
         sampler_batch_spec=batch_spec,
-        size_T=config["algo"]["replay_length"],
-        replay_batch_size=config["algo"]["batch_size"],
+        size_T=config.algo.replay_length,
+        replay_batch_size=config.algo.batch_size,
         newest_n_samples_invalid=0,
         oldest_n_samples_invalid=1,
         batch_transform=batch_transform,
@@ -172,14 +178,6 @@ def build(config: DictConfig):
         "pi": torch.optim.Adam(
             [
                 {
-                    "params": agent.model["embedder"].parameters(),
-                    **per_module_conf.get("embedder", {}),
-                },
-                {
-                    "params": agent.model["encoder"].parameters(),
-                    **per_module_conf.get("encoder", {}),
-                },
-                {
                     "params": agent.model["pi"].parameters(),
                     **per_module_conf.get("pi", {}),
                 },
@@ -188,6 +186,14 @@ def build(config: DictConfig):
         ),
         "q": torch.optim.Adam(
             [
+                {
+                    "params": agent.model["embedder"].parameters(),
+                    **per_module_conf.get("embedder", {}),
+                },
+                {
+                    "params": agent.model["encoder"].parameters(),
+                    **per_module_conf.get("encoder", {}),
+                },
                 {
                     "params": agent.model["q1"].parameters(),
                     **config.optimizer.get("q", {}),
@@ -296,7 +302,7 @@ def build(config: DictConfig):
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_sac")
 def main(config: DictConfig) -> None:
-    mp.set_start_method("forkserver")
+    mp.set_start_method("fork")
     # try...except block so we get error messages when using submitit
     try:
         run = wandb.init(

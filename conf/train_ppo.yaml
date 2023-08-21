@@ -7,7 +7,7 @@ defaults:
 
 parallel: True
 batch_T: 128
-batch_B: 8
+batch_B: 22
 reward_clip_min: -5
 reward_clip_max: 5
 max_steps_decorrelate: 0
@@ -18,7 +18,7 @@ runner:
   eval_interval_steps: 10240
 eval:
   n_eval_envs: 1
-  max_traj_length: 500
+  max_traj_length: 200
   max_trajectories: 1
 
 use_slurm: False

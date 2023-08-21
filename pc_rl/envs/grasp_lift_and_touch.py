@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Literal
 
 from gymnasium.wrappers.time_limit import TimeLimit
