@@ -10,7 +10,7 @@ from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 from torch import Tensor
 from typing_extensions import NotRequired
 
-from pc_rl.models.aux_mae import AuxMae, RLMae
+from pc_rl.models.aux_mae import RLMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.utils.array_dict import dict_to_batched_data

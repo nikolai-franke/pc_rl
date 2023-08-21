@@ -8,8 +8,8 @@ from parllel.torch.distributions.categorical import DistParams
 from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 from torch import Tensor
 from typing_extensions import NotRequired
+from pc_rl.models.aux_mae import RLMae
 
-from pc_rl.models.aux_mae import AuxMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.utils.array_dict import dict_to_batched_data
@@ -27,7 +27,7 @@ class AuxMaeCategoricalPgModel(nn.Module):
         self,
         embedder: Embedder,
         encoder: FinetuneEncoder,
-        aux_mae: AuxMae,
+        aux_mae: RLMae,
         pi_mlp: nn.Module,
         value_mlp: nn.Module,
     ) -> None:

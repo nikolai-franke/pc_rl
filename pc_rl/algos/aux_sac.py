@@ -90,7 +90,6 @@ class AuxPcSAC(SAC):
                 min_target_q + entropy_bonus
             )
 
-        q1, q2 = self.agent.q(encoder_out, samples["action"])
 
         pos_prediction, pos_ground_truth = self.agent.auto_encoder(
             samples["observation"]
@@ -102,6 +101,7 @@ class AuxPcSAC(SAC):
         mae_loss = self.aux_loss_fn(pos_prediction, pos_ground_truth)
         self.algo_log_info["mae_loss"].append(mae_loss.item())
 
+        q1, q2 = self.agent.q(encoder_out, samples["action"])
         q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
         # log critic_loss before adding MAE loss
         self.algo_log_info["critic_loss"].append(q_loss.item())
