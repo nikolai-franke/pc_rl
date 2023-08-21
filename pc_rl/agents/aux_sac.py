@@ -28,17 +28,23 @@ class AuxPcSacAgent(PcSacAgent):
 
     def encode(self, observation: ArrayTree[Tensor]) -> tuple[Tensor, Tensor, Tensor]:
         pos, batch = dict_to_batched_data(observation)
-        x, neighborhoods, center_points = self.model["embedder"](pos, batch)
-        encoder_out, pos_prediction, pos_ground_truth = self.model["encoder"](
-            x, center_points, neighborhoods
-        )
-        return encoder_out, pos_prediction, pos_ground_truth
+        x, _, center_points = self.model["embedder"](pos, batch)
+        x = self.model["encoder"](x, center_points)
+        return x
 
     def target_encode(self, observation: ArrayTree[Tensor]) -> Tensor:
         pos, batch = dict_to_batched_data(observation)
-        x, neighborhoods, center_points = self.model["target_embedder"](pos, batch)
-        encoder_out = self.model["target_encoder"](x, center_points, neighborhoods)
-        return encoder_out
+        x, _, center_points = self.model["target_embedder"](pos, batch)
+        x = self.model["target_encoder"](x, center_points)
+        return x
+
+    def auto_encoder(self, observation: ArrayTree[Tensor]) -> tuple[Tensor, Tensor]:
+        pos, batch = dict_to_batched_data(observation)
+        x, neighborhoods, center_points = self.model["embedder"](pos, batch)
+        pos_prediction, pos_ground_truth = self.model["rl_mae"](
+            x, neighborhoods, center_points
+        )
+        return pos_prediction, pos_ground_truth
 
     @torch.no_grad()
     def step(
@@ -47,7 +53,7 @@ class AuxPcSacAgent(PcSacAgent):
         observation = observation.to_ndarray()
         observation = dict_map(torch.from_numpy, observation)
         observation = observation.to(device=self.device)
-        encoding, *_ = self.encode(observation)
-        dist_params = self.model["pi"](encoding)
+        x = self.encode(observation)
+        dist_params = self.model["pi"](x)
         action = self.distribution.sample(dist_params)
         return action.cpu(), ArrayDict()

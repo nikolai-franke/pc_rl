@@ -172,7 +172,7 @@ def build(config: DictConfig):
             **per_module_conf.get("embedder", {}),
         },
         {
-            "params": agent.model.encoder.parameters(),
+            "params": agent.model.aux_mae.parameters(),
             **per_module_conf.get("encoder", {}),
         },
         {

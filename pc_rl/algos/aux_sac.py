@@ -29,7 +29,7 @@ class AuxPcSAC(SAC):
         replay_ratio: int,  # data_consumption / data_generation target_update_tau: float,  # tau=1 for hard update.
         target_update_tau: float,
         target_update_interval: int,  # 1000 for hard update, 1 for soft.
-        ent_coeff: float | None,
+        ent_coeff: float,
         clip_grad_norm: float,
         aux_loss_coeff: float,
         aux_loss: Literal["chamfer", "sinkhorn"] = "chamfer",
@@ -63,13 +63,8 @@ class AuxPcSAC(SAC):
         """
         # compute target Q according to formula
         # r + gamma * (1 - d) * (min Q_targ(s', a') - alpha * log pi(s', a'))
-        encoder_out, pos_prediction, ground_truth = self.agent.encode(
-            samples["observation"]
-        )
-        new_action, log_prob = self.agent.pi(
-            encoder_out.detach()
-        )  # NOTE: reordering is necessary
-        log_prob = log_prob.reshape(-1, 1)  # TODO: why?
+        encoder_out = self.agent.encode(samples["observation"])
+        new_action, log_prob = self.agent.pi(encoder_out.detach())
 
         if self.ent_coeff_optimizer is not None:
             entropy_coeff = torch.exp(self._log_ent_coeff.detach())
@@ -86,7 +81,7 @@ class AuxPcSAC(SAC):
         self.algo_log_info["ent_coeff"].append(entropy_coeff.item())
         # where a' ~ pi(.|s')
         with torch.no_grad():
-            next_encoder_out, *_ = self.agent.target_encode(samples["next_observation"])
+            next_encoder_out = self.agent.target_encode(samples["next_observation"])
             next_action, next_log_prob = self.agent.pi(next_encoder_out)
             target_q1, target_q2 = self.agent.target_q(next_encoder_out, next_action)
             min_target_q = torch.min(target_q1, target_q2)
@@ -97,17 +92,21 @@ class AuxPcSAC(SAC):
 
         q1, q2 = self.agent.q(encoder_out, samples["action"])
 
+        pos_prediction, pos_ground_truth = self.agent.auto_encoder(
+            samples["observation"]
+        )
         B, M, *_ = pos_prediction.shape
         pos_prediction = pos_prediction.reshape(B * M, -1, 3)
-        ground_truth = ground_truth.reshape(B * M, -1, 3)
+        pos_ground_truth = pos_ground_truth.reshape(B * M, -1, 3)
 
-        mae_loss = self.aux_loss_fn(pos_prediction, ground_truth)
-        q_loss = (
-            0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
-            + mae_loss * self.aux_loss_coeff
-        )
-
+        mae_loss = self.aux_loss_fn(pos_prediction, pos_ground_truth)
         self.algo_log_info["mae_loss"].append(mae_loss.item())
+
+        q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
+        # log critic_loss before adding MAE loss
+        self.algo_log_info["critic_loss"].append(q_loss.item())
+        q_loss += mae_loss * self.aux_loss_coeff
+
 
         # update Q model parameters according to Q loss
         self.optimizers["q"].zero_grad()
@@ -122,7 +121,6 @@ class AuxPcSAC(SAC):
         )
         self.optimizers["q"].step()
 
-        self.algo_log_info["critic_loss"].append(q_loss.item())
         self.algo_log_info["q1_grad_norm"].append(q1_grad_norm.item())
         self.algo_log_info["q2_grad_norm"].append(q2_grad_norm.item())
         self.algo_log_info["ent_coeff"].append(entropy_coeff.item())
@@ -141,6 +139,8 @@ class AuxPcSAC(SAC):
         pi_losses = entropy_coeff * log_prob - min_q
         pi_loss = valid_mean(pi_losses)
         self.algo_log_info["actor_loss"].append(pi_loss.item())
+        self.algo_log_info["min_q"].append(min_q.min().item())
+        self.algo_log_info["max_q"].append(min_q.max().item())
 
         # update Pi model parameters according to pi loss
         self.optimizers["pi"].zero_grad()

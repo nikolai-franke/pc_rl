@@ -29,7 +29,8 @@ import pc_rl.builder  # for hydra's instantiate
 import pc_rl.models.sac.q_and_pi_heads
 import wandb
 from pc_rl.agents.aux_sac import AuxPcSacAgent
-from pc_rl.models.aux_mae import AuxMae
+from pc_rl.models.aux_mae import AuxMae, RLMae
+from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 
@@ -97,19 +98,19 @@ def build(config: DictConfig):
         transformer_block_factory=transformer_block_factory,
     )
 
-    pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
+    encoder_pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
     embedder = instantiate(config.model.embedder, _convert_="partial")
 
     masked_encoder = instantiate(
         config.model.masked_encoder,
         transformer_encoder=transformer_encoder,
-        pos_embedder=pos_embedder,
+        pos_embedder=encoder_pos_embedder,
     )
 
-    pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
+    decoder_pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
     masked_decoder = MaskedDecoder(
         transformer_decoder=transformer_decoder,
-        pos_embedder=pos_embedder,
+        pos_embedder=decoder_pos_embedder,
     )
 
     mae_prediction_head = MaePredictionHead(
@@ -117,12 +118,15 @@ def build(config: DictConfig):
         group_size=config.model.embedder.group_size,
     )
 
-    aux_mae = AuxMae(
+    finetune_encoder = FinetuneEncoder(
+        transformer_encoder=transformer_encoder, pos_embedder=encoder_pos_embedder
+    )
+    rl_mae = RLMae(
         masked_encoder=masked_encoder,
         masked_decoder=masked_decoder,
         mae_prediction_head=mae_prediction_head,
     )
-    mlp_input_size = aux_mae.dim
+    mlp_input_size = rl_mae.dim
 
     pi_model = instantiate(
         config.model.pi_mlp_head,
@@ -150,7 +154,8 @@ def build(config: DictConfig):
             "q1": q1_model,
             "q2": q2_model,
             "embedder": embedder,
-            "encoder": aux_mae,
+            "encoder": finetune_encoder,
+            "rl_mae": rl_mae,
         }
     )
 
@@ -217,8 +222,12 @@ def build(config: DictConfig):
                     "params": agent.model["embedder"].parameters(),
                     **per_module_conf.get("embedder", {}),
                 },
+                # {
+                #     "params": agent.model["encoder"].parameters(),
+                #     **per_module_conf.get("encoder", {}),
+                # },
                 {
-                    "params": agent.model["encoder"].parameters(),
+                    "params": agent.model["rl_mae"].parameters(),
                     **per_module_conf.get("encoder", {}),
                 },
             ],

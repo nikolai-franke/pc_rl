@@ -1,16 +1,16 @@
 import multiprocessing as mp
+import os
 import sys
 import traceback
-import os
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from hydra.core.hydra_config import HydraConfig
 
 import gymnasium as gym
 import hydra
 import parllel.logger as logger
 import torch
+from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from parllel import Array, ArrayDict, dict_map
@@ -32,7 +32,8 @@ from parllel.types import BatchSpec
 
 import pc_rl.builder  # import for hydra's instantiate
 import wandb
-from pc_rl.models.aux_mae import AuxMae
+from pc_rl.models.aux_mae import RLMae
+from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 
@@ -100,31 +101,34 @@ def build(config: DictConfig):
         transformer_block_factory=transformer_block_factory,
     )
 
-    pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
+    encoder_pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
     embedder = instantiate(config.model.embedder, _convert_="partial")
 
     masked_encoder = instantiate(
         config.model.masked_encoder,
         transformer_encoder=transformer_encoder,
-        pos_embedder=pos_embedder,
+        pos_embedder=encoder_pos_embedder,
     )
 
-    pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
+    decoder_pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
     masked_decoder = MaskedDecoder(
         transformer_decoder=transformer_decoder,
-        pos_embedder=pos_embedder,
+        pos_embedder=decoder_pos_embedder,
     )
 
     mae_prediction_head = MaePredictionHead(
         dim=config.model.embedder.embedding_size,
         group_size=config.model.embedder.group_size,
     )
-
-    aux_mae = AuxMae(
+    finetune_encoder = FinetuneEncoder(
+        transformer_encoder=transformer_encoder, pos_embedder=encoder_pos_embedder
+    )
+    rl_mae = RLMae(
         masked_encoder=masked_encoder,
         masked_decoder=masked_decoder,
         mae_prediction_head=mae_prediction_head,
     )
+    mlp_input_size = rl_mae.dim
 
     aux_mae_pg_model = instantiate(
         config.model.rl_model,
@@ -313,23 +317,23 @@ def main(config: DictConfig):
     try:
         run = wandb.init(
             project="pc_rl",
-            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True), # type: ignore
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
             sync_tensorboard=True,
             save_code=True,
             reinit=True,
         )
         if config.use_slurm:
             os.system("wandb enabled")
-            tmp = Path(os.environ.get("TMP")) # type: ignore
+            tmp = Path(os.environ.get("TMP"))  # type: ignore
             video_path = (
-                    tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}" # type: ignore
+                tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"  # type: ignore
             )
             num_gpus = HydraConfig.get().launcher.gpus_per_node
             gpu_id = HydraConfig.get().job.num % num_gpus
             config.update({"device": f"cuda:{gpu_id}"})
         else:
             video_path = (
-                    Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}" # type: ignore
+                Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"  # type: ignore
             )
         config.update({"video_path": video_path})
 
@@ -341,14 +345,14 @@ def main(config: DictConfig):
             output_files={
                 "txt": Path("log.txt"),
             },
-            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True), # type: ignore
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
             model_save_path=Path("model.pt"),
             # verbosity=Verbosity.DEBUG,
         )
 
         with build(config) as runner:
             runner.run()
-        run.finish() # type: ignore
+        run.finish()  # type: ignore
 
     except Exception:
         traceback.print_exc(file=sys.stderr)
