@@ -15,15 +15,17 @@ from omegaconf import DictConfig, OmegaConf
 from parllel import Array, ArrayDict, dict_map
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.logger import Verbosity
-from parllel.patterns import build_cages_and_sample_tree
+from parllel.patterns import build_cages, build_sample_tree
 from parllel.replays.replay import ReplayBuffer
 from parllel.runners import RLRunner
 from parllel.samplers import BasicSampler
 from parllel.samplers.eval import EvalSampler
 from parllel.torch.algos.sac import SAC, build_replay_buffer_tree
 from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
-from parllel.transforms.video_recorder import RecordVectorizedVideo
+# from parllel.transforms.video_recorder import RecordVectorizedVideo
+from parllel.transforms.vectorized_video import RecordVectorizedVideo
 from parllel.types import BatchSpec
+from parllel.callbacks.recording_schedule import RecordingSchedule
 
 import pc_rl.builder  # for hydra's instantiate
 import pc_rl.models.sac.q_and_pi_heads
@@ -43,16 +45,34 @@ def build(config: DictConfig):
 
     env_factory = instantiate(config.env, _convert_="object", _partial_=True)
 
-    cages, sample_tree, metadata = build_cages_and_sample_tree(
+    cages, metadata = build_cages(
         EnvClass=env_factory,
+        n_envs=batch_spec.B,
         env_kwargs={"add_obs_to_info_dict": False},
         TrajInfoClass=TrajInfo,
-        reset_automatically=True,
+        parallel=parallel,
+    )
+    replay_length = int(config.algo.replay_length) // batch_spec.B
+    replay_length = (replay_length // batch_spec.T) * batch_spec.T
+    sample_tree, metadata = build_sample_tree(
+        env_metadata=metadata,
         batch_spec=batch_spec,
         parallel=parallel,
-        full_size=config.algo.replay_length,
-        keys_to_skip="observation",
+        full_size=replay_length,
+        keys_to_skip=("obs", "next_obs"),
     )
+
+    # cages, sample_tree, metadata = build_cages_and_sample_tree(
+    #     EnvClass=env_factory,
+    #     env_kwargs={"add_obs_to_info_dict": False},
+    #     TrajInfoClass=TrajInfo,
+    #     reset_automatically=True,
+    #     batch_spec=batch_spec,
+    #     parallel=parallel,
+    #     full_size=config.algo.replay_length,
+    #     keys_to_skip="observation",
+    # )
+
     obs_space, action_space = metadata.obs_space, metadata.action_space
     n_actions = action_space.shape[0]
 
@@ -66,15 +86,20 @@ def build(config: DictConfig):
         metadata.example_obs,
         batch_shape=tuple(batch_spec),
         max_mean_num_elem=obs_space.shape[0],
-        feature_shape=obs_space.shape[1:],
+        # feature_shape=obs_space.shape[1:],
         kind="jagged",
         storage=storage,
         padding=1,
-        full_size=config.algo.replay_length,
+        full_size=replay_length,
+    )
+
+    sample_tree["next_observation"] = sample_tree["observation"].new_array(
+        padding=0,
+        inherit_full_size=True,
     )
 
     sample_tree["observation"][0] = obs_space.sample()
-    example_obs_batch = sample_tree["observation"][0]
+    metadata.example_obs_batch = sample_tree["observation"][0]
 
     device = config.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
     wandb.config.update({"device": device}, allow_val_change=True)
@@ -148,8 +173,6 @@ def build(config: DictConfig):
         envs=cages,
         agent=agent,
         sample_tree=sample_tree,
-        max_steps_decorrelate=config.max_steps_decorrelate,
-        get_bootstrap_value=False,
     )
 
     replay_buffer_tree = build_replay_buffer_tree(sample_tree)
@@ -162,7 +185,7 @@ def build(config: DictConfig):
     replay_buffer = ReplayBuffer(
         tree=replay_buffer_tree,
         sampler_batch_spec=batch_spec,
-        size_T=config.algo.replay_length,
+        size_T=replay_length,
         replay_batch_size=config.algo.batch_size,
         newest_n_samples_invalid=0,
         oldest_n_samples_invalid=1,
@@ -174,45 +197,45 @@ def build(config: DictConfig):
         optimizer_conf, resolve=True, throw_on_missing=True
     )
     per_module_conf = optimizer_conf.pop("per_module", {})  # type: ignore
-    optimizers = {
-        "pi": torch.optim.Adam(
-            [
-                {
-                    "params": agent.model["pi"].parameters(),
-                    **per_module_conf.get("pi", {}),
-                },
-            ],
-            **optimizer_conf,
-        ),
-        "q": torch.optim.Adam(
-            [
-                {
-                    "params": agent.model["embedder"].parameters(),
-                    **per_module_conf.get("embedder", {}),
-                },
-                {
-                    "params": agent.model["encoder"].parameters(),
-                    **per_module_conf.get("encoder", {}),
-                },
-                {
-                    "params": agent.model["q1"].parameters(),
-                    **config.optimizer.get("q", {}),
-                },
-                {
-                    "params": agent.model["q2"].parameters(),
-                    **config.optimizer.get("q", {}),
-                },
-            ],
-            **optimizer_conf,
-        ),
-    }
+    pi_optimizer = torch.optim.Adam(
+        [
+            {
+                "params": agent.model["pi"].parameters(),
+                **per_module_conf.get("pi", {}),
+            }
+        ],
+        **optimizer_conf,
+    )
+
+    q_optimizer = torch.optim.Adam(
+        [
+            {
+                "params": agent.model["embedder"].parameters(),
+                **per_module_conf.get("embedder", {}),
+            },
+            {
+                "params": agent.model["encoder"].parameters(),
+                **per_module_conf.get("encoder", {}),
+            },
+            {
+                "params": agent.model["q1"].parameters(),
+                **config.optimizer.get("q", {}),
+            },
+            {
+                "params": agent.model["q2"].parameters(),
+                **config.optimizer.get("q", {}),
+            },
+        ],
+        **optimizer_conf,
+    )
 
     # create algorithm
     algorithm = SAC(
         batch_spec=batch_spec,
         agent=agent,
         replay_buffer=replay_buffer,
-        optimizers=optimizers,
+        pi_optimizer=pi_optimizer,
+        q_optimizer=q_optimizer,
         **config.algo,
     )
 
@@ -255,14 +278,14 @@ def build(config: DictConfig):
     eval_sample_tree["observation"][0] = obs_space.sample()
 
     video_recorder = RecordVectorizedVideo(
-        batch_buffer=eval_sample_tree,
+        sample_tree=eval_sample_tree,
         buffer_key_to_record="env_info.rendering",
         env_fps=50,
-        record_every_n_steps=1,
         output_dir=Path(config.video_path),
         video_length=config.eval.max_traj_length,
         use_wandb=True,
     )
+    recording_schedule = RecordingSchedule(video_recorder, trigger="on_eval")
 
     eval_sampler = EvalSampler(
         max_traj_length=config.eval.max_traj_length,
@@ -270,7 +293,7 @@ def build(config: DictConfig):
         envs=eval_cages,
         agent=agent,
         sample_tree=eval_sample_tree,
-        obs_transform=video_recorder,
+        step_transforms=[video_recorder],
     )
 
     # create runner
@@ -283,26 +306,26 @@ def build(config: DictConfig):
         n_steps=config.runner.n_steps,
         log_interval_steps=config.runner.log_interval_steps,
         eval_interval_steps=config.runner.eval_interval_steps,
+        callbacks=[recording_schedule],
     )
 
     try:
         yield runner
 
     finally:
-        sampler.close()
-        agent.close()
         eval_sampler.close()
-        for cage in cages:
-            cage.close()
+        eval_sample_tree.close()
+        sampler.close()
+        sample_tree.close()
+        agent.close()
         for eval_cage in eval_cages:
             eval_cage.close()
-        sample_tree.close()
-        eval_sample_tree.close()
+        for cage in cages:
+            cage.close()
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_sac")
 def main(config: DictConfig) -> None:
-    mp.set_start_method("fork")
     # try...except block so we get error messages when using submitit
     try:
         run = wandb.init(
@@ -351,6 +374,7 @@ def main(config: DictConfig) -> None:
         with build(config) as runner:
             runner.run()
 
+        logger.close()
         run.finish()
     except Exception:
         traceback.print_exc(file=sys.stderr)
