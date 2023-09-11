@@ -11,7 +11,7 @@ reward_amount_dict:
   distance_to_target: -0.0
   distance_reward: -0.2
   delta_distance_to_target: 0.0
-  time_step_cost: -0.00
+  time_step_cost: -0.0
   workspace_violation: -0.0
   successful_task: 100.0
   cos_reward: -50.0

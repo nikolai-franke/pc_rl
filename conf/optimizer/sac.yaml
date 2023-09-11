@@ -5,7 +5,7 @@ per_module:
   encoder:
     lr: 1e-5
   pi:
-    lr: 1e-5
+    lr: 1e-6
   q:
     lr: 1e-5
 
