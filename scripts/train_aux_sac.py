@@ -15,7 +15,7 @@ from omegaconf import DictConfig, OmegaConf
 from parllel import Array, ArrayDict, dict_map
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
 from parllel.logger import Verbosity
-from parllel.patterns import build_cages_and_sample_tree
+from parllel.patterns import build_cages, build_sample_tree
 from parllel.replays.replay import ReplayBuffer
 from parllel.runners import RLRunner
 from parllel.samplers import BasicSampler
@@ -46,16 +46,34 @@ def build(config: DictConfig):
 
     env_factory = instantiate(config.env, _convert_="object", _partial_=True)
 
-    cages, sample_tree, metadata = build_cages_and_sample_tree(
+    cages, metadata = build_cages(
         EnvClass=env_factory,
+        n_envs=batch_spec.B,
         env_kwargs={"add_obs_to_info_dict": False},
         TrajInfoClass=TrajInfo,
-        reset_automatically=True,
+        parallel=parallel,
+    )
+    replay_length = int(config.algo.replay_length) // batch_spec.B
+    replay_length = (replay_length // batch_spec.T) * batch_spec.T
+    sample_tree, metadata = build_sample_tree(
+        env_metadata=metadata,
         batch_spec=batch_spec,
         parallel=parallel,
-        full_size=config.algo.replay_length,
-        keys_to_skip="observation",
+        full_size=replay_length,
+        keys_to_skip=("obs", "next_obs"),
     )
+
+    # cages, sample_tree, metadata = build_cages_and_sample_tree(
+    #     EnvClass=env_factory,
+    #     env_kwargs={"add_obs_to_info_dict": False},
+    #     TrajInfoClass=TrajInfo,
+    #     reset_automatically=True,
+    #     batch_spec=batch_spec,
+    #     parallel=parallel,
+    #     full_size=config.algo.replay_length,
+    #     keys_to_skip="observation",
+    # )
+
     obs_space, action_space = metadata.obs_space, metadata.action_space
     n_actions = action_space.shape[0]
 
@@ -73,11 +91,16 @@ def build(config: DictConfig):
         kind="jagged",
         storage=storage,
         padding=1,
-        full_size=config.algo.replay_length,
+        full_size=replay_length,
+    )
+
+    sample_tree["next_observation"] = sample_tree["observation"].new_array(
+        padding=0,
+        inherit_full_size=True,
     )
 
     sample_tree["observation"][0] = obs_space.sample()
-    example_obs_batch = sample_tree["observation"][0]
+    metadata.example_obs_batch = sample_tree["observation"][0]
 
     device = config.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
     wandb.config.update({"device": device}, allow_val_change=True)
@@ -198,42 +221,70 @@ def build(config: DictConfig):
         optimizer_conf, resolve=True, throw_on_missing=True
     )
     per_module_conf = optimizer_conf.pop("per_module", {})  # type: ignore
-    optimizers = {
-        "pi": torch.optim.Adam(
-            [
-                {
-                    "params": agent.model["pi"].parameters(),
-                    **per_module_conf.get("pi", {}),
-                },
-            ],
-            **optimizer_conf,
-        ),
-        "q": torch.optim.Adam(
-            [
-                {
-                    "params": agent.model["q1"].parameters(),
-                    **config.optimizer.get("q", {}),
-                },
-                {
-                    "params": agent.model["q2"].parameters(),
-                    **config.optimizer.get("q", {}),
-                },
-                {
-                    "params": agent.model["embedder"].parameters(),
-                    **per_module_conf.get("embedder", {}),
-                },
-                # {
-                #     "params": agent.model["encoder"].parameters(),
-                #     **per_module_conf.get("encoder", {}),
-                # },
-                {
-                    "params": agent.model["rl_mae"].parameters(),
-                    **per_module_conf.get("encoder", {}),
-                },
-            ],
-            **optimizer_conf,
-        ),
-    }
+
+    pi_optimizer = torch.optim.Adam(
+        [
+            {
+                "params": agent.model["pi"].parameters(),
+                **per_module_conf.get("pi", {}),
+            }
+        ],
+        **optimizer_conf,
+    )
+
+    q_optimizer = torch.optim.Adam(
+        [
+            {
+                "params": agent.model["embedder"].parameters(),
+                **per_module_conf.get("embedder", {}),
+            },
+            {
+                "params": agent.model["encoder"].parameters(),
+                **per_module_conf.get("encoder", {}),
+            },
+            {
+                "params": agent.model["q1"].parameters(),
+                **config.optimizer.get("q", {}),
+            },
+            {
+                "params": agent.model["q2"].parameters(),
+                **config.optimizer.get("q", {}),
+            },
+        ],
+        **optimizer_conf,
+    )
+    # optimizers = {
+    #     "pi": torch.optim.Adam(
+    #         [
+    #             {
+    #                 "params": agent.model["pi"].parameters(),
+    #                 **per_module_conf.get("pi", {}),
+    #             },
+    #         ],
+    #         **optimizer_conf,
+    #     ),
+    #     "q": torch.optim.Adam(
+    #         [
+    #             {
+    #                 "params": agent.model["q1"].parameters(),
+    #                 **config.optimizer.get("q", {}),
+    #             },
+    #             {
+    #                 "params": agent.model["q2"].parameters(),
+    #                 **config.optimizer.get("q", {}),
+    #             },
+    #             {
+    #                 "params": agent.model["embedder"].parameters(),
+    #                 **per_module_conf.get("embedder", {}),
+    #             },
+    #             {
+    #                 "params": agent.model["encoder"].parameters(),
+    #                 **per_module_conf.get("encoder", {}),
+    #             },
+    #         ],
+    #         **optimizer_conf,
+    #     ),
+    # }
 
     algorithm = instantiate(
         config.algo,
