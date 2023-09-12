@@ -13,13 +13,13 @@ reward_clip_max: 5
 max_steps_decorrelate: 0
 device: null
 runner:
-  n_steps: 10_000_000
+  n_steps: 2e6
   log_interval_steps: 1024
   eval_interval_steps: 10240
 eval:
-  n_eval_envs: 1
+  n_eval_envs: 4
   max_traj_length: 200
-  max_trajectories: 1
+  max_trajectories: 4
 
 use_slurm: False
 video_path: videos
