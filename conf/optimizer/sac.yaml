@@ -1,11 +1,11 @@
 lr: 1e-6
 per_module:
-  embedder:
-    lr: 1e-5
+  # embedder:
+  #   lr: 1e-5
   encoder:
-    lr: 1e-5
+    lr: 1e-8
   pi:
-    lr: 1e-6
+    lr: 1e-4
   q:
-    lr: 1e-5
+    lr: 1e-6
 
