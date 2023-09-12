@@ -10,7 +10,8 @@ from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 from torch import Tensor
 from typing_extensions import NotRequired
 
-from pc_rl.models.aux_mae import AuxMae
+from pc_rl.models.aux_mae import RLMae
+from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.utils.array_dict import dict_to_batched_data
 
@@ -26,13 +27,15 @@ class AuxMaeContinuousPgModel(nn.Module):
     def __init__(
         self,
         embedder: Embedder,
-        aux_mae: AuxMae,
+        encoder: FinetuneEncoder,
+        aux_mae: RLMae,
         pi_mlp: nn.Module,
         value_mlp: nn.Module,
         init_log_std: float,
     ) -> None:
         super().__init__()
         self.embedder = embedder
+        self.encoder = encoder
         self.aux_mae = aux_mae
         self.pi_mlp = pi_mlp
         self.value_mlp = value_mlp
@@ -63,9 +66,10 @@ class AuxMaeContinuousPgModel(nn.Module):
 
     def forward(self, data):
         pos, batch = dict_to_batched_data(data)
-        x, neighborhoods, center_points = self.embedder(pos, batch)
-        x, pos_prediction, pos_ground_truth = self.aux_mae(
-            x, center_points, neighborhoods
+        embedder_out, neighborhoods, center_points = self.embedder(pos, batch)
+        x = self.encoder(embedder_out, center_points)
+        pos_prediction, pos_ground_truth = self.aux_mae(
+            embedder_out, neighborhoods, center_points
         )
 
         lead_dim, B, T, _ = infer_leading_dims(x, 1)
