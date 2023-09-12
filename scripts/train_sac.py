@@ -14,6 +14,7 @@ from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from parllel import Array, ArrayDict, dict_map
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
+from parllel.callbacks.recording_schedule import RecordingSchedule
 from parllel.logger import Verbosity
 from parllel.patterns import build_cages, build_sample_tree
 from parllel.replays.replay import ReplayBuffer
@@ -25,7 +26,6 @@ from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
 # from parllel.transforms.video_recorder import RecordVectorizedVideo
 from parllel.transforms.vectorized_video import RecordVectorizedVideo
 from parllel.types import BatchSpec
-from parllel.callbacks.recording_schedule import RecordingSchedule
 
 import pc_rl.builder  # for hydra's instantiate
 import pc_rl.models.sac.q_and_pi_heads
@@ -121,12 +121,6 @@ def build(config: DictConfig):
     finetune_encoder = FinetuneEncoder(
         pos_embedder=pos_embedder, transformer_encoder=transformer_encoder
     )
-    pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
-    embedder = instantiate(config.model.embedder, _convert_="partial")
-
-    finetune_encoder = FinetuneEncoder(
-        pos_embedder=pos_embedder, transformer_encoder=transformer_encoder
-    )
 
     mlp_input_size = finetune_encoder.dim
 
@@ -166,6 +160,7 @@ def build(config: DictConfig):
         distribution=distribution,
         device=device,
         learning_starts=config.algo.learning_starts,
+        pretrain_std=1.0,
     )
 
     sampler = BasicSampler(
@@ -211,7 +206,7 @@ def build(config: DictConfig):
         [
             {
                 "params": agent.model["embedder"].parameters(),
-                **per_module_conf.get("embedder", {}),
+                **per_module_conf.get("encoder", {}),
             },
             {
                 "params": agent.model["encoder"].parameters(),

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from pc_rl.models.modules.transformer import TransformerEncoder
 
@@ -17,16 +18,19 @@ class FinetuneEncoder(nn.Module):
         self.pos_embedder = pos_embedder
         self.dim = self.transformer_encoder.dim
         self.norm = nn.LayerNorm(self.dim)
-        self.cls_token = nn.Parameter(torch.zeros(1, 1, self.dim))
-        self.cls_pos = nn.Parameter(torch.randn(1, 1, self.dim))
+        self.attention_pool = nn.Linear(self.dim, 1)
+        # self.cls_token = nn.Parameter(torch.zeros(1, 1, self.dim))
+        # self.cls_pos = nn.Parameter(torch.randn(1, 1, self.dim))
 
     def forward(self, x, center_points, _=None):
-        cls_tokens = self.cls_token.expand(x.shape[0], -1, -1)
-        cls_pos = self.cls_pos.expand(x.shape[0], -1, -1)
+        # cls_tokens = self.cls_token.expand(x.shape[0], -1, -1)
+        # cls_pos = self.cls_pos.expand(x.shape[0], -1, -1)
         pos = self.pos_embedder(center_points)
-        pos = torch.cat((cls_pos, pos), dim=1)
-        x = torch.cat((cls_tokens, x), dim=1)
+        # pos = torch.cat((cls_pos, pos), dim=1)
+        # x = torch.cat((cls_tokens, x), dim=1)
         x = self.transformer_encoder(x, pos)
         x = self.norm(x)
+        x = torch.matmul(F.softmax(self.attention_pool(x), dim=1).transpose(-1, -2), x).squeeze(-2)
         # out = torch.cat([x[:, 0], x[:, 1:].max(1)[0]], dim=-1)
-        return x[:, 0]
+        # return x[:, 0]
+        return x
