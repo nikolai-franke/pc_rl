@@ -29,13 +29,13 @@ class PcSacAgent(SacAgent):
 
     def encode(self, observation: ArrayTree[Tensor]) -> Tensor:
         pos, batch = dict_to_batched_data(observation)
-        x, neighborhoods, center_points = self.model["embedder"](pos, batch)
+        x, _, center_points = self.model["embedder"](pos, batch)
         encoder_out = self.model["encoder"](x, center_points)
         return encoder_out
 
     def target_encode(self, observation: ArrayTree[Tensor]) -> Tensor:
         pos, batch = dict_to_batched_data(observation)
-        x, neighborhoods, center_points = self.model["target_embedder"](pos, batch)
+        x, _, center_points = self.model["target_embedder"](pos, batch)
         encoder_out = self.model["target_encoder"](x, center_points)
         return encoder_out
 

@@ -1,24 +1,25 @@
 import multiprocessing as mp
+import os
 import sys
 import traceback
-import os
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from hydra.core.hydra_config import HydraConfig
 
 import gymnasium as gym
 import hydra
 import parllel.logger as logger
 import torch
+from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from parllel import Array, ArrayDict, dict_map
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
+from parllel.callbacks.recording_schedule import RecordingSchedule
 from parllel.logger import Verbosity
 from parllel.patterns import (add_advantage_estimation, add_agent_info,
                               add_bootstrap_value, add_reward_normalization,
-                              build_cages_and_sample_tree)
+                              build_cages, build_sample_tree)
 from parllel.runners import RLRunner
 from parllel.samplers.basic import BasicSampler
 from parllel.samplers.eval import EvalSampler
@@ -26,8 +27,7 @@ from parllel.torch.agents.categorical import CategoricalPgAgent
 from parllel.torch.agents.gaussian import GaussianPgAgent
 from parllel.torch.algos.ppo import BatchedDataLoader, build_loss_sample_tree
 from parllel.torch.distributions import Categorical, Gaussian
-from parllel.transforms import Compose
-from parllel.transforms.video_recorder import RecordVectorizedVideo
+from parllel.transforms.vectorized_video import RecordVectorizedVideo
 from parllel.types import BatchSpec
 
 import pc_rl.builder  # import for hydra's instantiate
@@ -47,15 +47,28 @@ def build(config: DictConfig):
 
     env_factory = instantiate(config.env, _convert_="object", _partial_=True)
 
-    cages, sample_tree, metadata = build_cages_and_sample_tree(
+    cages, metadata = build_cages(
         EnvClass=env_factory,
+        n_envs=batch_spec.B,
         env_kwargs={"add_obs_to_info_dict": False},
         TrajInfoClass=TrajInfo,
-        reset_automatically=True,
+        parallel=parallel,
+    )
+    sample_tree, metadata = build_sample_tree(
+        env_metadata=metadata,
         batch_spec=batch_spec,
         parallel=parallel,
-        keys_to_skip="observation",
+        keys_to_skip=("obs", "next_obs"),
     )
+    # cages, sample_tree, metadata = build_cages_and_sample_tree(
+    #     EnvClass=env_factory,
+    #     env_kwargs={"add_obs_to_info_dict": False},
+    #     TrajInfoClass=TrajInfo,
+    #     reset_automatically=True,
+    #     batch_spec=batch_spec,
+    #     parallel=parallel,
+    #     keys_to_skip="observation",
+    # )
 
     obs_space, action_space = metadata.obs_space, metadata.action_space
     discrete = isinstance(action_space, gym.spaces.Discrete)
@@ -65,7 +78,6 @@ def build(config: DictConfig):
     sample_tree["observation"] = dict_map(
         Array.from_numpy,
         metadata.example_obs,
-        feature_shape=obs_space.shape[1:],
         max_mean_num_elem=obs_space.shape[0],
         batch_shape=tuple(batch_spec),
         kind="jagged",
@@ -73,8 +85,9 @@ def build(config: DictConfig):
         padding=1,
     )
 
+    sample_tree["next_observation"] = sample_tree["observation"].new_array(padding=0)
     sample_tree["observation"][0] = obs_space.sample()
-    example_obs_batch = sample_tree["observation"][0]
+    metadata.example_obs_batch = sample_tree["observation"][0]
 
     n_actions = action_space.n if discrete else action_space.shape[0]
     distribution = DistributionClass(dim=n_actions)
@@ -112,11 +125,11 @@ def build(config: DictConfig):
     agent = AgentClass(
         model=pg_model,
         distribution=distribution,  # type: ignore
-        example_obs=example_obs_batch,
+        example_obs=metadata.example_obs_batch,
         device=device,
     )
 
-    sample_tree = add_agent_info(sample_tree, agent, example_obs_batch)
+    sample_tree = add_agent_info(sample_tree, agent, metadata.example_obs_batch)
     sample_tree = add_bootstrap_value(sample_tree)
 
     batch_transforms, step_transforms = [], []
@@ -142,8 +155,8 @@ def build(config: DictConfig):
         sample_tree=sample_tree,
         max_steps_decorrelate=config.max_steps_decorrelate,
         get_bootstrap_value=True,
-        obs_transform=Compose(step_transforms),
-        batch_transform=Compose(batch_transforms),
+        step_transforms=step_transforms,
+        batch_transforms=batch_transforms,
     )
 
     loss_sample_tree = build_loss_sample_tree(sample_tree)
@@ -172,7 +185,7 @@ def build(config: DictConfig):
             **per_module_conf.get("embedder", {}),
         },
         {
-            "params": agent.model.aux_mae.parameters(),
+            "params": agent.model.encoder.parameters(),
             **per_module_conf.get("encoder", {}),
         },
         {
@@ -238,14 +251,14 @@ def build(config: DictConfig):
     eval_sample_tree["observation"][0] = obs_space.sample()
 
     video_recorder = RecordVectorizedVideo(
-        batch_buffer=eval_sample_tree,
+        sample_tree=eval_sample_tree,
         buffer_key_to_record="env_info.rendering",
         env_fps=50,
-        record_every_n_steps=1,
         output_dir=Path(config.video_path),
         video_length=config.eval.max_traj_length,
         use_wandb=True,
     )
+    recording_schedule = RecordingSchedule(video_recorder, trigger="on_eval")
 
     eval_sampler = EvalSampler(
         max_traj_length=config.eval.max_traj_length,
@@ -253,7 +266,7 @@ def build(config: DictConfig):
         envs=eval_cages,
         agent=agent,
         sample_tree=eval_sample_tree,
-        obs_transform=video_recorder,
+        step_transforms=[video_recorder],
     )
 
     runner = RLRunner(
@@ -265,46 +278,47 @@ def build(config: DictConfig):
         n_steps=config.runner.n_steps,
         log_interval_steps=config.runner.log_interval_steps,
         eval_interval_steps=config.runner.eval_interval_steps,
+        callbacks=[recording_schedule],
     )
     try:
         yield runner
 
     finally:
-        sampler.close()
-        agent.close()
         eval_sampler.close()
-        for cage in cages:
-            cage.close()
+        eval_sample_tree.close()
+        sampler.close()
+        sample_tree.close()
+        agent.close()
         for eval_cage in eval_cages:
             eval_cage.close()
-        sample_tree.close()
-        eval_sample_tree.close()
+        for cage in cages:
+            cage.close()
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_ppo")
 def main(config: DictConfig):
-    mp.set_start_method("forkserver")
     # try...except block so we get error messages when using submitit
     try:
         run = wandb.init(
             project="pc_rl",
-            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True), # type: ignore
+            tags=["ppo"],
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
             sync_tensorboard=True,
             save_code=True,
             reinit=True,
         )
         if config.use_slurm:
             os.system("wandb enabled")
-            tmp = Path(os.environ.get("TMP")) # type: ignore
+            tmp = Path(os.environ.get("TMP"))  # type: ignore
             video_path = (
-                    tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}" # type: ignore
+                tmp / config.video_path / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"  # type: ignore
             )
             num_gpus = HydraConfig.get().launcher.gpus_per_node
             gpu_id = HydraConfig.get().job.num % num_gpus
             config.update({"device": f"cuda:{gpu_id}"})
         else:
             video_path = (
-                    Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}" # type: ignore
+                Path(config.video_path) / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"  # type: ignore
             )
         config.update({"video_path": video_path})
 
@@ -316,14 +330,14 @@ def main(config: DictConfig):
             output_files={
                 "txt": Path("log.txt"),
             },
-            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True), # type: ignore
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
             model_save_path=Path("model.pt"),
             # verbosity=Verbosity.DEBUG,
         )
 
         with build(config) as runner:
             runner.run()
-        run.finish() # type: ignore
+        run.finish()  # type: ignore
 
     except Exception:
         traceback.print_exc(file=sys.stderr)

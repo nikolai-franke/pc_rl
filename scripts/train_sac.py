@@ -78,7 +78,7 @@ def build(config: DictConfig):
 
     distribution = SquashedGaussian(
         dim=n_actions,
-        scale=action_space.high[0] * 3,
+        scale=action_space.high[0],
     )
 
     sample_tree["observation"] = dict_map(
@@ -144,13 +144,31 @@ def build(config: DictConfig):
         _convert_="partial",
     )
 
+    transformer_block_factory = instantiate(
+        config.model.transformer_block,
+        embedding_size=config.model.embedder.embedding_size,
+        _partial_=True,
+    )
+    transformer_encoder = instantiate(
+        config.model.transformer_encoder,
+        transformer_block_factory=transformer_block_factory,
+    )
+
+    # pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
+    # pi_embedder = instantiate(config.model.embedder, _convert_="partial")
+
+    # pi_encoder = FinetuneEncoder(
+    #     pos_embedder=pos_embedder, transformer_encoder=transformer_encoder, out_dim=64
+    # )
     model = torch.nn.ModuleDict(
         {
             "pi": pi_model,
             "q1": q1_model,
             "q2": q2_model,
             "embedder": embedder,
+            # "pi_embedder": pi_embedder,
             "encoder": finetune_encoder,
+            # "pi_encoder": pi_encoder,
         }
     )
 
@@ -194,6 +212,14 @@ def build(config: DictConfig):
     per_module_conf = optimizer_conf.pop("per_module", {})  # type: ignore
     pi_optimizer = torch.optim.Adam(
         [
+            # {
+            #     "params": agent.model["pi_embedder"].parameters(),
+            #     **per_module_conf.get("encoder", {}),
+            # },
+            # {
+            #     "params": agent.model["pi_encoder"].parameters(),
+            #     **per_module_conf.get("encoder", {}),
+            # },
             {
                 "params": agent.model["pi"].parameters(),
                 **per_module_conf.get("pi", {}),

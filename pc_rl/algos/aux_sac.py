@@ -102,24 +102,20 @@ class AuxPcSAC(SAC):
 
         q1, q2 = self.agent.q(observation, samples["action"])
 
-        pos_prediction, pos_ground_truth = self.agent.auto_encoder(
-            samples["observation"]
-        )
         B, M, *_ = pos_prediction.shape
         pos_prediction = pos_prediction.reshape(B * M, -1, 3)
-        pos_ground_truth = pos_ground_truth.reshape(B * M, -1, 3)
+        ground_truth = ground_truth.reshape(B * M, -1, 3)
+
+        mae_loss = self.aux_loss_fn(pos_prediction, ground_truth)
+        q_loss = (
+            0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
+            + mae_loss * self.aux_loss_coeff
+        )
 
         self.algo_log_info["critic_loss"].append(q_loss.item())
         self.algo_log_info["mean_ent_bonus"].append(entropy_bonus.mean().item())
         self.algo_log_info["ent_coeff"].append(entropy_coeff.item())
         self.algo_log_info["mae_loss"].append(mae_loss.item())
-
-        q1, q2 = self.agent.q(encoder_out, samples["action"])
-        q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
-        # log critic_loss before adding MAE loss
-        self.algo_log_info["critic_loss"].append(q_loss.item())
-        q_loss += mae_loss * self.aux_loss_coeff
-
 
         # update Q model parameters according to Q loss
         self.q_optimizer.zero_grad()
