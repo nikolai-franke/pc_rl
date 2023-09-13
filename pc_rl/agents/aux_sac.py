@@ -26,18 +26,6 @@ class AuxPcSacAgent(PcSacAgent):
             pretrain_std=pretrain_std,
         )
 
-    def encode(self, observation: ArrayTree[Tensor]) -> tuple[Tensor, Tensor, Tensor]:
-        pos, batch = dict_to_batched_data(observation)
-        x, _, center_points = self.model["embedder"](pos, batch)
-        x = self.model["encoder"](x, center_points)
-        return x
-
-    def target_encode(self, observation: ArrayTree[Tensor]) -> Tensor:
-        pos, batch = dict_to_batched_data(observation)
-        x, _, center_points = self.model["target_embedder"](pos, batch)
-        x = self.model["target_encoder"](x, center_points)
-        return x
-
     def auto_encoder(self, observation: ArrayTree[Tensor]) -> tuple[Tensor, Tensor]:
         pos, batch = dict_to_batched_data(observation)
         x, neighborhoods, center_points = self.model["embedder"](pos, batch)
@@ -45,15 +33,3 @@ class AuxPcSacAgent(PcSacAgent):
             x, neighborhoods, center_points
         )
         return pos_prediction, pos_ground_truth
-
-    @torch.no_grad()
-    def step(
-        self, observation: ArrayTree[Tensor], *, env_indices: Index = ...
-    ) -> tuple[Tensor, ArrayDict[Tensor]]:
-        observation = observation.to_ndarray()
-        observation = dict_map(torch.from_numpy, observation)
-        observation = observation.to(device=self.device)
-        x = self.encode(observation)
-        dist_params = self.model["pi"](x)
-        action = self.distribution.sample(dist_params)
-        return action.cpu(), ArrayDict()

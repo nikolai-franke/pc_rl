@@ -23,7 +23,6 @@ from parllel.samplers import BasicSampler
 from parllel.samplers.eval import EvalSampler
 from parllel.torch.algos.sac import SAC, build_replay_buffer_tree
 from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
-# from parllel.transforms.video_recorder import RecordVectorizedVideo
 from parllel.transforms.vectorized_video import RecordVectorizedVideo
 from parllel.types import BatchSpec
 
@@ -78,7 +77,7 @@ def build(config: DictConfig):
 
     distribution = SquashedGaussian(
         dim=n_actions,
-        scale=action_space.high[0],
+        scale=action_space.high[0] * 2,
     )
 
     sample_tree["observation"] = dict_map(
@@ -86,7 +85,6 @@ def build(config: DictConfig):
         metadata.example_obs,
         batch_shape=tuple(batch_spec),
         max_mean_num_elem=obs_space.shape[0],
-        # feature_shape=obs_space.shape[1:],
         kind="jagged",
         storage=storage,
         padding=1,
@@ -154,21 +152,13 @@ def build(config: DictConfig):
         transformer_block_factory=transformer_block_factory,
     )
 
-    # pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
-    # pi_embedder = instantiate(config.model.embedder, _convert_="partial")
-
-    # pi_encoder = FinetuneEncoder(
-    #     pos_embedder=pos_embedder, transformer_encoder=transformer_encoder, out_dim=64
-    # )
     model = torch.nn.ModuleDict(
         {
             "pi": pi_model,
             "q1": q1_model,
             "q2": q2_model,
             "embedder": embedder,
-            # "pi_embedder": pi_embedder,
             "encoder": finetune_encoder,
-            # "pi_encoder": pi_encoder,
         }
     )
 
@@ -210,16 +200,9 @@ def build(config: DictConfig):
         optimizer_conf, resolve=True, throw_on_missing=True
     )
     per_module_conf = optimizer_conf.pop("per_module", {})  # type: ignore
+
     pi_optimizer = torch.optim.Adam(
         [
-            # {
-            #     "params": agent.model["pi_embedder"].parameters(),
-            #     **per_module_conf.get("encoder", {}),
-            # },
-            # {
-            #     "params": agent.model["pi_encoder"].parameters(),
-            #     **per_module_conf.get("encoder", {}),
-            # },
             {
                 "params": agent.model["pi"].parameters(),
                 **per_module_conf.get("pi", {}),
@@ -232,7 +215,7 @@ def build(config: DictConfig):
         [
             {
                 "params": agent.model["embedder"].parameters(),
-                **per_module_conf.get("encoder", {}),
+                **per_module_conf.get("embedder", {}),
             },
             {
                 "params": agent.model["encoder"].parameters(),
@@ -351,7 +334,7 @@ def main(config: DictConfig) -> None:
     try:
         run = wandb.init(
             project="pc_rl",
-            tags=["continuous", "sac"],
+            tags=["sac"],
             config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
             sync_tensorboard=True,  # auto-upload any values logged to tensorboard
             save_code=True,  # save script used to start training, git commit, and patch
@@ -396,7 +379,7 @@ def main(config: DictConfig) -> None:
             runner.run()
 
         logger.close()
-        run.finish()
+        run.finish()  # type: ignore
     except Exception:
         traceback.print_exc(file=sys.stderr)
         raise

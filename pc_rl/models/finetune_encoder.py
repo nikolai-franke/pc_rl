@@ -12,7 +12,6 @@ class FinetuneEncoder(nn.Module):
         self,
         transformer_encoder: TransformerEncoder,
         pos_embedder: nn.Module,
-        # out_dim: int,
     ) -> None:
         super().__init__()
         self.transformer_encoder = transformer_encoder
@@ -21,7 +20,7 @@ class FinetuneEncoder(nn.Module):
         self.norm = nn.LayerNorm(self.dim)
         self.attention_pool = nn.Linear(self.dim, 1)
 
-    def forward(self, x, center_points, _=None):
+    def forward(self, x, center_points):
         pos = self.pos_embedder(center_points)
         x = self.transformer_encoder(x, pos)
         x = self.norm(x)

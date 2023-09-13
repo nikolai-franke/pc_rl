@@ -10,7 +10,7 @@ masked_encoder:
   mask_type: rand
   transformer_encoder:
     _target_: pc_rl.builder.build_transformer_encoder
-    depth: 8
+    depth: 4
 
 masked_decoder:
   transformer_decoder:
@@ -19,12 +19,12 @@ masked_decoder:
 
 pi_mlp_head:
   _target_: pc_rl.models.sac.q_and_pi_heads.PiMlpHead
-  hidden_sizes: [256, 256]
+  hidden_sizes: [128]
   hidden_nonlinearity: ReLU
 
 q_mlp_head:
   _target_: pc_rl.models.sac.q_and_pi_heads.QMlpHead
-  hidden_sizes: [256, 256]
+  hidden_sizes: [128]
   hidden_nonlinearity: ReLU
 
 

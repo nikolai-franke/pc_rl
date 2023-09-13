@@ -14,6 +14,7 @@ from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from parllel import Array, ArrayDict, dict_map
 from parllel.cages import ProcessCage, SerialCage, TrajInfo
+from parllel.callbacks.recording_schedule import RecordingSchedule
 from parllel.logger import Verbosity
 from parllel.patterns import build_cages, build_sample_tree
 from parllel.replays.replay import ReplayBuffer
@@ -22,14 +23,14 @@ from parllel.samplers import BasicSampler
 from parllel.samplers.eval import EvalSampler
 from parllel.torch.algos.sac import build_replay_buffer_tree
 from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
-from parllel.transforms.video_recorder import RecordVectorizedVideo
+from parllel.transforms.vectorized_video import RecordVectorizedVideo
 from parllel.types import BatchSpec
 
 import pc_rl.builder  # for hydra's instantiate
 import pc_rl.models.sac.q_and_pi_heads
 import wandb
 from pc_rl.agents.aux_sac import AuxPcSacAgent
-from pc_rl.models.aux_mae import AuxMae, RLMae
+from pc_rl.models.aux_mae import RLMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
@@ -63,23 +64,12 @@ def build(config: DictConfig):
         keys_to_skip=("obs", "next_obs"),
     )
 
-    # cages, sample_tree, metadata = build_cages_and_sample_tree(
-    #     EnvClass=env_factory,
-    #     env_kwargs={"add_obs_to_info_dict": False},
-    #     TrajInfoClass=TrajInfo,
-    #     reset_automatically=True,
-    #     batch_spec=batch_spec,
-    #     parallel=parallel,
-    #     full_size=config.algo.replay_length,
-    #     keys_to_skip="observation",
-    # )
-
     obs_space, action_space = metadata.obs_space, metadata.action_space
     n_actions = action_space.shape[0]
 
     distribution = SquashedGaussian(
         dim=n_actions,
-        scale=action_space.high[0] * 3,
+        scale=action_space.high[0] * 2,
     )
 
     sample_tree["observation"] = dict_map(
@@ -87,7 +77,6 @@ def build(config: DictConfig):
         metadata.example_obs,
         batch_shape=tuple(batch_spec),
         max_mean_num_elem=obs_space.shape[0],
-        feature_shape=obs_space.shape[1:],
         kind="jagged",
         storage=storage,
         padding=1,
@@ -188,6 +177,7 @@ def build(config: DictConfig):
         distribution=distribution,
         device=device,
         learning_starts=config.algo.learning_starts,
+        pretrain_std=1.0,
     )
 
     sampler = BasicSampler(
@@ -195,8 +185,6 @@ def build(config: DictConfig):
         envs=cages,
         agent=agent,
         sample_tree=sample_tree,
-        max_steps_decorrelate=config.max_steps_decorrelate,
-        get_bootstrap_value=False,
     )
 
     replay_buffer_tree = build_replay_buffer_tree(sample_tree)
@@ -209,8 +197,8 @@ def build(config: DictConfig):
     replay_buffer = ReplayBuffer(
         tree=replay_buffer_tree,
         sampler_batch_spec=batch_spec,
-        size_T=config["algo"]["replay_length"],
-        replay_batch_size=config["algo"]["batch_size"],
+        size_T=replay_length,
+        replay_batch_size=config.algo.batch_size,
         newest_n_samples_invalid=0,
         oldest_n_samples_invalid=1,
         batch_transform=batch_transform,
@@ -239,7 +227,7 @@ def build(config: DictConfig):
                 **per_module_conf.get("embedder", {}),
             },
             {
-                "params": agent.model["encoder"].parameters(),
+                "params": agent.model["rl_mae"].parameters(),
                 **per_module_conf.get("encoder", {}),
             },
             {
@@ -253,45 +241,14 @@ def build(config: DictConfig):
         ],
         **optimizer_conf,
     )
-    # optimizers = {
-    #     "pi": torch.optim.Adam(
-    #         [
-    #             {
-    #                 "params": agent.model["pi"].parameters(),
-    #                 **per_module_conf.get("pi", {}),
-    #             },
-    #         ],
-    #         **optimizer_conf,
-    #     ),
-    #     "q": torch.optim.Adam(
-    #         [
-    #             {
-    #                 "params": agent.model["q1"].parameters(),
-    #                 **config.optimizer.get("q", {}),
-    #             },
-    #             {
-    #                 "params": agent.model["q2"].parameters(),
-    #                 **config.optimizer.get("q", {}),
-    #             },
-    #             {
-    #                 "params": agent.model["embedder"].parameters(),
-    #                 **per_module_conf.get("embedder", {}),
-    #             },
-    #             {
-    #                 "params": agent.model["encoder"].parameters(),
-    #                 **per_module_conf.get("encoder", {}),
-    #             },
-    #         ],
-    #         **optimizer_conf,
-    #     ),
-    # }
 
     algorithm = instantiate(
         config.algo,
+        batch_spec=batch_spec,
         agent=agent,
         replay_buffer=replay_buffer,
-        optimizers=optimizers,
-        batch_spec=batch_spec,
+        pi_optimizer=pi_optimizer,
+        q_optimizer=q_optimizer,
         _convert_="partial",
     )
 
@@ -334,14 +291,14 @@ def build(config: DictConfig):
     eval_sample_tree["observation"][0] = obs_space.sample()
 
     video_recorder = RecordVectorizedVideo(
-        batch_buffer=eval_sample_tree,
+        sample_tree=eval_sample_tree,
         buffer_key_to_record="env_info.rendering",
         env_fps=50,
-        record_every_n_steps=1,
         output_dir=Path(config.video_path),
         video_length=config.eval.max_traj_length,
         use_wandb=True,
     )
+    recording_schedule = RecordingSchedule(video_recorder, trigger="on_eval")
 
     eval_sampler = EvalSampler(
         max_traj_length=config.eval.max_traj_length,
@@ -349,7 +306,7 @@ def build(config: DictConfig):
         envs=eval_cages,
         agent=agent,
         sample_tree=eval_sample_tree,
-        obs_transform=video_recorder,
+        step_transforms=[video_recorder],
     )
 
     # create runner
@@ -362,40 +319,38 @@ def build(config: DictConfig):
         n_steps=config.runner.n_steps,
         log_interval_steps=config.runner.log_interval_steps,
         eval_interval_steps=config.runner.eval_interval_steps,
+        callbacks=[recording_schedule],
     )
 
     try:
         yield runner
 
     finally:
-        sampler.close()
-        agent.close()
         eval_sampler.close()
-        for cage in cages:
-            cage.close()
+        eval_sample_tree.close()
+        sampler.close()
+        sample_tree.close()
+        agent.close()
         for eval_cage in eval_cages:
             eval_cage.close()
-        sample_tree.close()
-        eval_sample_tree.close()
+        for cage in cages:
+            cage.close()
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_aux_sac")
 def main(config: DictConfig) -> None:
-    mp.set_start_method("fork")
     # try...except block so we get error messages when using submitit
     try:
         run = wandb.init(
             project="pc_rl",
-            tags=["continuous", "sac", "aux"],
+            tags=["sac", "aux"],
             config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
             sync_tensorboard=True,  # auto-upload any values logged to tensorboard
             save_code=True,  # save script used to start training, git commit, and patch
             reinit=True,
         )
 
-        if (
-            config.use_slurm
-        ):  # TODO: replace explicit bool with checking for submitit launcher
+        if config.use_slurm:
             os.system("wandb enabled")
             tmp = Path(os.environ.get("TMP"))  # type: ignore
             video_path = (
@@ -432,6 +387,7 @@ def main(config: DictConfig) -> None:
         with build(config) as runner:
             runner.run()
 
+        logger.close()
         run.finish()  # type: ignore
     except Exception:
         traceback.print_exc(file=sys.stderr)
