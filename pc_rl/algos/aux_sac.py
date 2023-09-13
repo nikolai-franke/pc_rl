@@ -107,10 +107,8 @@ class AuxPcSAC(SAC):
         ground_truth = ground_truth.reshape(B * M, -1, 3)
 
         mae_loss = self.aux_loss_fn(pos_prediction, ground_truth)
-        q_loss = (
-            0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
-            + mae_loss * self.aux_loss_coeff
-        )
+        q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
+        q_and_mae_loss = q_loss + mae_loss * self.aux_loss_coeff
 
         self.algo_log_info["critic_loss"].append(q_loss.item())
         self.algo_log_info["mean_ent_bonus"].append(entropy_bonus.mean().item())
@@ -119,7 +117,7 @@ class AuxPcSAC(SAC):
 
         # update Q model parameters according to Q loss
         self.q_optimizer.zero_grad()
-        q_loss.backward()
+        q_and_mae_loss.backward()
 
         if self.clip_grad_norm is not None:
             q1_grad_norm = clip_grad_norm_(

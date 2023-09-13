@@ -77,7 +77,7 @@ def build(config: DictConfig):
 
     distribution = SquashedGaussian(
         dim=n_actions,
-        scale=action_space.high[0] * 2,
+        scale=action_space.high[0] * config.action_scale,
     )
 
     sample_tree["observation"] = dict_map(

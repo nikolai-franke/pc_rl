@@ -19,6 +19,7 @@ eval:
   max_traj_length: 200
   max_trajectories: 100
 
+action_scale: 2
 use_slurm: False
 video_path: videos
 
