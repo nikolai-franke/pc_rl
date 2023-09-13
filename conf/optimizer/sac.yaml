@@ -3,9 +3,9 @@ per_module:
   # embedder:
   #   lr: 1e-5
   encoder:
-    lr: 1e-8
+    lr: 1e-6
   pi:
-    lr: 1e-4
+    lr: 1e-6
   q:
     lr: 1e-6
 

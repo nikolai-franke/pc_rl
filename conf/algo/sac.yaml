@@ -1,4 +1,4 @@
-discount: 0.9
+discount: 0.99
 replay_length: 81920
 learning_starts: 20480
 replay_ratio: 8
