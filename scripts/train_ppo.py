@@ -337,6 +337,7 @@ def main(config: DictConfig):
 
         with build(config) as runner:
             runner.run()
+        logger.close()
         run.finish()  # type: ignore
 
     except Exception:
