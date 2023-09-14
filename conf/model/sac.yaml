@@ -1,6 +1,6 @@
 defaults:
   - pos_embedder: default
-  - embedder: small_groups
+  - embedder: default
   - transformer_block: default
   - _self_
 
@@ -10,11 +10,11 @@ transformer_encoder:
 
 pi_mlp_head:
   _target_: pc_rl.models.sac.q_and_pi_heads.PiMlpHead
-  hidden_sizes: [128]
+  hidden_sizes: [256, 256]
   hidden_nonlinearity: ReLU
 
 q_mlp_head:
   _target_: pc_rl.models.sac.q_and_pi_heads.QMlpHead
-  hidden_sizes: [128]
+  hidden_sizes: [256, 256]
   hidden_nonlinearity: ReLU
 

@@ -4,10 +4,16 @@ defaults:
   - base
   - _self_
 
+time_step: 0.01
+frame_skip: 10
+max_episode_steps: 300
+
 discrete_action_magnitude: 100.0
 camera_reset_noise: null
-hole_rotation_reset_noise: null
-hole_position_reset_noise: null
+hole_rotation_reset_noise: [1., 1., 1.]
+hole_position_reset_noise: [30., 30., 30.]
+insertion_ratio_threshold: 0.3
+settle_steps: 10
 
 reward_amount_dict:
   thread_tip_distance_to_hole: -0.1
@@ -24,5 +30,30 @@ reward_amount_dict:
   action_violated_state_limits: -0.0
   ratio_rope_in_hole: 0.1
   delta_ratio_rope_in_hole: 1.0
-  gripper_collisions: -0.1
+  gripper_collisions: -1.0
+
+create_scene_kwargs:
+  hole_config:
+    inner_radius: 6.0
+    outer_radius: 25.0
+    height: 30.0
+    young_modulus: 5000.0
+    poisson_ratio: 0.3
+    total_mass: 10.0
+  thread_config:
+    length: 80.0
+    radius: 2.0
+    total_mass: 1.0
+    young_modulus: 1000.0
+    poisson_ratio: 0.3
+    beam_radius: 3.0
+    mechanical_damping: 0.2
+  gripper_config:
+    cartesian_workspace:
+      low: [-100.0, -100.0, 0.0]
+      high: [100.0, 100.0, 200.0]
+    state_reset_noise: [15.0, 15.0, 0.0, 20.0]
+    rcm_reset_noise: null
+    gripper_ptsd_state: [60.0, 0.0, 180.0, 90.0]
+    gripper_rcm_pose: [100.0, 0.0, 150.0, 0.0, 180.0, 0.0]
 

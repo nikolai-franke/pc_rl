@@ -23,6 +23,8 @@ def build(
     frame_skip: int,
     time_step: float,
     discrete_action_magnitude: float,
+    insertion_ratio_threshold: float,
+    settle_steps: int,
     camera_reset_noise: list | None,
     hole_rotation_reset_noise: list | None,
     hole_position_reset_noise: list | None,
@@ -40,6 +42,9 @@ def build(
     if hole_position_reset_noise is not None:
         hole_position_reset_noise = np.asarray(hole_position_reset_noise)
 
+    if create_scene_kwargs is not None:
+        convert_to_array(create_scene_kwargs)
+
     env = ThreadInHoleEnv(
         observation_type=ObservationType.RGBD,
         render_mode=render_mode,
@@ -47,12 +52,14 @@ def build(
         image_shape=image_shape,
         frame_skip=frame_skip,
         time_step=time_step,
+        settle_steps=settle_steps,
         create_scene_kwargs=create_scene_kwargs,
         discrete_action_magnitude=discrete_action_magnitude,
         reward_amount_dict=reward_amount_dict,
         camera_reset_noise=camera_reset_noise,
         hole_rotation_reset_noise=hole_rotation_reset_noise,
         hole_position_reset_noise=hole_position_reset_noise,
+        insertion_ratio_threshold=insertion_ratio_threshold,
     )
 
     if add_obs_to_info_dict:
@@ -60,3 +67,10 @@ def build(
     env = PointCloudFromDepthImageObservationWrapper(env)
     env = TimeLimit(env, max_episode_steps)
     return env
+
+def convert_to_array(kwargs_dict):
+    for k, v in kwargs_dict.items():
+        if isinstance(v, list):
+            kwargs_dict[k] = np.asarray(v)
+        elif isinstance(v, dict):
+            convert_to_array(v)
