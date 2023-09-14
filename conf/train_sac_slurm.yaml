@@ -1,0 +1,15 @@
+defaults:
+  - train_sac
+  - slurm
+  - _self_
+
+batch_T: 96
+batch_B: 22
+use_slurm: True
+action_scale: 1
+
+# sweep pararmeters
+hydra:
+  sweeper:
+    params:
+      optimizer.lr: 2e-5,4e-5,6e-5,8e-5
