@@ -25,6 +25,7 @@ def build(
     discrete_action_magnitude: float,
     insertion_ratio_threshold: float,
     settle_steps: int,
+    simple_success_check: bool,
     camera_reset_noise: list | None,
     hole_rotation_reset_noise: list | None,
     hole_position_reset_noise: list | None,
@@ -60,6 +61,7 @@ def build(
         hole_rotation_reset_noise=hole_rotation_reset_noise,
         hole_position_reset_noise=hole_position_reset_noise,
         insertion_ratio_threshold=insertion_ratio_threshold,
+        simple_success_check=simple_success_check,
     )
 
     if add_obs_to_info_dict:
