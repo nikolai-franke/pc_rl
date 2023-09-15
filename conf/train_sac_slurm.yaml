@@ -6,7 +6,7 @@ defaults:
 batch_T: 128
 batch_B: 22
 use_slurm: True
-action_scale: 1
+action_scale: 0.5
 
 # sweep pararmeters
 hydra:

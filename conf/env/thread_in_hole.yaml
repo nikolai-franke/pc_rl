@@ -13,14 +13,14 @@ camera_reset_noise: null
 hole_rotation_reset_noise: [0.0, 0.0, 0.0]
 hole_position_reset_noise: [30., 30., 30.]
 insertion_ratio_threshold: 0.3
-settle_steps: 10
+settle_steps: 50
 simple_success_check: false
 
 reward_amount_dict:
   thread_tip_distance_to_hole: -1.0
   delta_thread_tip_distance_to_hole: -10.0
-  thread_center_distance_to_hole: -0.1
-  delta_thread_center_distance_to_hole: -1.0
+  thread_center_distance_to_hole: -0.0
+  delta_thread_center_distance_to_hole: -0.0
   thread_points_distance_to_hole: -0.0
   delta_thread_points_distance_to_hole: -0.0
   unstable_deformation: -0.0
