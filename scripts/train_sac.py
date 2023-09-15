@@ -168,7 +168,6 @@ def build(config: DictConfig):
         distribution=distribution,
         device=device,
         learning_starts=config.algo.learning_starts,
-        pretrain_std=1.0,
     )
 
     sampler = BasicSampler(
