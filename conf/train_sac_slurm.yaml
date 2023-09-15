@@ -12,4 +12,5 @@ action_scale: 1
 hydra:
   sweeper:
     params:
-      algo.ent_coeff: 1.0,0.6,0.4,0.2
+      algo.ent_coeff: 1.0,0.5
+      algo.ent_coeff_lr: 1e-4,5e-5
