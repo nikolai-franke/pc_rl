@@ -3,8 +3,8 @@ defaults:
   - slurm_local
   - _self_
 
-batch_T: 96
-batch_B: 22
+batch_T: 128
+batch_B: 10
 use_slurm: True
 action_scale: 1
 
@@ -14,3 +14,4 @@ hydra:
     params:
       algo.ent_coeff: 1.0,0.5
       algo.ent_coeff_lr: 1e-4,5e-5
+      optimizer.lr: 1e-4,5e-5
