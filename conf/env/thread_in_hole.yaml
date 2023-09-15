@@ -19,8 +19,8 @@ simple_success_check: false
 reward_amount_dict:
   thread_tip_distance_to_hole: -1.0
   delta_thread_tip_distance_to_hole: -10.0
-  thread_center_distance_to_hole: -0.5
-  delta_thread_center_distance_to_hole: -5.0
+  thread_center_distance_to_hole: -0.0
+  delta_thread_center_distance_to_hole: -0.0
   thread_points_distance_to_hole: -0.0
   delta_thread_points_distance_to_hole: -0.0
   unstable_deformation: -0.0
