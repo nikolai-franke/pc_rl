@@ -11,7 +11,7 @@ batch_B: 22
 max_steps_decorrelate: 0
 device: null
 runner:
-  n_steps: 2e6
+  n_steps: 1e6
   log_interval_steps: 1024
   eval_interval_steps: 10240
 eval:
