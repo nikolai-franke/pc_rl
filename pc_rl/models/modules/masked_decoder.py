@@ -23,8 +23,8 @@ class MaskedDecoder(nn.Module):
         assert (
             pos_dim := self.pos_embedder.channel_list[-1]
         ) == self.dim, f"pos_embedder and decoder don't have matching dimensions: {pos_dim} != {self.dim}"
-        self.mask_token = nn.Parameter(torch.zeros(1, 1, self.dim))
-        self.padding_token = nn.Parameter(torch.full((1, 3), padding_value))
+        self.mask_token = nn.Parameter(torch.zeros(1, 1, self.dim), requires_grad=False)
+        self.padding_token = nn.Parameter(torch.full((1, 3), padding_value), requires_grad=False)
         nn.init.trunc_normal_(self.mask_token, std=0.02)
 
     def forward(self, x_vis, mask, center_points):
