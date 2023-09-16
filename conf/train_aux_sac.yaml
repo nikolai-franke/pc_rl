@@ -2,7 +2,7 @@ defaults:
   - algo: aux_sac
   - model: aux_sac
   - env: reach
-  - optimizer: sac
+  - optimizer: basic
   - _self_
 
 parallel: True
@@ -11,7 +11,7 @@ batch_B: 22
 max_steps_decorrelate: 0
 device: null
 runner:
-  n_steps: 5e5
+  n_steps: 1e6
   log_interval_steps: 1024
   eval_interval_steps: 10240
 eval:

@@ -34,6 +34,7 @@ from pc_rl.models.aux_mae import RLMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
+from itertools import chain
 
 
 @contextmanager
@@ -218,12 +219,18 @@ def build(config: DictConfig):
         ],
         **optimizer_conf,
     )
+    encoder = agent.model["encoder"]
+    encoder_additional_params = chain(encoder.norm.parameters(), encoder.attention_pool.parameters())
 
     q_optimizer = torch.optim.Adam(
         [
             {
                 "params": agent.model["embedder"].parameters(),
                 **per_module_conf.get("embedder", {}),
+            },
+            {
+                "params": encoder_additional_params,
+                **per_module_conf.get("encoder", {}),
             },
             {
                 "params": agent.model["rl_mae"].parameters(),
