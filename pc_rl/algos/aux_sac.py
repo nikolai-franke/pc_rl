@@ -37,6 +37,7 @@ class AuxPcSAC(SAC):
         ent_coeff_lr: float | None = None,
         clip_grad_norm: float | None = None,
         learning_rate_schedulers: Sequence[LRScheduler] | None = None,
+        detach_encoder: bool = False,
         **kwargs,  # ignore additional arguments
     ):
         super().__init__(
@@ -57,6 +58,7 @@ class AuxPcSAC(SAC):
         )
         self.aux_loss_fn = get_loss_fn(aux_loss)
         self.aux_loss_coeff = aux_loss_coeff
+        self.detach_encoder = detach_encoder
 
     def train_once(self, samples: ArrayDict[Tensor]) -> None:
         """
@@ -99,16 +101,19 @@ class AuxPcSAC(SAC):
         y = samples["reward"] + self.discount * ~samples["terminated"] * (
             min_target_q + entropy_bonus
         )
-        q1, q2 = self.agent.q(observation, samples["action"])
+        if not self.detach_encoder:
+            q1, q2 = self.agent.q(observation, samples["action"])
+        else:
+            q1, q2 = self.agent.q(observation.detach(), samples["action"])
 
         pos_prediction, ground_truth = self.agent.auto_encoder(samples["observation"])
         B, M, *_ = pos_prediction.shape
         pos_prediction = pos_prediction.reshape(B * M, -1, 3)
         ground_truth = ground_truth.reshape(B * M, -1, 3)
 
-        mae_loss = self.aux_loss_fn(pos_prediction, ground_truth)
+        mae_loss = self.aux_loss_fn(pos_prediction, ground_truth) * self.aux_loss_coeff
         q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
-        q_and_mae_loss = q_loss + mae_loss * self.aux_loss_coeff
+        # q_and_mae_loss = q_loss + mae_loss * self.aux_loss_coeff
 
         self.algo_log_info["critic_loss"].append(q_loss.item())
         self.algo_log_info["mean_ent_bonus"].append(entropy_bonus.mean().item())
@@ -117,7 +122,8 @@ class AuxPcSAC(SAC):
 
         # update Q model parameters according to Q loss
         self.q_optimizer.zero_grad()
-        q_and_mae_loss.backward()
+        mae_loss.backward()
+        q_loss.backward()
 
         if self.clip_grad_norm is not None:
             q1_grad_norm = clip_grad_norm_(
@@ -128,17 +134,24 @@ class AuxPcSAC(SAC):
                 self.agent.model["q2"].parameters(),
                 self.clip_grad_norm,
             )
-            encoder_grad_norm = clip_grad_norm_(
+            finetune_encoder_grad_norm = clip_grad_norm_(
                 self.agent.model["encoder"].parameters(), self.clip_grad_norm
             )
-
+            # masked_decoder_grad_norm = clip_grad_norm_(
+            #     self.agent.model["rl_mae"].masked_decoder.parameters(), self.clip_grad_norm
+            # )
+            # mae_prediction_head_grad_norm = clip_grad_norm_(
+            #     self.agent.model["rl_mae"].mae_prediction_head.parameters(), self.clip_grad_norm
+            # )
             embedder_grad_norm = clip_grad_norm_(
                 self.agent.model["embedder"].parameters(), self.clip_grad_norm
             )
             self.algo_log_info["q1_grad_norm"].append(q1_grad_norm.item())
             self.algo_log_info["q2_grad_norm"].append(q2_grad_norm.item())
-            self.algo_log_info["encoder_grad_norm"].append(encoder_grad_norm.item())
+            self.algo_log_info["encoder_grad_norm"].append(finetune_encoder_grad_norm.item())
             self.algo_log_info["embedder_grad_norm"].append(embedder_grad_norm.item())
+            # self.algo_log_info["masked_decoder_grad_norm"].append(masked_decoder_grad_norm.item())
+            # self.algo_log_info["mae_prediction_head_grad_norm"].append(mae_prediction_head_grad_norm.item())
 
         self.q_optimizer.step()
 

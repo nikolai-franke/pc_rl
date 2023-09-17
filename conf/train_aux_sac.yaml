@@ -16,10 +16,10 @@ runner:
   eval_interval_steps: 10240
 eval:
   n_eval_envs: 4
-  max_traj_length: 200
+  max_traj_length: 300
   max_trajectories: 100
 
-action_scale: 2
+action_scale: 1
 use_slurm: False
 video_path: videos
 

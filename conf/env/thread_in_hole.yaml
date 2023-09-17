@@ -7,6 +7,7 @@ defaults:
 time_step: 0.01
 frame_skip: 10
 max_episode_steps: 300
+image_shape: [96, 96]
 
 discrete_action_magnitude: 100.0
 camera_reset_noise: null
