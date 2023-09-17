@@ -27,6 +27,7 @@ def main(config: DictConfig):
         while not done:
             obs, _, terminated, truncated, *_ = env.step(env.action_space.sample())
             np.save(save_path / str(obs_counter).zfill(6), obs)
+            # np.savetxt(save_path / (str(obs_counter).zfill(6) + ".csv"), obs, delimiter=",")
             done = terminated or truncated
 
             obs_counter += 1

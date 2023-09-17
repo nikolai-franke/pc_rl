@@ -16,8 +16,7 @@ from torch_geometric.transforms import (Compose, FixedPoints, GridSampling,
 import pc_rl.builder  # for hydra's instantiate
 from pc_rl.callbacks.log_pointclouds import LogPointCloudCallback
 from pc_rl.datasets.in_memory import PcInMemoryDataset
-# from pc_rl.models.mae import MaskedAutoEncoder
-from pc_rl.models.contrastive_mae import MaskedAutoEncoder
+from pc_rl.models.mae import MaskedAutoEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 
@@ -107,7 +106,7 @@ def main(config: DictConfig):
             transform=transform,
             split="val",
         )
-    elif config.dataset.name == "reach":
+    elif config.dataset.name in ("reach", "thread_in_hole"):
         dataset = PcInMemoryDataset(root=path, transform=transform)
         validation_dataset = dataset[int(0.9 * len(dataset)) :]
         dataset = dataset[: int(0.9 * len(dataset))]
@@ -129,6 +128,7 @@ def main(config: DictConfig):
 
     trainer = Trainer(
         logger=wandb_logger,
+        accelerator="cpu",
         max_epochs=config["max_epochs"],
         log_every_n_steps=config["log_every_n_steps"],
         callbacks=[log_point_cloud_callback],
