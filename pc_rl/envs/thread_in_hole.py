@@ -12,6 +12,7 @@ from sofa_env.scenes.thread_in_hole.thread_in_hole_env import (ActionType,
 from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
 from pc_rl.envs.point_cloud_wrapper import \
     PointCloudFromDepthImageObservationWrapper
+from pc_rl.envs.normalize_point_cloud_wrapper import NormalizePointCloudWrapper
 
 
 def build(
@@ -67,6 +68,7 @@ def build(
     if add_obs_to_info_dict:
         env = AddObsToInfoWrapper(env)
     env = PointCloudFromDepthImageObservationWrapper(env)
+    env = NormalizePointCloudWrapper(env)
     env = TimeLimit(env, max_episode_steps)
     return env
 
