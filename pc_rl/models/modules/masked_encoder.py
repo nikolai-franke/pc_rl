@@ -21,7 +21,9 @@ class MaskedEncoder(nn.Module):
         self.pos_embedder = pos_embedder
         self.transformer_encoder = transformer_encoder
         self.dim = self.transformer_encoder.dim
-        self.padding_token = nn.Parameter(torch.full((1, 3), padding_value), requires_grad=False)
+        self.padding_token = nn.Parameter(
+            torch.full((1, 3), padding_value), requires_grad=False
+        )
         self.norm = nn.LayerNorm(self.dim)
         self._check_pos_embedder()
         self.apply(self._init_weights)

@@ -5,9 +5,9 @@ from sofa_env.scenes.reach.reach_env import (ActionType, ObservationType,
                                              ReachEnv, RenderMode)
 
 from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
+from pc_rl.envs.normalize_point_cloud_wrapper import NormalizePointCloudWrapper
 from pc_rl.envs.point_cloud_wrapper import \
     PointCloudFromDepthImageObservationWrapper
-from pc_rl.envs.normalize_point_cloud_wrapper import NormalizePointCloudWrapper
 from pc_rl.envs.voxel_grid_wrapper import VoxelGridWrapper
 
 

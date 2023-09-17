@@ -10,9 +10,9 @@ from sofa_env.scenes.thread_in_hole.thread_in_hole_env import (ActionType,
                                                                ThreadInHoleEnv)
 
 from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
+from pc_rl.envs.normalize_point_cloud_wrapper import NormalizePointCloudWrapper
 from pc_rl.envs.point_cloud_wrapper import \
     PointCloudFromDepthImageObservationWrapper
-from pc_rl.envs.normalize_point_cloud_wrapper import NormalizePointCloudWrapper
 from pc_rl.envs.voxel_grid_wrapper import VoxelGridWrapper
 
 
@@ -75,6 +75,7 @@ def build(
         env = VoxelGridWrapper(env, voxel_grid_size)
     env = TimeLimit(env, max_episode_steps)
     return env
+
 
 def convert_to_array(kwargs_dict):
     for k, v in kwargs_dict.items():
