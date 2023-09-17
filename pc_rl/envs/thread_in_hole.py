@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from typing import Literal
 
 import numpy as np
@@ -10,10 +11,10 @@ from sofa_env.scenes.thread_in_hole.thread_in_hole_env import (ActionType,
                                                                ThreadInHoleEnv)
 
 from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
-from pc_rl.envs.normalize_point_cloud_wrapper import NormalizePointCloudWrapper
 from pc_rl.envs.point_cloud_wrapper import \
     PointCloudFromDepthImageObservationWrapper
-from pc_rl.envs.voxel_grid_wrapper import VoxelGridWrapper
+
+from .post_processing_functions import normalize, voxel_grid_sample
 
 
 def build(
@@ -32,7 +33,7 @@ def build(
     hole_rotation_reset_noise: list | None,
     hole_position_reset_noise: list | None,
     reward_amount_dict: dict,
-    voxel_grid_size: float | None = None,
+    voxel_grid_size: float | None,
     create_scene_kwargs: dict | None = None,
 ):
     image_shape = tuple(image_shape)  # type: ignore
@@ -69,10 +70,22 @@ def build(
 
     if add_obs_to_info_dict:
         env = AddObsToInfoWrapper(env)
-    env = PointCloudFromDepthImageObservationWrapper(env)
-    env = NormalizePointCloudWrapper(env)
+
+    post_processing_functions = []
+    post_processing_functions.append(normalize)
     if voxel_grid_size is not None:
-        env = VoxelGridWrapper(env, voxel_grid_size)
+        post_processing_functions.append(
+            functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
+        )
+
+    env = PointCloudFromDepthImageObservationWrapper(
+        env,
+        post_processing_functions=post_processing_functions,
+    )
+
+    # env = NormalizePointCloudWrapper(env)
+    # if voxel_grid_size is not None:
+    #     env = VoxelGridWrapper(env, voxel_grid_size)
     env = TimeLimit(env, max_episode_steps)
     return env
 

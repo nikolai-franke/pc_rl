@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import functools
+
 from gymnasium.wrappers.time_limit import TimeLimit
 from sofa_env.scenes.reach.reach_env import (ActionType, ObservationType,
                                              ReachEnv, RenderMode)
 
 from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
-from pc_rl.envs.normalize_point_cloud_wrapper import NormalizePointCloudWrapper
 from pc_rl.envs.point_cloud_wrapper import \
     PointCloudFromDepthImageObservationWrapper
-from pc_rl.envs.voxel_grid_wrapper import VoxelGridWrapper
+from pc_rl.envs.post_processing_functions import normalize, voxel_grid_sample
 
 
 def build(
@@ -45,9 +46,15 @@ def build(
     )
     if add_obs_to_info_dict:
         env = AddObsToInfoWrapper(env)
-    env = PointCloudFromDepthImageObservationWrapper(env)
+    post_processing_functions = []
+    post_processing_functions.append(normalize)
     if voxel_grid_size is not None:
-        env = VoxelGridWrapper(env, voxel_grid_size)
-    env = NormalizePointCloudWrapper(env)
+        post_processing_functions.append(
+            functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
+        )
+
+    env = PointCloudFromDepthImageObservationWrapper(
+        env, post_processing_functions=post_processing_functions
+    )
     env = TimeLimit(env, max_episode_steps)
     return env
