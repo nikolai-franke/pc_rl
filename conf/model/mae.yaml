@@ -18,4 +18,4 @@ transformer_decoder:
   depth: 4
 
 transformer_block:
-  dropout: 0.0625
+  dropout: 0.1
