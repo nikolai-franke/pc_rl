@@ -6,7 +6,7 @@ defaults:
 
 masked_encoder:
   _target_: pc_rl.builder.build_masked_encoder
-  mask_ratio: 0.85
+  mask_ratio: 0.8
   mask_type: rand
 
 transformer_encoder:
@@ -18,4 +18,4 @@ transformer_decoder:
   depth: 4
 
 transformer_block:
-  dropout: 0.1
+  dropout: 0.0625

@@ -8,6 +8,7 @@ from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
 from pc_rl.envs.point_cloud_wrapper import \
     PointCloudFromDepthImageObservationWrapper
 from pc_rl.envs.normalize_point_cloud_wrapper import NormalizePointCloudWrapper
+from pc_rl.envs.voxel_grid_wrapper import VoxelGridWrapper
 
 
 def build(
@@ -22,6 +23,7 @@ def build(
     reward_amount_dict: dict,
     create_scene_kwargs: dict,
     add_obs_to_info_dict: bool,
+    voxel_grid_size: float | None,
 ):
     assert len(image_shape) == 2
     image_shape = tuple(image_shape)  # type: ignore
@@ -44,6 +46,8 @@ def build(
     if add_obs_to_info_dict:
         env = AddObsToInfoWrapper(env)
     env = PointCloudFromDepthImageObservationWrapper(env)
+    if voxel_grid_size is not None:
+        env = VoxelGridWrapper(env, voxel_grid_size)
     env = NormalizePointCloudWrapper(env)
     env = TimeLimit(env, max_episode_steps)
     return env

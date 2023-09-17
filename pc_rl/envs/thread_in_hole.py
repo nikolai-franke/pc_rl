@@ -32,6 +32,7 @@ def build(
     hole_rotation_reset_noise: list | None,
     hole_position_reset_noise: list | None,
     reward_amount_dict: dict,
+    voxel_grid_size: float | None = None,
     create_scene_kwargs: dict | None = None,
 ):
     image_shape = tuple(image_shape)  # type: ignore
@@ -70,7 +71,8 @@ def build(
         env = AddObsToInfoWrapper(env)
     env = PointCloudFromDepthImageObservationWrapper(env)
     env = NormalizePointCloudWrapper(env)
-    # env = VoxelGridWrapper(env, 0.05)
+    if voxel_grid_size is not None:
+        env = VoxelGridWrapper(env, voxel_grid_size)
     env = TimeLimit(env, max_episode_steps)
     return env
 
