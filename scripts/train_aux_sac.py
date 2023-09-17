@@ -1,9 +1,9 @@
-import multiprocessing as mp
 import os
 import sys
 import traceback
 from contextlib import contextmanager
 from datetime import datetime
+from itertools import chain
 from pathlib import Path
 
 import hydra
@@ -34,7 +34,6 @@ from pc_rl.models.aux_mae import RLMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
-from itertools import chain
 
 
 @contextmanager
@@ -220,7 +219,9 @@ def build(config: DictConfig):
         **optimizer_conf,
     )
     encoder = agent.model["encoder"]
-    encoder_additional_params = chain(encoder.norm.parameters(), encoder.attention_pool.parameters())
+    encoder_additional_params = chain(
+        encoder.norm.parameters(), encoder.attention_pool.parameters()
+    )
 
     q_optimizer = torch.optim.Adam(
         [
