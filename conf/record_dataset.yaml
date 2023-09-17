@@ -1,5 +1,5 @@
 defaults:
-  - env: grasp_lift_and_touch
+  - env: thread_in_hole
   - _self_
 
 env:
@@ -7,8 +7,8 @@ env:
   render_mode: human
   add_obs_to_info_dict: False
   frame_skip: 2
-  start_in_phase: touch
-  end_in_phase: done
+  # start_in_phase: touch
+  # end_in_phase: done
 
-num_observations: 10_000
-save_path: data/grasp_lift_and_touch/
+num_observations: 2_000
+save_path: data/thread_in_hole/

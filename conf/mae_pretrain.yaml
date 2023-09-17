@@ -1,9 +1,9 @@
 defaults:
   - _self_
-  - dataset: reach
+  - dataset: thread_in_hole
   - model: mae
 
-batch_size: 128
+batch_size: 2
 num_workers: 4
 max_epochs: 1000
 log_every_n_steps: 5
