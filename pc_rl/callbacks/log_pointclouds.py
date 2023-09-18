@@ -27,16 +27,21 @@ class LogPointCloudCallback(Callback):
     def on_validation_epoch_end(
         self, trainer: Trainer, pl_module: LightningModule
     ) -> None:
-        B, _, G, _ = pl_module.test_neighborhoods.shape  # type: ignore
-        ground_truth = pl_module.test_ground_truth.reshape(B, -1, G, 3)  # type: ignore
-        prediction = pl_module.test_prediction.reshape(B, -1, G, 3)  # type: ignore
+        ground_truth = pl_module.ground_truth.view(pl_module.B, -1, pl_module.G, 3)  # type: ignore
+        prediction = pl_module.prediction.view(pl_module.B, -1, pl_module.G, 3)  # type: ignore
+
+        padding_mask_without_masked_tokens = pl_module.padding_mask_without_masked_tokens  # type: ignore
         index = torch.randint(0, prediction.shape[0], (1,))
+        prediction = prediction[index][~padding_mask_without_masked_tokens[index]]
+        ground_truth = ground_truth[index][~padding_mask_without_masked_tokens[index]]
+        center_points = pl_module.center_points
+        center_points = center_points[index][~pl_module.center_points_mask[index]]
         masked_input, prediction, ground_truth = create_full_point_clouds(
-            prediction[index],
-            ground_truth[index],
-            pl_module.test_neighborhoods[index],  # type: ignore
-            pl_module.test_mask[index],  # type: ignore
-            pl_module.test_center_points[index],  # type: ignore
+            prediction,
+            ground_truth,
+            pl_module.neighborhoods[index][~pl_module.center_points_mask.reshape(pl_module.B, -1)[index]],  # type: ignore
+            pl_module.ae_mask[index][~pl_module.center_points_mask.reshape(pl_module.B, -1)[index]],  # type: ignore
+            center_points,  # type: ignore
         )
         log_point_cloud("masked_input", masked_input)
         log_point_cloud("prediction", prediction)

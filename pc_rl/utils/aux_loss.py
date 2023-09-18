@@ -17,7 +17,7 @@ def get_loss_fn(name: Literal["chamfer", "sinkhorn"], loss_kwargs: dict | None =
         sinkhorn = SamplesLoss("sinkhorn", **loss_kwargs)
 
         def loss_fn(prediction, ground_truth):
-            return torch.sum(sinkhorn(prediction, ground_truth))
+            return torch.mean(sinkhorn(prediction, ground_truth))
 
     else:
         raise ValueError(f"Invalid name: {name}")

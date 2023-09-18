@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Callable, Literal
 
 import pytorch_lightning as pl
 import torch
+from pytorch_lightning.utilities.grads import grad_norm
 from torch import Tensor
+from torch.nn.modules import padding
 
 from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
@@ -43,48 +45,67 @@ class MaskedAutoEncoder(pl.LightningModule):
         return pos_recovered, neighborhoods, mask, padding_mask, center_points
 
     def training_step(self, data, batch_idx):
-        prediction, neighborhoods, mask, padding_mask, _ = self.forward(
+        prediction, neighborhoods, mask, padding_mask, center_points = self.forward(
             data.pos, data.batch
         )
         B, M, G, _ = prediction.shape
-        padding_mask = padding_mask.view(B, -1, 1, 1).expand(-1, -1, G, 3)
-        padding_mask = padding_mask[mask]
-        ground_truth = neighborhoods[mask].reshape(B * M, -1, 3)
+        center_points_mask = torch.all(
+            center_points == torch.tensor([0.0, 0.0, 0.0], device=center_points.device),
+            dim=-1,
+        )
+        center_points_mask = center_points_mask.reshape(B, -1)
+        padding_mask = center_points_mask[mask].reshape(B, -1)
 
-        prediction = prediction.reshape(B * M, -1, 3)
+        ground_truth = neighborhoods[mask].reshape(B, M, -1, 3)
+
+        prediction = prediction.reshape(B, M, -1, 3)
 
         prediction[padding_mask] = 0.0
         ground_truth[padding_mask] = 0.0
 
-        loss = self.loss_fn(prediction, ground_truth)
+        loss = self.loss_fn(
+            prediction.reshape(B * M, -1, 3), ground_truth.reshape(B * M, -1, 3)
+        )
 
         self.log("train/loss", loss.item(), batch_size=B)
         return loss
 
+    def on_before_optimizer_step(self, optimizer) -> None:
+        norms = grad_norm(self.masked_encoder, norm_type=2)
+        self.log_dict(norms)
+
     @torch.no_grad()
     def validation_step(self, data, batch_idx):
         (
-            self.test_prediction,
-            self.test_neighborhoods,
-            self.test_mask,
-            self.test_padding_mask,
-            self.test_center_points,
+            self.prediction,
+            self.neighborhoods,
+            self.ae_mask,
+            self.padding_mask,
+            self.center_points,
         ) = self.forward(data.pos, data.batch)
-        B, M, G, _ = self.test_prediction.shape
-        self.test_padding_mask = self.test_padding_mask.view(B, -1, 1, 1).expand(
-            -1, -1, G, 3
+        self.B, self.M, self.G, _ = self.prediction.shape
+        B, M, G = self.B, self.M, self.G
+        self.center_points_mask = torch.all(
+            self.center_points
+            == torch.tensor([0.0, 0.0, 0.0], device=self.center_points.device),
+            dim=-1,
         )
-        self.test_padding_mask = self.test_padding_mask[self.test_mask]
-        self.test_ground_truth = self.test_neighborhoods[self.test_mask].reshape(
-            B * M, -1, 3
+        self.center_points_mask = self.center_points_mask.reshape(B, -1)
+        self.padding_mask_without_masked_tokens = self.center_points_mask[
+            self.ae_mask
+        ].reshape(B, -1)
+
+        self.ground_truth = self.neighborhoods[self.ae_mask].reshape(B, -1, G, 3)
+        self.prediction[self.padding_mask_without_masked_tokens] = 0.0
+        self.ground_truth[self.padding_mask_without_masked_tokens] = 0.0
+        self.prediction = self.prediction.reshape(B * M, -1, 3)
+        self.ground_truth = self.ground_truth.reshape(B * M, -1, 3)
+
+        loss = self.loss_fn(
+            self.prediction,
+            self.ground_truth,
         )
-
-        self.test_prediction = self.test_prediction.reshape(B * M, -1, 3)
-
-        self.test_prediction[self.test_padding_mask] = 0.0
-        self.test_ground_truth[self.test_padding_mask] = 0.0
-        loss = self.loss_fn(self.test_prediction, self.test_ground_truth)
-        chamfer_loss = self.chamfer_loss(self.test_prediction, self.test_ground_truth)
+        chamfer_loss = self.chamfer_loss(self.prediction, self.ground_truth)
 
         self.log("val/loss", loss.item(), batch_size=B)
         self.log("val/chamfer_loss", chamfer_loss.item(), batch_size=B)
