@@ -6,9 +6,7 @@ env:
   max_episode_steps: 20
   render_mode: human
   add_obs_to_info_dict: False
-  frame_skip: 2
-  # start_in_phase: touch
-  # end_in_phase: done
+  frame_skip: 20
 
-num_observations: 2_000
+num_observations: 10_000
 save_path: data/thread_in_hole/

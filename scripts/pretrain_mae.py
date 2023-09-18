@@ -13,11 +13,13 @@ from torch_geometric.transforms import (Compose, FixedPoints, GridSampling,
                                         SamplePoints)
 
 import pc_rl.builder  # for hydra's instantiate
+import wandb
 from pc_rl.callbacks.log_pointclouds import LogPointCloudCallback
 from pc_rl.datasets.in_memory import PcInMemoryDataset
 from pc_rl.models.mae import MaskedAutoEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
+from pc_rl.utils.aux_loss import get_loss_fn
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="mae_pretrain")
@@ -57,6 +59,8 @@ def main(config: DictConfig):
         group_size=config.model.embedder.group_size,
     )
 
+    loss_fn = get_loss_fn(name="sinkhorn", loss_kwargs=config.loss_fn)
+
     masked_autoencoder = MaskedAutoEncoder(
         embedder=embedder,
         masked_encoder=masked_encoder,
@@ -64,7 +68,7 @@ def main(config: DictConfig):
         mae_prediction_head=mae_prediction_head,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
-        aux_loss="sinkhorn",
+        loss_fn=loss_fn,
     )
 
     transforms = []
@@ -127,7 +131,6 @@ def main(config: DictConfig):
 
     trainer = Trainer(
         logger=wandb_logger,
-        accelerator="cpu",
         max_epochs=config["max_epochs"],
         log_every_n_steps=config["log_every_n_steps"],
         callbacks=[log_point_cloud_callback],
@@ -137,6 +140,7 @@ def main(config: DictConfig):
         data_module.train_dataloader(),
         val_dataloaders=data_module.val_dataloader(),
     )
+    wandb.finish()
 
 
 if __name__ == "__main__":

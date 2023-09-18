@@ -2,10 +2,11 @@ defaults:
   - _self_
   - dataset: thread_in_hole
   - model: mae
+  - loss_fn: sinkhorn
 
-batch_size: 2
-num_workers: 4
-max_epochs: 1000
+batch_size: 128
+num_workers: 8
+max_epochs: 300
 log_every_n_steps: 5
 
 learning_rate: 1e-3
