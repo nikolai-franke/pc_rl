@@ -22,7 +22,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         mae_prediction_head: MaePredictionHead,
         learning_rate: float,
         weight_decay: float,
-        aux_loss: Literal["chamfer", "sinkhorn"],
+        loss_fn: Callable,
     ):
         super().__init__()
         self.embedder = embedder
@@ -31,7 +31,8 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.mae_prediction_head = mae_prediction_head
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
-        self.loss_fn = get_loss_fn(aux_loss)
+        self.loss_fn = loss_fn
+        self.chamfer_loss = get_loss_fn("chamfer")
 
     def forward(self, pos: Tensor, batch: Tensor):
         x, neighborhoods, center_points = self.embedder(pos, batch)
@@ -83,8 +84,10 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.test_prediction[self.test_padding_mask] = 0.0
         self.test_ground_truth[self.test_padding_mask] = 0.0
         loss = self.loss_fn(self.test_prediction, self.test_ground_truth)
+        chamfer_loss = self.chamfer_loss(self.test_prediction, self.test_ground_truth)
 
         self.log("val/loss", loss.item(), batch_size=B)
+        self.log("val/chamfer_loss", chamfer_loss.item(), batch_size=B)
         return loss
 
     def configure_optimizers(self):
