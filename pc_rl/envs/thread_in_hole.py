@@ -7,12 +7,13 @@ import numpy as np
 from gymnasium.wrappers.time_limit import TimeLimit
 from sofa_env.scenes.thread_in_hole.thread_in_hole_env import (ActionType,
                                                                ObservationType,
+                                                               RenderFramework,
                                                                RenderMode,
                                                                ThreadInHoleEnv)
 
 from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
-from pc_rl.envs.point_cloud_wrapper import \
-    PointCloudFromDepthImageObservationWrapper
+from pc_rl.envs.point_cloud_wrapper import (
+    ColorPointCloudWrapper, PointCloudFromDepthImageObservationWrapper)
 
 from .post_processing_functions import normalize, voxel_grid_sample
 
@@ -55,6 +56,7 @@ def build(
         render_mode=render_mode,
         action_type=action_type,
         image_shape=image_shape,
+        # render_framework=RenderFramework.PYGAME,
         frame_skip=frame_skip,
         time_step=time_step,
         settle_steps=settle_steps,
@@ -78,14 +80,14 @@ def build(
             functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
         )
 
-    env = PointCloudFromDepthImageObservationWrapper(
-        env,
-        post_processing_functions=post_processing_functions,
+    # env = PointCloudFromDepthImageObservationWrapper(
+    #     env,
+    #     post_processing_functions=post_processing_functions,
+    # )
+    env = ColorPointCloudWrapper(
+        env, post_processing_functions=post_processing_functions
     )
 
-    # env = NormalizePointCloudWrapper(env)
-    # if voxel_grid_size is not None:
-    #     env = VoxelGridWrapper(env, voxel_grid_size)
     env = TimeLimit(env, max_episode_steps)
     return env
 
