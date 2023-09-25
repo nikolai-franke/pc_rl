@@ -2,4 +2,4 @@ name: shapenet
 path: "../data/ShapeNet"
 num_points: 2048
 downsampling_method: voxel_grid # voxel_grid or fixed_points
-grid_size: 0.01
+grid_size: 0.03
