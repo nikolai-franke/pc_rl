@@ -1,5 +1,5 @@
 defaults:
-  - env: grasp_lift_and_touch
+  - env: thread_in_hole
   - _self_
 
 env:
@@ -9,4 +9,4 @@ env:
   frame_skip: 20
 
 num_observations: 10_000
-save_path: data/thread_in_hole/
+save_path: data/color_thread_in_hole/
