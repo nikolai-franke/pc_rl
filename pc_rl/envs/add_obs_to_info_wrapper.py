@@ -11,5 +11,4 @@ class AddObsToInfoWrapper(gym.Wrapper):
     def step(self, action):
         observation, reward, terminated, truncated, info = self.env.step(action)
         info[self.key] = observation[..., :3]
-        # info[self.key] = observation.transpose(2, 0, 1)
         return observation, reward, terminated, truncated, info

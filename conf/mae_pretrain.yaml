@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - dataset: reach
+  - dataset: thread_in_hole
   - model: mae
   - loss_fn: sinkhorn
 
