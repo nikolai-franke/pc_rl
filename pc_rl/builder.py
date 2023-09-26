@@ -10,7 +10,7 @@ from torch.nn import MultiheadAttention
 from torch_geometric.nn import MLP
 
 from pc_rl.models.finetune_encoder import FinetuneEncoder
-from pc_rl.models.modules.embedder import Embedder
+from pc_rl.models.modules.embedder import ColorEmbedder, Embedder
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
 from pc_rl.models.modules.transformer import (TransformerBlock,
                                               TransformerDecoder,
@@ -34,6 +34,27 @@ def build_embedder(
     mlp_2_layers.append(embedding_size)
     mlp_2 = MLP(mlp_2_layers, act=mlp_act)
     return Embedder(
+        mlp_1=mlp_1,
+        mlp_2=mlp_2,
+        group_size=group_size,
+        sampling_ratio=sampling_ratio,
+        random_start=random_start,
+    )
+
+
+def build_color_embedder(
+    embedding_size: int,
+    mlp_1_layers: list[int],
+    mlp_2_layers: list[int],
+    mlp_act: str,
+    group_size: int,
+    sampling_ratio: float,
+    random_start: bool,
+) -> ColorEmbedder:
+    mlp_1 = MLP(mlp_1_layers, act=mlp_act)
+    mlp_2_layers.append(embedding_size)
+    mlp_2 = MLP(mlp_2_layers, act=mlp_act)
+    return ColorEmbedder(
         mlp_1=mlp_1,
         mlp_2=mlp_2,
         group_size=group_size,

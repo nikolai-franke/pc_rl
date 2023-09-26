@@ -4,13 +4,13 @@ import torch.nn as nn
 
 
 class MaePredictionHead(nn.Module):
-    # TODO: maybe rewrite this using the pytorch MessagePassing interface
-    def __init__(self, dim: int, group_size: int):
+    def __init__(self, dim: int, group_size: int, n_out_channels: int = 3):
         super().__init__()
-        self.head = nn.Conv1d(dim, 3 * group_size, 1)
+        self.n_out_channels = n_out_channels
+        self.head = nn.Conv1d(dim, n_out_channels * group_size, 1)
 
     def forward(self, x):
         B, M, _ = x.shape
         prediction = self.head(x.transpose(1, 2)).transpose(1, 2)
-        prediction = prediction.reshape(B, M, -1, 3)
+        prediction = prediction.reshape(B, M, -1, self.n_out_channels)
         return prediction
