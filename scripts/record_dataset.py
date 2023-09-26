@@ -1,8 +1,8 @@
-from pathlib import Path
 import os
-import numpy as np
+from pathlib import Path
 
 import hydra
+import numpy as np
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
@@ -26,14 +26,17 @@ def main(config: DictConfig):
         env.reset()
         while not done:
             obs, _, terminated, truncated, *_ = env.step(env.action_space.sample())
-            np.save(save_path / str(obs_counter).zfill(6), obs)
-            # np.savetxt(save_path / (str(obs_counter).zfill(6) + ".csv"), obs, delimiter=",")
+            # np.save(save_path / str(obs_counter).zfill(6), obs)
+            np.savetxt(
+                save_path / (str(obs_counter).zfill(6) + ".csv"), obs, delimiter=","
+            )
             done = terminated or truncated
 
             obs_counter += 1
             if obs_counter >= config.num_observations:
                 finished = True
                 break
+
 
 if __name__ == "__main__":
     main()

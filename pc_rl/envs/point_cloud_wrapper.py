@@ -12,6 +12,135 @@ from sofa_env.utils.camera import (determine_look_at, get_focal_length,
 from sofa_env.utils.math_helper import rotated_y_axis
 
 
+class ColorPointCloudWrapper(gym.ObservationWrapper):
+    def __init__(
+        self,
+        env: SofaEnv,
+        transform_to_world_coordinates: bool = False,
+        depth_array_max_distance: Optional[float] = None,
+        post_processing_functions: Optional[List[Callable]] = None,
+    ):
+        super().__init__(env)
+
+        self.env = env
+        self.depth_array_max_distance = depth_array_max_distance
+        self.post_processing_functions = post_processing_functions
+        self.transform_to_world_coordinates = transform_to_world_coordinates
+
+        if self.env.render_mode == RenderMode.NONE:
+            raise ValueError(
+                "RenderMode of environment cannot be RenderMode.NONE, if point clouds are to be created from OpenGL depth images."
+            )
+
+        max_num_points = (
+            self.env.observation_space.shape[0] * self.env.observation_space.shape[1]  # type: ignore
+        )
+        self.observation_space = spaces.Box(
+            high=np.inf, low=-np.inf, shape=(max_num_points, 3)
+        )
+
+    def reset(self, **kwargs):
+        """Reads the data for the point clouds from the sofa_env after it is resetted."""
+
+        # First reset calls _init_sim to setup the scene
+        observation, reset_info = self.env.reset(**kwargs)
+
+        if (
+            not isinstance(self.env.scene_creation_result, dict)
+            and "camera" in self.env.scene_creation_result
+            and isinstance(
+                self.env.scene_creation_result["camera"],
+                (self.env.sofa_core.Object, self.env.camera_templates.Camera),
+            )
+        ):
+            raise AttributeError(
+                "No camera was found to create a raycasting scene. Please make sure createScene() returns a dictionary with key 'camera' or specify the cameras for point cloud creation in camera_configs."
+            )
+
+        if isinstance(
+            self.env.scene_creation_result["camera"], self.env.camera_templates.Camera
+        ):
+            self.camera_object = self.env.scene_creation_result["camera"].sofa_object
+        else:
+            self.camera_object = self.env.scene_creation_result["camera"]
+
+        # Read camera parameters from SOFA camera
+        self.width = int(self.camera_object.widthViewport.array())
+        self.height = int(self.camera_object.heightViewport.array())
+
+        return self.observation(observation), reset_info
+
+    def create_point_cloud(self, observation) -> np.ndarray:
+        """Returns a point cloud calculated from the depth image of the sofa scene"""
+
+        # Set the intrinsic camera parameters
+        intrinsic = o3d.camera.PinholeCameraIntrinsic()
+        fx, fy = get_focal_length(self.camera_object, self.width, self.height)
+        intrinsic.set_intrinsics(
+            self.width, self.height, fx, fy, self.width / 2, self.height / 2
+        )
+
+        # Get the depth image from the SOFA scene and remove the background
+        depth_array = self.get_depth_from_open_gl()
+        # logger.debug(f"max depth_array_length: {np.max(depth_array)}")
+        if self.depth_array_max_distance is not None:
+            background_threshold = self.depth_array_max_distance
+        else:
+            background_threshold = 0.99 * depth_array.max()
+        depth_array_no_background = np.where(
+            depth_array > background_threshold, 0, depth_array
+        )
+
+        # Calculate point cloud
+        depth_image = o3d.geometry.Image(depth_array_no_background)
+        # we need to copy the observation since Open3D uses the buffer directly
+        color_image = o3d.geometry.Image(observation[:, :, :3].copy())
+        rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
+            color_image, depth_image, convert_rgb_to_intensity=False
+        )
+
+        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, intrinsic)
+
+        if self.transform_to_world_coordinates:
+            # Get the model view matrix of the camera
+            model_view_matrix = self.camera_object.getOpenGLModelViewMatrix()
+            # Reshape from list into 4x4 matrix
+            model_view_matrix = np.asarray(model_view_matrix).reshape((4, 4), order="F")
+
+            # Invert the model_view_matrix
+            transformation = np.identity(4)
+            transformation[:3, :3] = model_view_matrix[:3, :3].transpose()
+            transformation[:3, 3] = (
+                -model_view_matrix[:3, :3].transpose() @ model_view_matrix[:3, 3]
+            )
+
+            # Negate part of the rotation component to flip around the z axis.
+            # This is necessary because the camera looks in the negative z direction in SOFA,
+            # but we invert z in get_depth_from_open_gl().
+            # TODO: Find a better solution for this.
+            transformation[:3, 1:3] *= -1
+
+            pcd = pcd.transform(transformation)
+
+        return np.hstack((np.asarray(pcd.points), np.asarray(pcd.colors)))
+        # return np.asarray(pcd.points)
+
+    def observation(self, observation) -> np.ndarray:
+        """Replaces the observation of a step in a sofa_env scene with a point cloud."""
+
+        point_cloud = self.create_point_cloud(observation)
+        assert len(point_cloud) > 0
+        if len(point_cloud) <= 32:
+            print(f"WARNING, points cloud has length: {len(point_cloud)}")
+
+        # Apply optional post processing functions to point cloud
+        if self.post_processing_functions is not None:
+            for function in self.post_processing_functions:
+                point_cloud = function(point_cloud)
+
+        return point_cloud
+
+
 class PointCloudFromDepthImageObservationWrapper(gym.ObservationWrapper):
     """Point cloud from depth image wrapper for SOFA simulation environments.
 
