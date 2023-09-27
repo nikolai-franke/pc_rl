@@ -75,11 +75,11 @@ def build(
         env = AddObsToInfoWrapper(env)
 
     post_processing_functions = []
-    post_processing_functions.append(normalize)
     if voxel_grid_size is not None:
         post_processing_functions.append(
             functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
         )
+    post_processing_functions.append(normalize)
     if use_color:
         env = ColorPointCloudWrapper(
             env, post_processing_functions=post_processing_functions
