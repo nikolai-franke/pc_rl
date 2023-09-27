@@ -32,4 +32,3 @@ class RLMae(nn.Module):
         pos_prediction[padding_mask] = 0.0
         pos_ground_truth[padding_mask] = 0.0
         return pos_prediction, pos_ground_truth
-
