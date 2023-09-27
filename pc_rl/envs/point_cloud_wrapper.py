@@ -36,7 +36,7 @@ class ColorPointCloudWrapper(gym.ObservationWrapper):
             self.env.observation_space.shape[0] * self.env.observation_space.shape[1]  # type: ignore
         )
         self.observation_space = spaces.Box(
-            high=np.inf, low=-np.inf, shape=(max_num_points, 3)
+            high=np.inf, low=-np.inf, shape=(max_num_points, 6)
         )
 
     def reset(self, **kwargs):
