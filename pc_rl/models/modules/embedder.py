@@ -250,7 +250,7 @@ class ColorEmbedder(MessagePassing):
 
         # pad and reshape into [B, G, M, 3]
         neighborhoods = pad_sequence(
-            unbatch(neighborhoods.reshape(-1, self.group_size, 3), batch_y),
+            unbatch(neighborhoods.reshape(-1, self.group_size, 6), batch_y),
             padding_value=self.padding_value,
             batch_first=True,
         )

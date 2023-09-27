@@ -1,0 +1,21 @@
+defaults:
+  - transformer_block: default
+  - embedder: color
+  - pos_embedder: default
+  - _self_
+
+masked_encoder:
+  _target_: pc_rl.builder.build_masked_encoder
+  mask_ratio: 0.8
+  mask_type: rand
+
+transformer_encoder:
+  _target_: pc_rl.builder.build_transformer_encoder
+  depth: 4
+
+transformer_decoder:
+  _target_: pc_rl.builder.build_transformer_decoder
+  depth: 4
+
+transformer_block:
+  dropout: 0.1

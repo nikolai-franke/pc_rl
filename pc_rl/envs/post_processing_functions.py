@@ -21,4 +21,7 @@ def voxel_grid_sample(obs, voxel_grid_size):
     if shape == 6:
         pcd.colors = o3d.utility.Vector3dVector(color)
     pcd = pcd.voxel_down_sample(voxel_grid_size)
-    return np.hstack((np.asarray(pcd.points), np.asarray(pcd.colors)))
+    if shape == 6:
+        return np.hstack((np.asarray(pcd.points), np.asarray(pcd.colors)))
+    else:
+        return np.asarray(pcd.points)

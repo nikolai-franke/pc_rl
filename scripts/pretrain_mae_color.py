@@ -14,15 +14,14 @@ from torch_geometric.transforms import (Compose, FixedPoints, GridSampling,
 
 import pc_rl.builder  # for hydra's instantiate
 import wandb
-from pc_rl.callbacks.log_pointclouds import LogPointCloudCallback
-from pc_rl.datasets.in_memory import PcInMemoryDataset
-from pc_rl.models.mae_color import MaskedAutoEncoder
+from pc_rl.callbacks.log_color_pointclouds import LogPointCloudCallback
+from pc_rl.datasets.in_memory import ColorPcInMemoryDataset
+from pc_rl.models.color_mae import ColorMaskedAutoEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
-from pc_rl.utils.aux_loss import get_loss_fn
 
 
-@hydra.main(version_base=None, config_path="../conf", config_name="mae_pretrain")
+@hydra.main(version_base=None, config_path="../conf", config_name="mae_pretrain_color")
 def main(config: DictConfig):
     embedder = instantiate(config.model.embedder, _convert_="partial")
 
@@ -60,16 +59,13 @@ def main(config: DictConfig):
         n_out_channels=6,
     )
 
-    loss_fn = get_loss_fn(name="sinkhorn", loss_kwargs=config.loss_fn)
-
-    masked_autoencoder = MaskedAutoEncoder(
+    masked_autoencoder = ColorMaskedAutoEncoder(
         embedder=embedder,
         masked_encoder=masked_encoder,
         masked_decoder=masked_decoder,
         mae_prediction_head=mae_prediction_head,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
-        loss_fn=loss_fn,
     )
 
     transforms = []
@@ -110,8 +106,8 @@ def main(config: DictConfig):
             transform=transform,
             split="val",
         )
-    elif config.dataset.name in ("reach", "thread_in_hole"):
-        dataset = PcInMemoryDataset(root=path, transform=transform)
+    elif config.dataset.name in ("reach", "thread_in_hole", "color_thread_in_hole"):
+        dataset = ColorPcInMemoryDataset(root=path, transform=transform)
         validation_dataset = dataset[int(0.9 * len(dataset)) :]
         dataset = dataset[: int(0.9 * len(dataset))]
     else:
@@ -124,7 +120,7 @@ def main(config: DictConfig):
         num_workers=config.num_workers,
     )
 
-    wandb_logger = WandbLogger(project="MAE")
+    wandb_logger = WandbLogger(project="MAE", log_model=True)
     wandb_config = OmegaConf.to_container(config, resolve=True, throw_on_missing=True)
     log_point_cloud_callback = LogPointCloudCallback()
 

@@ -16,7 +16,7 @@ from pc_rl.models.modules.masked_encoder import MaskedEncoder
 from pc_rl.utils.aux_loss import get_loss_fn
 
 
-class MaskedAutoEncoder(pl.LightningModule):
+class ColorMaskedAutoEncoder(pl.LightningModule):
     def __init__(
         self,
         embedder: Embedder,
