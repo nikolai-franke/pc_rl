@@ -78,18 +78,20 @@ class MaskedAutoEncoder(pl.LightningModule):
             self.padding_mask,
             self.center_points,
         ) = self.forward(data.pos, data.batch)
-        self.B, self.M, self.G, _ = self.prediction.shape
-        B, M, G = self.B, self.M, self.G
+        # save dimensions for point cloud logger
+        self.B, self.M, self.G, self.C = self.prediction.shape
+        B, M, G, C = self.B, self.M, self.G, self.C
+
         self.padding_mask = self.padding_mask.reshape(B, -1)
         self.padding_mask_without_masked_tokens = self.padding_mask[
             self.ae_mask
         ].reshape(B, -1)
 
-        self.ground_truth = self.neighborhoods[self.ae_mask].reshape(B, -1, G, 3)
+        self.ground_truth = self.neighborhoods[self.ae_mask].reshape(B, -1, G, C)
         self.prediction[self.padding_mask_without_masked_tokens] = 0.0
         self.ground_truth[self.padding_mask_without_masked_tokens] = 0.0
-        self.prediction = self.prediction.reshape(B * M, -1, 3)
-        self.ground_truth = self.ground_truth.reshape(B * M, -1, 3)
+        self.prediction = self.prediction.reshape(B * M, -1, C)
+        self.ground_truth = self.ground_truth.reshape(B * M, -1, C)
 
         loss = self.loss_fn(
             self.prediction,

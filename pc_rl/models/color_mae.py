@@ -96,7 +96,7 @@ class ColorMaskedAutoEncoder(pl.LightningModule):
             self.padding_mask,
             self.center_points,
         ) = self.forward(data.pos, data.batch, data.x)
-        self.B, self.M, self.G, _ = self.prediction.shape
+        self.B, self.M, self.G, self.C = self.prediction.shape
         B, M, G = self.B, self.M, self.G
         self.padding_mask = self.padding_mask.reshape(B, -1)
         self.padding_mask_without_masked_tokens = self.padding_mask[
