@@ -35,12 +35,12 @@ class LogPointCloudCallback(Callback):
         prediction = prediction[index][~padding_mask_without_masked_tokens[index]]
         ground_truth = ground_truth[index][~padding_mask_without_masked_tokens[index]]
         center_points = pl_module.center_points
-        center_points = center_points[index][~pl_module.center_points_mask[index]]
+        center_points = center_points[index][~pl_module.padding_mask[index]]
         masked_input, prediction, ground_truth = create_full_point_clouds(
             prediction,
             ground_truth,
-            pl_module.neighborhoods[index][~pl_module.center_points_mask.reshape(pl_module.B, -1)[index]],  # type: ignore
-            pl_module.ae_mask[index][~pl_module.center_points_mask.reshape(pl_module.B, -1)[index]],  # type: ignore
+            pl_module.neighborhoods[index][~pl_module.padding_mask.reshape(pl_module.B, -1)[index]],  # type: ignore
+            pl_module.ae_mask[index][~pl_module.padding_mask.reshape(pl_module.B, -1)[index]],  # type: ignore
             center_points,  # type: ignore
         )
         log_point_cloud("masked_input", masked_input)
