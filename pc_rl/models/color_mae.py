@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable
+import functools
 
 import pytorch_lightning as pl
 import torch
@@ -13,7 +13,7 @@ from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
-from pc_rl.utils.aux_loss import get_loss_fn
+from pc_rl.utils.chamfer import chamfer_distance
 
 
 class ColorMaskedAutoEncoder(pl.LightningModule):
@@ -35,7 +35,7 @@ class ColorMaskedAutoEncoder(pl.LightningModule):
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.color_loss_coeff = color_loss_coeff
-        self.loss_fn = get_loss_fn("chamfer", loss_kwargs={"return_x_nn": True})
+        self.loss_fn = functools.partial(chamfer_distance, return_x_nn=True)
 
     def forward(self, pos: Tensor, batch: Tensor, color: Tensor):
         x, neighborhoods, center_points = self.embedder(pos, batch, color)

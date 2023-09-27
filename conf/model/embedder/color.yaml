@@ -1,4 +1,4 @@
-_target_: pc_rl.builder.build_color_embedder
+_target_: pc_rl.builder.build_embedder
 embedding_size: 384
 group_size: 32
 mlp_1_layers: [6, 128, 256]

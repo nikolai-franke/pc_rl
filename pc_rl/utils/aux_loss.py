@@ -7,8 +7,6 @@ from geomloss import SamplesLoss
 
 from pc_rl.utils.chamfer import chamfer_distance
 
-# from pytorch3d.loss import chamfer_distance
-
 
 def get_loss_fn(name: Literal["chamfer", "sinkhorn"], loss_kwargs: dict = {}):
     if name == "chamfer":
