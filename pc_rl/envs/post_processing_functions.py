@@ -15,10 +15,10 @@ def voxel_grid_sample(obs, voxel_grid_size):
     assert (shape := obs.shape[-1]) in (3, 6)
     # TODO: find out if we can do this without copying the numpy arrays
     pos = obs[:, :3].copy()
-    color = obs[:, 3:].copy()
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(pos)
     if shape == 6:
+        color = obs[:, 3:].copy()
         pcd.colors = o3d.utility.Vector3dVector(color)
     pcd = pcd.voxel_down_sample(voxel_grid_size)
     if shape == 6:
