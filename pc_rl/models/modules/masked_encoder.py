@@ -128,4 +128,4 @@ class MaskedEncoder(nn.Module):
         x_vis = self.transformer_encoder(x_vis, pos, vis_padding_mask)
         x_vis = self.norm(x_vis)
 
-        return x_vis, ae_mask
+        return x_vis, ae_mask, padding_mask

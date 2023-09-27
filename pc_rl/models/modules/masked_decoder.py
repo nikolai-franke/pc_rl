@@ -50,4 +50,4 @@ class MaskedDecoder(nn.Module):
             x_full, pos_full, num_masked_tokens, padding_mask
         )
 
-        return x_recovered, padding_mask
+        return x_recovered
