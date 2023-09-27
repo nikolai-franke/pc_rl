@@ -28,14 +28,14 @@ class PcSacAgent(SacAgent):
         model["target_encoder"].requires_grad_(False)
 
     def encode(self, observation: ArrayTree[Tensor]) -> Tensor:
-        pos, batch = dict_to_batched_data(observation)
-        x, _, center_points = self.model["embedder"](pos, batch)
+        pos, batch, color = dict_to_batched_data(observation)
+        x, _, center_points = self.model["embedder"](pos, batch, color)
         encoder_out = self.model["encoder"](x, center_points)
         return encoder_out
 
     def target_encode(self, observation: ArrayTree[Tensor]) -> Tensor:
-        pos, batch = dict_to_batched_data(observation)
-        x, _, center_points = self.model["target_embedder"](pos, batch)
+        pos, batch, color = dict_to_batched_data(observation)
+        x, _, center_points = self.model["target_embedder"](pos, batch, color)
         encoder_out = self.model["target_encoder"](x, center_points)
         return encoder_out
 
