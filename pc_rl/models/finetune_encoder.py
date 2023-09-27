@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import itertools
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -19,6 +21,12 @@ class FinetuneEncoder(nn.Module):
         self.dim = self.transformer_encoder.dim
         self.norm = nn.LayerNorm(self.dim)
         self.attention_pool = nn.Linear(self.dim, 1)
+
+    def get_additional_parameters(self):
+        """
+        Returns an iterator containing all parameters that are NOT part of the AuxMAE class.
+        """
+        return itertools.chain(self.norm.parameters(), self.attention_pool.parameters())
 
     def forward(self, x, center_points):
         pos = self.pos_embedder(center_points)

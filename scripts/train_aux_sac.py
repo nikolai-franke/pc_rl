@@ -219,9 +219,8 @@ def build(config: DictConfig):
         **optimizer_conf,
     )
     encoder = agent.model["encoder"]
-    encoder_additional_params = chain(
-        encoder.norm.parameters(), encoder.attention_pool.parameters()
-    )
+
+    encoder_additional_params = encoder.get_additional_parameters()
 
     q_optimizer = torch.optim.Adam(
         [
