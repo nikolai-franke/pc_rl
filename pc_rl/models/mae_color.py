@@ -25,6 +25,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         mae_prediction_head: MaePredictionHead,
         learning_rate: float,
         weight_decay: float,
+        color_loss_coeff: float = 0.1,
     ):
         super().__init__()
         self.embedder = embedder
@@ -33,27 +34,24 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.mae_prediction_head = mae_prediction_head
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
-        self.loss_fn = get_loss_fn("chamfer", loss_kwargs={"return_y_nn": True})
+        self.color_loss_coeff = color_loss_coeff
+        self.loss_fn = get_loss_fn("chamfer", loss_kwargs={"return_x_nn": True})
 
-    def forward(self, pos: Tensor, batch: Tensor):
-        x, neighborhoods, center_points = self.embedder(pos, batch)
-        x_vis, mask = self.masked_encoder(x, center_points)
-        x_recovered, padding_mask = self.masked_decoder(x_vis, mask, center_points)
+    def forward(self, pos: Tensor, batch: Tensor, color: Tensor):
+        x, neighborhoods, center_points = self.embedder(pos, batch, color)
+        x_vis, ae_mask, padding_mask = self.masked_encoder(x, center_points)
+        x_recovered = self.masked_decoder(x_vis, ae_mask, center_points)
         pos_recovered = self.mae_prediction_head(x_recovered)
 
-        return pos_recovered, neighborhoods, mask, padding_mask, center_points
+        return pos_recovered, neighborhoods, ae_mask, padding_mask, center_points
 
     def training_step(self, data, batch_idx):
-        prediction, neighborhoods, mask, padding_mask, center_points = self.forward(
-            data.pos, data.batch
+        prediction, neighborhoods, mask, padding_mask, _ = self.forward(
+            data.pos, data.batch, data.x
         )
-        B, M, G, _ = prediction.shape
-        center_points_mask = torch.all(
-            center_points == torch.tensor([0.0, 0.0, 0.0], device=center_points.device),
-            dim=-1,
-        )
-        center_points_mask = center_points_mask.reshape(B, -1)
-        padding_mask = center_points_mask[mask].reshape(B, -1)
+        B, M, *_ = prediction.shape
+        padding_mask = padding_mask.reshape(B, -1)
+        padding_mask = padding_mask[mask].reshape(B, -1)
 
         ground_truth = neighborhoods[mask].reshape(B, M, -1, 6)
 
@@ -68,8 +66,16 @@ class MaskedAutoEncoder(pl.LightningModule):
         chamfer_distance, *_, x_idx = self.loss_fn(
             prediction[..., :3], ground_truth[..., :3]
         )
-        prediction_nearest_neighbor = knn_gather(ground_truth, x_idx)
-        color_loss = F.mse_loss(prediction[3:], prediction_nearest_neighbor[3:])
+        prediction_nearest_neighbor = knn_gather(ground_truth, x_idx).reshape(
+            B, M, -1, 6
+        )
+        color_loss = (
+            F.mse_loss(
+                prediction[..., 3:].reshape(B, -1, 3),
+                prediction_nearest_neighbor[..., 3:].reshape(B, -1, 3),
+            )
+            * self.color_loss_coeff
+        )
         loss = chamfer_distance + color_loss
 
         self.log("train/loss", loss.item(), batch_size=B)
@@ -89,16 +95,11 @@ class MaskedAutoEncoder(pl.LightningModule):
             self.ae_mask,
             self.padding_mask,
             self.center_points,
-        ) = self.forward(data.pos, data.batch)
+        ) = self.forward(data.pos, data.batch, data.x)
         self.B, self.M, self.G, _ = self.prediction.shape
         B, M, G = self.B, self.M, self.G
-        self.center_points_mask = torch.all(
-            self.center_points
-            == torch.tensor([0.0, 0.0, 0.0], device=self.center_points.device),
-            dim=-1,
-        )
-        self.center_points_mask = self.center_points_mask.reshape(B, -1)
-        self.padding_mask_without_masked_tokens = self.center_points_mask[
+        self.padding_mask = self.padding_mask.reshape(B, -1)
+        self.padding_mask_without_masked_tokens = self.padding_mask[
             self.ae_mask
         ].reshape(B, -1)
 
@@ -112,7 +113,13 @@ class MaskedAutoEncoder(pl.LightningModule):
             self.prediction[..., :3], self.ground_truth[..., :3]
         )
         prediction_nearest_neighbor = knn_gather(self.ground_truth, x_idx)
-        color_loss = F.mse_loss(self.prediction[3:], prediction_nearest_neighbor[3:])
+        color_loss = (
+            F.mse_loss(
+                self.prediction[..., 3:].reshape(B, -1, 3),
+                prediction_nearest_neighbor[..., 3:].reshape(B, -1, 3),
+            )
+            * self.color_loss_coeff
+        )
         loss = chamfer_distance + color_loss
 
         self.log("val/loss", loss.item(), batch_size=B)
