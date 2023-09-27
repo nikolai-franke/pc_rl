@@ -11,7 +11,6 @@ image_shape: [128, 128]
 use_color: False
 voxel_grid_size: 0.005
 
-discrete_action_magnitude: 100.0
 camera_reset_noise: [20.0, 20.0, 20.0, 20.0, 20.0, 20.0]
 hole_rotation_reset_noise: [0.0, 0.0, 0.0]
 hole_position_reset_noise: [30., 30., 30.]
