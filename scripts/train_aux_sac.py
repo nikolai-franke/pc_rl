@@ -307,7 +307,7 @@ def build(config: DictConfig):
     recording_schedule = RecordingSchedule(video_recorder, trigger="on_eval")
 
     eval_sampler = EvalSampler(
-        max_traj_length=config.eval.max_traj_length,
+        max_traj_length=config.env.max_episode_steps,
         max_trajectories=config.eval.max_trajectories,
         envs=eval_cages,
         agent=agent,
