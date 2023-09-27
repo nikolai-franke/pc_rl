@@ -36,6 +36,7 @@ def build(
     reward_amount_dict: dict,
     voxel_grid_size: float | None,
     create_scene_kwargs: dict | None = None,
+    use_color: bool = False,
 ):
     image_shape = tuple(image_shape)  # type: ignore
     render_mode = RenderMode[render_mode.upper()]  # type: ignore
@@ -79,15 +80,15 @@ def build(
         post_processing_functions.append(
             functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
         )
-
-    # env = PointCloudFromDepthImageObservationWrapper(
-    #     env,
-    #     post_processing_functions=post_processing_functions,
-    # )
-    env = ColorPointCloudWrapper(
-        env, post_processing_functions=post_processing_functions
-    )
-
+    if use_color:
+        env = ColorPointCloudWrapper(
+            env, post_processing_functions=post_processing_functions
+        )
+    else:
+        env = PointCloudFromDepthImageObservationWrapper(
+            env,
+            post_processing_functions=post_processing_functions,
+        )
     env = TimeLimit(env, max_episode_steps)
     return env
 

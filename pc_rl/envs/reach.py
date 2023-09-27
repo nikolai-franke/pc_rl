@@ -7,8 +7,8 @@ from sofa_env.scenes.reach.reach_env import (ActionType, ObservationType,
                                              ReachEnv, RenderMode)
 
 from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
-from pc_rl.envs.point_cloud_wrapper import \
-    PointCloudFromDepthImageObservationWrapper
+from pc_rl.envs.point_cloud_wrapper import (
+    ColorPointCloudWrapper, PointCloudFromDepthImageObservationWrapper)
 from pc_rl.envs.post_processing_functions import normalize, voxel_grid_sample
 
 
@@ -25,6 +25,7 @@ def build(
     create_scene_kwargs: dict,
     add_obs_to_info_dict: bool,
     voxel_grid_size: float | None,
+    use_color: bool = False,
 ):
     assert len(image_shape) == 2
     image_shape = tuple(image_shape)  # type: ignore
@@ -52,9 +53,14 @@ def build(
         post_processing_functions.append(
             functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
         )
-
-    env = PointCloudFromDepthImageObservationWrapper(
-        env, post_processing_functions=post_processing_functions
-    )
+    if use_color:
+        env = ColorPointCloudWrapper(
+            env, post_processing_functions=post_processing_functions
+        )
+    else:
+        env = PointCloudFromDepthImageObservationWrapper(
+            env,
+            post_processing_functions=post_processing_functions,
+        )
     env = TimeLimit(env, max_episode_steps)
     return env

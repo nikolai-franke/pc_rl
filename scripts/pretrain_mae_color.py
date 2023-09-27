@@ -5,7 +5,6 @@ from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers.wandb import WandbLogger
 from pytorch_lightning.trainer import Trainer
-from torch.optim.adamw import AdamW
 from torch_geometric.data.lightning import LightningDataset
 from torch_geometric.datasets import ModelNet, ShapeNet
 from torch_geometric.transforms import (Compose, FixedPoints, GridSampling,
