@@ -46,14 +46,14 @@ class ColorMaskedAutoEncoder(pl.LightningModule):
         return pos_recovered, neighborhoods, ae_mask, padding_mask, center_points
 
     def training_step(self, data, batch_idx):
-        prediction, neighborhoods, mask, padding_mask, _ = self.forward(
+        prediction, neighborhoods, ae_mask, padding_mask, _ = self.forward(
             data.pos, data.batch, data.x
         )
         B, M, *_ = prediction.shape
         padding_mask = padding_mask.reshape(B, -1)
-        padding_mask = padding_mask[mask].reshape(B, -1)
+        padding_mask = padding_mask[ae_mask].reshape(B, -1)
 
-        ground_truth = neighborhoods[mask].reshape(B, M, -1, 6)
+        ground_truth = neighborhoods[ae_mask].reshape(B, M, -1, 6)
 
         prediction = prediction.reshape(B, M, -1, 6)
 
