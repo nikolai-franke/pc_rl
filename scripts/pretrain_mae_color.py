@@ -13,7 +13,7 @@ from torch_geometric.transforms import (Compose, FixedPoints, GridSampling,
 
 import pc_rl.builder  # for hydra's instantiate
 import wandb
-from pc_rl.callbacks.log_color_pointclouds import LogPointCloudCallback
+from pc_rl.callbacks.log_pointclouds import LogPointCloudCallback
 from pc_rl.datasets.in_memory import ColorPcInMemoryDataset
 from pc_rl.models.color_mae import ColorMaskedAutoEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
