@@ -96,7 +96,11 @@ class ColorPointCloudWrapper(gym.ObservationWrapper):
         # we need to copy the observation since Open3D uses the buffer directly
         color_image = o3d.geometry.Image(observation[:, :, :3].copy())
         rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
-            color_image, depth_image, convert_rgb_to_intensity=False
+            color_image,
+            depth_image,
+            convert_rgb_to_intensity=False,
+            depth_scale=1.0,
+            depth_trunc=1e9,
         )
 
         pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, intrinsic)
