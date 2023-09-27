@@ -1,3 +1,4 @@
+_target_: pc_rl.envs.rope_cutting.build
 
 defaults:
   - base

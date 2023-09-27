@@ -64,15 +64,10 @@ def build(
             functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
         )
     post_processing_functions.append(normalize)
-    if use_color:
-        env = ColorPointCloudWrapper(
-            env, post_processing_functions=post_processing_functions
-        )
-    else:
-        env = PointCloudFromDepthImageObservationWrapper(
-            env,
-            post_processing_functions=post_processing_functions,
-        )
+
+    env = ColorPointCloudWrapper(
+        env, post_processing_functions=post_processing_functions
+    )
     env = TimeLimit(env, max_episode_steps)
     return env
 
