@@ -6,7 +6,9 @@ defaults:
 batch_T: 128
 batch_B: 20
 use_slurm: True
-algo.batch_size: 256
+
+algo:
+  batch_size: 256
 
 hydra:
   sweeper:
