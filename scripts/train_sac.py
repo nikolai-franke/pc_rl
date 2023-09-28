@@ -330,6 +330,12 @@ def build(config: DictConfig):
 def main(config: DictConfig) -> None:
     # try...except block so we get error messages when using submitit
     # try:
+    if config.use_slurm:
+        os.system("wandb enabled")
+        tmp = Path(os.environ.get("TMP"))  # type: ignore
+        os.environ["WANDB_DIR"] = os.environ["TMPDIR"] + "/wandb"
+        os.makedirs(os.environ["WANDB_DIR"], exist_ok=True)
+
     run = wandb.init(
         project="pc_rl",
         tags=["sac"],
@@ -340,10 +346,6 @@ def main(config: DictConfig) -> None:
     )
 
     if config.use_slurm:  # TODO: check if launcher starts with submitit
-        os.system("wandb enabled")
-        tmp = Path(os.environ.get("TMP"))  # type: ignore
-        os.environ["WANDB_DIR"] = os.environ["TMPDIR"] + "/wandb"
-        os.makedirs(os.environ["WANDB_DIR"], exist_ok=True)
         video_path = (
             tmp
             / config.video_path
@@ -376,7 +378,7 @@ def main(config: DictConfig) -> None:
         runner.run()
 
     logger.close()
-    run.finish()  # type: ignore
+    r2122768un.finish()  # type: ignore
     # except Exception:
     #     traceback.print_exc(file=sys.stderr)
     #     raise
