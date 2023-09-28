@@ -10,7 +10,7 @@ hdyra:
     timeout_min: 1200
     parallel_runs_per_node: 8
     wait_for_completion: False
-    partition: dev_accelerated
+    partition: accelerated
     gres: gpu:4
     resources_config:
       - cpu
