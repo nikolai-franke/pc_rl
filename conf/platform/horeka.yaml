@@ -12,9 +12,10 @@ hydra:
     wait_for_completion: False
     partition: accelerated
     gres: gpu:4
+    verbose: True
     resources_config:
-      - cpu
-      - cuda:
-          gpus: [0, 1, 2, 3]
-      - stagger:
-          delay: 30
+      cpu:
+      cuda:
+        gpus: [0, 1, 2, 3]
+      stagger:
+        delay: 30
