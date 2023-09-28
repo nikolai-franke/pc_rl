@@ -1,0 +1,15 @@
+defaults:
+  - train_sac
+  - slurm
+  - _self_
+
+batch_T: 128
+batch_B: 20
+use_slurm: True
+
+hydra:
+  sweeper:
+    params:
+      optimizer.lr: 1e-4, 2e-4
+      model.transformer_encoder.depth: 1,2,3,4
+
