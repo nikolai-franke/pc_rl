@@ -6,10 +6,13 @@ defaults:
 batch_T: 128
 batch_B: 20
 use_slurm: True
+algo.batch_size: 256
 
 hydra:
   sweeper:
     params:
       optimizer.lr: 1e-4, 2e-4
       model.transformer_encoder.depth: 1,2,3,4
+      env: thread_in_hole
+      algo.ent_coeff_lr: 1e-4, 5e-5
 

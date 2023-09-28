@@ -1,0 +1,14 @@
+# @package _global_
+
+defaults:
+  - override /hydra/launcher: clusterduck_local
+  - _self_
+
+hydra:
+  mode: MULTIRUN
+  timeout_min: 30
+  parallel_runs_per_node: 8
+  gpus_per_node: 4
+  resource_config:
+    - cpu
+    - cuda
