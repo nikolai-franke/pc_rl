@@ -13,8 +13,8 @@ algo:
 hydra:
   sweeper:
     params:
-      optimizer.lr: 1e-4, 2e-4
+      optimizer.lr: 1e-4,2e-4
       model.transformer_encoder.depth: 1,2,3,4
+      algo.ent_coeff_lr: 1e-4,5e-5
       env: thread_in_hole
-      algo.ent_coeff_lr: 1e-4, 5e-5
 
