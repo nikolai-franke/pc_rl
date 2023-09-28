@@ -285,7 +285,7 @@ def build(config: DictConfig):
         buffer_key_to_record="env_info.rendering",
         env_fps=50,
         output_dir=Path(config.video_path),
-        video_length=config.eval.max_traj_length,
+        video_length=config.env.max_episode_steps,
         use_wandb=True,
     )
     recording_schedule = RecordingSchedule(video_recorder, trigger="on_eval")
