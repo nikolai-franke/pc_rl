@@ -10,6 +10,3 @@ hydra:
     timeout_min: 30
     parallel_runs_per_node: 8
     gpus_per_node: 4
-    resource_config:
-      - cpu
-      - cuda
