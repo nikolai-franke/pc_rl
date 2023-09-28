@@ -59,7 +59,7 @@ def main(config: DictConfig):
         group_size=config.model.embedder.group_size,
     )
 
-    loss_fn = get_loss_fn(name="sinkhorn", loss_kwargs=config.loss_fn)
+    loss_fn = get_loss_fn(name="chamfer")
 
     masked_autoencoder = MaskedAutoEncoder(
         embedder=embedder,

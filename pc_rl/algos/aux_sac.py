@@ -107,9 +107,9 @@ class AuxPcSAC(SAC):
             q1, q2 = self.agent.q(observation.detach(), samples["action"])
 
         pos_prediction, ground_truth = self.agent.auto_encoder(samples["observation"])
-        B, M, *_ = pos_prediction.shape
-        pos_prediction = pos_prediction.reshape(B * M, -1, 3)
-        ground_truth = ground_truth.reshape(B * M, -1, 3)
+        B, M, *_, C = pos_prediction.shape
+        pos_prediction = pos_prediction.reshape(B * M, -1, C)
+        ground_truth = ground_truth.reshape(B * M, -1, C)
 
         mae_loss = self.aux_loss_fn(pos_prediction, ground_truth) * self.aux_loss_coeff
         q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
@@ -148,7 +148,9 @@ class AuxPcSAC(SAC):
             )
             self.algo_log_info["q1_grad_norm"].append(q1_grad_norm.item())
             self.algo_log_info["q2_grad_norm"].append(q2_grad_norm.item())
-            self.algo_log_info["encoder_grad_norm"].append(finetune_encoder_grad_norm.item())
+            self.algo_log_info["encoder_grad_norm"].append(
+                finetune_encoder_grad_norm.item()
+            )
             self.algo_log_info["embedder_grad_norm"].append(embedder_grad_norm.item())
             # self.algo_log_info["masked_decoder_grad_norm"].append(masked_decoder_grad_norm.item())
             # self.algo_log_info["mae_prediction_head_grad_norm"].append(mae_prediction_head_grad_norm.item())
