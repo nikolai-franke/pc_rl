@@ -15,3 +15,5 @@ hydra:
     resources_config:
       - cpu
       - cuda
+      - stagger:
+          delay: 120
