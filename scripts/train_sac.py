@@ -342,7 +342,7 @@ def main(config: DictConfig) -> None:
         if config.use_slurm:  # TODO: check if launcher starts with submitit
             os.system("wandb enabled")
             tmp = Path(os.environ.get("TMP"))  # type: ignore
-            os.environ["WANDB_DIR"] = "$TMPDDIR/wandb"
+            os.environ["WANDB_DIR"] = os.environ["TMPDIR"] + "/wandb"
             os.makedirs(os.environ["WANDB_DIR"], exist_ok=True)
             video_path = (
                 tmp
