@@ -332,7 +332,7 @@ def main(config: DictConfig) -> None:
     # try:
     if config.use_slurm:
         os.system("wandb enabled")
-        tmp = Path(os.environ.get("TMP"))  # type: ignore
+        tmp = Path(os.environ.get("TMPDIR"))  # type: ignore
         os.environ["WANDB_DIR"] = os.environ["TMPDIR"] + "/wandb"
         os.makedirs(os.environ["WANDB_DIR"], exist_ok=True)
 
