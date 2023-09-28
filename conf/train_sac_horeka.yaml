@@ -1,6 +1,6 @@
 defaults:
   - train_sac
-  - horeka
+  - platform: horeka
   - _self_
 
 batch_T: 128
