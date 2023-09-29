@@ -77,8 +77,7 @@ class Embedder(MessagePassing):
             - neighborhoods - [B, G, N, 3] Tensor containing the neighborhoods in local coordinates (with respect to the neighborhood center)
             - center_points - [B, G, 3] Tensor containing the center points of each neighborhood
         """
-        unique_return = torch.unique(batch, return_counts=True)
-        unique, count = unique_return
+        _, count = torch.unique(batch, return_counts=True)
 
         assert torch.all(count >= self.group_size), f"COUNT: {count}"
 
@@ -98,7 +97,7 @@ class Embedder(MessagePassing):
         except RuntimeError as e:
             torch.set_printoptions(threshold=sys.maxsize)
             logger.log(
-                f"POS SHAPE: {pos.shape}\n BATCH SHAPE: {batch.shape}\n CENTER POINTS SHAP: {center_points.shape}\n EDGES SHAPE: {edges.shape}\n"
+                f"POS SHAPE: {pos.shape}\n BATCH SHAPE: {batch.shape}\n CENTER POINTS SHAPE: {center_points.shape}\n EDGES SHAPE: {edges.shape}\n"
             )
             raise e
 
