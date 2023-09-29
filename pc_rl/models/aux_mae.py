@@ -21,14 +21,19 @@ class RLMae(nn.Module):
         self.dim = self.masked_encoder.dim
 
     def forward(self, x, neighborhoods, center_points):
-        x_vis, ae_mask = self.masked_encoder(x, center_points)
-        pos_recovered, padding_mask = self.masked_decoder(x_vis, ae_mask, center_points)
-        pos_recovered = self.mae_prediction_head(pos_recovered)
-        B, M, G, _ = pos_recovered.shape
-        padding_mask = padding_mask.view(B, -1, 1, 1).expand(-1, -1, G, 3)
-        padding_mask = padding_mask[ae_mask]
-        pos_ground_truth = neighborhoods[ae_mask].reshape(B * M, -1, 3)
-        pos_prediction = pos_recovered.reshape(B * M, -1, 3)
-        pos_prediction[padding_mask] = 0.0
-        pos_ground_truth[padding_mask] = 0.0
-        return pos_prediction, pos_ground_truth
+        x_vis, ae_mask, padding_mask = self.masked_encoder(x, center_points)
+        x_recovered = self.masked_decoder(x_vis, ae_mask, center_points)
+        prediction = self.mae_prediction_head(x_recovered)
+        B, M, *_ = x_recovered.shape
+        *_, C = center_points.shape
+
+        padding_mask = padding_mask.reshape(B, -1)
+        padding_mask = padding_mask[ae_mask].reshape(B, -1)
+
+        ground_truth = neighborhoods[ae_mask].reshape(B, M, -1, C)
+        prediction = prediction.reshape(B, M, -1, C)
+
+        ground_truth[padding_mask] = 0.0
+        prediction[padding_mask] = 0.0
+
+        return prediction, ground_truth
