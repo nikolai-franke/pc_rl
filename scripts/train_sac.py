@@ -60,17 +60,6 @@ def build(config: DictConfig):
         keys_to_skip=("obs", "next_obs"),
     )
 
-    # cages, sample_tree, metadata = build_cages_and_sample_tree(
-    #     EnvClass=env_factory,
-    #     env_kwargs={"add_obs_to_info_dict": False},
-    #     TrajInfoClass=TrajInfo,
-    #     reset_automatically=True,
-    #     batch_spec=batch_spec,
-    #     parallel=parallel,
-    #     full_size=config.algo.replay_length,
-    #     keys_to_skip="observation",
-    # )
-
     obs_space, action_space = metadata.obs_space, metadata.action_space
     n_actions = action_space.shape[0]
 
