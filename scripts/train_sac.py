@@ -338,7 +338,7 @@ def main(config: DictConfig) -> None:
 
         run = wandb.init(
             project="pc_rl",
-            tags=["sac"],
+            tags=["sac", "horeka"],
             config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
             sync_tensorboard=True,  # auto-upload any values logged to tensorboard
             save_code=True,  # save script used to start training, git commit, and patch
@@ -371,7 +371,7 @@ def main(config: DictConfig) -> None:
             },  # type: ignore
             config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
             model_save_path="model.pt",
-            verbosity=Verbosity.DEBUG,
+            # verbosity=Verbosity.DEBUG,
         )
 
         with build(config) as runner:
