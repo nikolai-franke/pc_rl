@@ -19,5 +19,3 @@ hydra:
         gpus: [0, 1, 2, 3]
       pyglet:
         gpus: [0, 1, 2, 3]
-      stagger:
-        delay: 5
