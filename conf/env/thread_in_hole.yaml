@@ -59,4 +59,9 @@ create_scene_kwargs:
     rcm_reset_noise: null
     gripper_ptsd_state: [60.0, 0.0, 180.0, 90.0]
     gripper_rcm_pose: [100.0, 0.0, 150.0, 0.0, 180.0, 0.0]
+  camera_config:
+    placement_kwargs:
+      position: [0.0, -135.0, 100.0]
+      lookAt: [10.0, 0.0, 55.0]
+    vertical_field_of_view: 62.0
 
