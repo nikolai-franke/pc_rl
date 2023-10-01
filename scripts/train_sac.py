@@ -220,15 +220,12 @@ def build(config: DictConfig):
         **optimizer_conf,
     )
 
-    lr_schedulers = None
     if gamma := config.get("lr_scheduler_gamma") is not None:
-        pi_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            pi_optimizer, gamma=gamma
-        )
-        q_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            q_optimizer, gamma=gamma
-        )
+        pi_scheduler = torch.optim.lr_scheduler.ExponentialLR(pi_optimizer, gamma=gamma)
+        q_scheduler = torch.optim.lr_scheduler.ExponentialLR(q_optimizer, gamma=gamma)
         lr_schedulers = [pi_scheduler, q_scheduler]
+    else:
+        lr_schedulers = None
 
     # create algorithm
     algorithm = SAC(
