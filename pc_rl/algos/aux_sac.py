@@ -1,19 +1,22 @@
 from __future__ import annotations
 
-from typing import Literal, Mapping, Sequence
+import functools
+from typing import Sequence
 
 import torch
+import torch.nn.functional as F
 from parllel import ArrayDict
 from parllel.replays.replay import ReplayBuffer
 from parllel.torch.algos.sac import SAC
 from parllel.torch.utils import valid_mean
 from parllel.types.batch_spec import BatchSpec
+from pytorch3d.ops.knn import knn_gather
 from torch import Tensor
 from torch.nn.utils.clip_grad import clip_grad_norm_
 from torch.optim.lr_scheduler import LRScheduler
 
 from pc_rl.agents.sac import PcSacAgent
-from pc_rl.utils.aux_loss import get_loss_fn
+from pc_rl.utils.chamfer import chamfer_distance
 
 
 class AuxPcSAC(SAC):
@@ -33,7 +36,7 @@ class AuxPcSAC(SAC):
         target_update_interval: int,  # 1000 for hard update, 1 for soft.
         ent_coeff: float,
         aux_loss_coeff: float,
-        aux_loss: Literal["chamfer", "sinkhorn"] = "chamfer",
+        color_loss_coeff: float = 1.0,
         ent_coeff_lr: float | None = None,
         clip_grad_norm: float | None = None,
         learning_rate_schedulers: Sequence[LRScheduler] | None = None,
@@ -56,8 +59,9 @@ class AuxPcSAC(SAC):
             clip_grad_norm=clip_grad_norm,
             learning_rate_schedulers=learning_rate_schedulers,
         )
-        self.aux_loss_fn = get_loss_fn(aux_loss)
+        self.aux_loss_fn = functools.partial(chamfer_distance, return_x_nn=True)
         self.aux_loss_coeff = aux_loss_coeff
+        self.color_loss_coeff = color_loss_coeff
         self.detach_encoder = detach_encoder
 
     def train_once(self, samples: ArrayDict[Tensor]) -> None:
@@ -106,14 +110,32 @@ class AuxPcSAC(SAC):
         else:
             q1, q2 = self.agent.q(observation.detach(), samples["action"])
 
-        pos_prediction, ground_truth = self.agent.auto_encoder(samples["observation"])
-        B, M, *_, C = pos_prediction.shape
-        pos_prediction = pos_prediction.reshape(B * M, -1, C)
+        prediction, ground_truth = self.agent.auto_encoder(samples["observation"])
+        B, M, *_, C = prediction.shape
+        prediction = prediction.reshape(B * M, -1, C)
         ground_truth = ground_truth.reshape(B * M, -1, C)
 
-        mae_loss = self.aux_loss_fn(pos_prediction, ground_truth) * self.aux_loss_coeff
+        mae_loss, _, x_idx = self.aux_loss_fn(
+            prediction[..., :3], ground_truth[..., :3]
+        )
+        mae_loss *= self.aux_loss_coeff
+
+        # if color
+        if C > 3:
+            assert x_idx is not None
+            prediction_nearest_neighbor = knn_gather(ground_truth, x_idx).reshape(
+                B, M, -1, C
+            )
+            color_loss = (
+                F.mse_loss(
+                    prediction[..., 3:].reshape(B, M, -1, C - 3),
+                    prediction_nearest_neighbor[..., 3:].reshape(B, -1, C - 3),
+                )
+                * self.color_loss_coeff
+            )
+            mae_loss += color_loss
+
         q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
-        # q_and_mae_loss = q_loss + mae_loss * self.aux_loss_coeff
 
         self.algo_log_info["critic_loss"].append(q_loss.item())
         self.algo_log_info["mean_ent_bonus"].append(entropy_bonus.mean().item())
