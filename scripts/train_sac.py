@@ -219,12 +219,16 @@ def build(config: DictConfig):
         ],
         **optimizer_conf,
     )
-    pi_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-        pi_optimizer, gamma=config.algo.pop("lr_scheduler_gamma")
-    )
-    q_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-        q_optimizer, gamma=config.algo.pop("lr_scheduler_gamma")
-    )
+
+    lr_schedulers = None
+    if gamma := config.get("lr_scheduler_gamma") is not None:
+        pi_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            pi_optimizer, gamma=gamma
+        )
+        q_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            q_optimizer, gamma=gamma
+        )
+        lr_schedulers = [pi_scheduler, q_scheduler]
 
     # create algorithm
     algorithm = SAC(
@@ -233,7 +237,7 @@ def build(config: DictConfig):
         replay_buffer=replay_buffer,
         pi_optimizer=pi_optimizer,
         q_optimizer=q_optimizer,
-        learning_rate_schedulers=[pi_scheduler, q_scheduler],
+        learning_rate_schedulers=lr_schedulers,
         **config.algo,
     )
 

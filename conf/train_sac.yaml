@@ -21,4 +21,5 @@ eval:
 action_scale: 1
 use_slurm: False
 video_path: videos
+lr_scheduler_gamma: 0.99
 
