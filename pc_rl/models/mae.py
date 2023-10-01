@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import functools
 from typing import Callable
 
 import pytorch_lightning as pl
 import torch
+import torch.nn.functional as F
+from pytorch3d.ops.knn import knn_gather
 from pytorch_lightning.utilities.grads import grad_norm
 from torch import Tensor
 
@@ -12,6 +15,7 @@ from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
 from pc_rl.utils.aux_loss import get_loss_fn
+from pc_rl.utils.chamfer import chamfer_distance
 
 
 class MaskedAutoEncoder(pl.LightningModule):
@@ -23,7 +27,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         mae_prediction_head: MaePredictionHead,
         learning_rate: float,
         weight_decay: float,
-        loss_fn: Callable,
+        color_loss_coeff: float = 1.0,
     ):
         super().__init__()
         self.embedder = embedder
@@ -32,8 +36,8 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.mae_prediction_head = mae_prediction_head
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
-        self.loss_fn = loss_fn
-        self.chamfer_loss = get_loss_fn("chamfer")
+        self.color_loss_coeff = color_loss_coeff
+        self.loss_fn = functools.partial(chamfer_distance, return_x_nn=True)
 
     def forward(self, pos: Tensor, batch: Tensor):
         x, neighborhoods, center_points = self.embedder(pos, batch)
@@ -47,20 +51,34 @@ class MaskedAutoEncoder(pl.LightningModule):
         prediction, neighborhoods, mask, padding_mask, _ = self.forward(
             data.pos, data.batch
         )
-        B, M, *_ = prediction.shape
+        B, M, *_, C = prediction.shape
         padding_mask = padding_mask.reshape(B, -1)
         padding_mask = padding_mask[mask].reshape(B, -1)
 
-        ground_truth = neighborhoods[mask].reshape(B, M, -1, 3)
+        ground_truth = neighborhoods[mask].reshape(B, M, -1, C)
 
-        prediction = prediction.reshape(B, M, -1, 3)
+        prediction = prediction.reshape(B, M, -1, C)
 
         prediction[padding_mask] = 0.0
         ground_truth[padding_mask] = 0.0
 
-        loss = self.loss_fn(
-            prediction.reshape(B * M, -1, 3), ground_truth.reshape(B * M, -1, 3)
-        )
+        prediction = prediction.reshape(B * M, -1, C)
+        ground_truth = ground_truth.reshape(B * M, -1, C)
+
+        loss, *_, x_idx = self.loss_fn(prediction[..., :3], ground_truth[..., :3])
+        # if color
+        if C > 3:
+            prediction_nearest_neighbor = knn_gather(ground_truth, x_idx).reshape(
+                B, M, -1, C
+            )
+            color_loss = (
+                F.mse_loss(
+                    prediction[..., 3:].reshape(B, -1, C - 3),
+                    prediction_nearest_neighbor[..., 3:].reshape(B, -1, C - 3),
+                )
+                * self.color_loss_coeff
+            )
+            loss += color_loss
 
         self.log("train/loss", loss.item(), batch_size=B)
         return loss
@@ -93,14 +111,21 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.prediction = self.prediction.reshape(B * M, -1, C)
         self.ground_truth = self.ground_truth.reshape(B * M, -1, C)
 
-        loss = self.loss_fn(
-            self.prediction,
-            self.ground_truth,
+        loss, *_, x_idx = self.loss_fn(
+            self.prediction[..., :3], self.ground_truth[..., :3]
         )
-        chamfer_loss = self.chamfer_loss(self.prediction, self.ground_truth)
+        if C > 3:
+            prediction_nearest_neighbor = knn_gather(self.ground_truth, x_idx)
+            color_loss = (
+                F.mse_loss(
+                    self.prediction[..., 3:].reshape(B, -1, C - 3),
+                    prediction_nearest_neighbor[..., 3:].reshape(B, -1, C - 3),
+                )
+                * self.color_loss_coeff
+            )
+            loss += color_loss
 
         self.log("val/loss", loss.item(), batch_size=B)
-        self.log("val/chamfer_loss", chamfer_loss.item(), batch_size=B)
         return loss
 
     def configure_optimizers(self):
