@@ -44,7 +44,7 @@ create_scene_kwargs:
     poisson_ratio: 0.3
     total_mass: 10.0
   thread_config:
-    length: 80.0
+    length: 70.0
     radius: 2.0
     total_mass: 1.0
     young_modulus: 1000.0
