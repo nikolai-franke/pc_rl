@@ -1,6 +1,6 @@
 discount: 0.99
-replay_length: 81920
-learning_starts: 10240
+replay_length: 100000
+learning_starts: 50000
 replay_ratio: 8
 batch_size: 128
 target_update_tau: 0.01
