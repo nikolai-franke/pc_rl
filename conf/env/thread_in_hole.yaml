@@ -31,7 +31,7 @@ reward_amount_dict:
   successful_task: 100.0
   action_violated_cartesian_workspace: -0.0
   action_violated_state_limits: -0.0
-  ratio_rope_in_hole: 0.0
+  ratio_rope_in_hole: 1.0
   delta_ratio_rope_in_hole: 50.0
   gripper_collisions: -0.1
 
