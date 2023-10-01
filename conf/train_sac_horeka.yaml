@@ -12,8 +12,6 @@ hydra:
     params:
       optimizer.lr: 1e-4
       model.transformer_encoder.depth: 3
-      algo.ent_coeff_lr: 5e-5, 2e-4
-      algo.ent_coeff: 0.3
+      algo.ent_coeff_lr: 5e-5, 2e-5
       algo.batch_size: 128
       env: thread_in_hole
-      # lr_scheduler_gamma: 0.99, 0.995
