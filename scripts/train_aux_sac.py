@@ -374,9 +374,6 @@ def main(config: DictConfig) -> None:
             / config.video_path
             / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"  # type: ignore
         )
-        num_gpus = HydraConfig.get().launcher.gpus_per_node
-        gpu_id = HydraConfig.get().job.num % num_gpus
-        config.update({"device": f"cuda:{gpu_id}"})
     else:
         video_path = (
             Path(config.video_path)

@@ -1,7 +1,7 @@
 defaults:
   - algo: aux_sac
   - model: aux_sac
-  - env: reach
+  - env: thread_in_hole
   - optimizer: basic
   - _self_
 
