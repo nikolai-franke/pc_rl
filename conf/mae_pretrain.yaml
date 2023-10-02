@@ -2,7 +2,7 @@ defaults:
   - _self_
   - dataset: thread_in_hole
   - model: mae
-  - loss_fn: sinkhorn
+  - loss_fn: chamfer
 
 batch_size: 128
 num_workers: 8

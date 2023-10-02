@@ -248,6 +248,13 @@ def build(config: DictConfig):
         **optimizer_conf,
     )
 
+    if gamma := config.get("lr_scheduler_gamma") is not None:
+        pi_scheduler = torch.optim.lr_scheduler.ExponentialLR(pi_optimizer, gamma=gamma)
+        q_scheduler = torch.optim.lr_scheduler.ExponentialLR(q_optimizer, gamma=gamma)
+        lr_schedulers = [pi_scheduler, q_scheduler]
+    else:
+        lr_schedulers = None
+
     algorithm = instantiate(
         config.algo,
         batch_spec=batch_spec,
@@ -255,6 +262,7 @@ def build(config: DictConfig):
         replay_buffer=replay_buffer,
         pi_optimizer=pi_optimizer,
         q_optimizer=q_optimizer,
+        lr_schedulers=lr_schedulers,
         _convert_="partial",
     )
 
