@@ -115,7 +115,7 @@ class AuxPcSAC(SAC):
         prediction = prediction.reshape(B * M, -1, C)
         ground_truth = ground_truth.reshape(B * M, -1, C)
 
-        mae_loss, _, x_idx = self.aux_loss_fn(
+        mae_loss, _, x_idx = self.aux_loss_fn(  # type: ignore
             prediction[..., :3], ground_truth[..., :3]
         )
         mae_loss *= self.aux_loss_coeff
