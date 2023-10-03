@@ -25,7 +25,7 @@ class RLMae(nn.Module):
         x_recovered = self.masked_decoder(x_vis, ae_mask, center_points)
         prediction = self.mae_prediction_head(x_recovered)
         B, M, *_ = x_recovered.shape
-        *_, C = center_points.shape
+        *_, C = neighborhoods.shape
 
         padding_mask = padding_mask.reshape(B, -1)
         padding_mask = padding_mask[ae_mask].reshape(B, -1)
