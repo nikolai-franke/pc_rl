@@ -118,7 +118,7 @@ class AuxPcSAC(SAC):
         mae_loss, _, x_idx = self.aux_loss_fn(  # type: ignore
             prediction[..., :3], ground_truth[..., :3]
         )
-        self.algo_log_info["chamfer_loss", mae_loss.item()]
+        self.algo_log_info["chamfer_loss"].append(mae_loss.item())
         mae_loss *= self.aux_loss_coeff
 
         # if color
@@ -134,7 +134,7 @@ class AuxPcSAC(SAC):
                 )
                 * self.color_loss_coeff
             )
-            self.algo_log_info["color_loss", color_loss.item()]
+            self.algo_log_info["color_loss"].append(color_loss.item())
             mae_loss += color_loss
 
         q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
