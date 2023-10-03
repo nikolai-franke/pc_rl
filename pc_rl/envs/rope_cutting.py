@@ -23,6 +23,9 @@ def build(
     add_obs_to_info_dict: bool,
     render_mode: Literal["headless", "human"],
     action_type: Literal["discrete", "continuous"],
+    observation_type: Literal[
+        "color_point_cloud", "rgb_image", "rgbd_image"
+    ],
     image_shape: list[int],
     frame_skip: int,
     time_step: float,
@@ -32,17 +35,23 @@ def build(
     reward_amount_dict: dict,
     voxel_grid_size: float | None,
     create_scene_kwargs: dict | None = None,
-    use_color: bool = False,
 ):
     image_shape = tuple(image_shape)  # type: ignore
     render_mode = RenderMode[render_mode.upper()]  # type: ignore
     action_type = ActionType[action_type.upper()]  # type: ignore
 
+    if observation_type in ("color_point_cloud", "rgbd_image"):
+        obs_type = ObservationType.RGBD
+    elif observation_type == "rgb_image":
+        obs_type = ObservationType.RGB
+    else:
+        raise ValueError(f"Invalis observation type: {observation_type}")
+
     if create_scene_kwargs is not None:
         convert_to_array(create_scene_kwargs)
 
     env = RopeCuttingEnv(
-        observation_type=ObservationType.RGBD,
+        observation_type=obs_type,
         render_mode=render_mode,
         action_type=action_type,
         image_shape=image_shape,
@@ -64,10 +73,10 @@ def build(
             functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
         )
     post_processing_functions.append(normalize)
+    if observation_type == "color_point_cloud":
+        env = ColorPointCloudWrapper(env, post_processing_functions=post_processing_functions)
 
-    env = ColorPointCloudWrapper(
-        env, post_processing_functions=post_processing_functions
-    )
+
     env = TimeLimit(env, max_episode_steps)
     return env
 
