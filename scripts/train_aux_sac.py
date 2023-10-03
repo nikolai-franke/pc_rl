@@ -128,6 +128,7 @@ def build(config: DictConfig):
     mae_prediction_head = MaePredictionHead(
         dim=config.model.embedder.embedding_size,
         group_size=config.model.embedder.group_size,
+        n_out_channels=3 if not config.env.use_color else 6,
     )
 
     finetune_encoder = FinetuneEncoder(

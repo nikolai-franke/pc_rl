@@ -57,7 +57,7 @@ def main(config: DictConfig):
     mae_prediction_head = MaePredictionHead(
         dim=config.model.embedder.embedding_size,
         group_size=config.model.embedder.group_size,
-        n_out_channels=6,
+        n_out_channels=3 if not config.use_color else 6,
     )
 
     masked_autoencoder = MaskedAutoEncoder(

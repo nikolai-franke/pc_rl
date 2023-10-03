@@ -154,6 +154,7 @@ class Embedder(MessagePassing):
         msg = self.mlp_2(msg.reshape(-1, msg.shape[-1]))
 
         if x_j is not None:
+            assert self.color_embedder is not None
             color_embedding = self.color_embedder(x_j).reshape(-1, msg.shape[-1])
             msg = msg + color_embedding
             neighborhood = torch.cat([neighborhood, x_j], dim=1)
