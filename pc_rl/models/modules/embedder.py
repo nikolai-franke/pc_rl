@@ -22,6 +22,7 @@ class Embedder(MessagePassing):
         sampling_ratio: float,
         random_start: bool = True,
         padding_value: float = 0.0,
+        color_embedder: MLP | None = None,
         **kwargs,
     ):
         """
@@ -43,8 +44,9 @@ class Embedder(MessagePassing):
 
         self.mlp_1 = mlp_1
         self.mlp_2 = mlp_2
-        self.color_embedder = MLP([3, 128, 384], act="gelu", norm=None)
-        self.points_dim = 6
+        self.color_embedder = color_embedder
+        # TODO: Don't hardcode 3 and 6
+        self.points_dim = 3 if color_embedder is not None else 6
 
         assert (
             self.mlp_1.channel_list[-1] * 2 == self.mlp_2.channel_list[0]

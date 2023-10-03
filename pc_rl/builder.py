@@ -29,16 +29,23 @@ def build_embedder(
     group_size: int,
     sampling_ratio: float,
     random_start: bool,
+    color_embedder_layers: list[int] | None = None,
 ) -> Embedder:
     mlp_1 = MLP(mlp_1_layers, act=mlp_act)
     mlp_2_layers.append(embedding_size)
     mlp_2 = MLP(mlp_2_layers, act=mlp_act)
+    if color_embedder_layers is not None:
+        color_embedder = MLP(color_embedder_layers, act=mlp_act)
+    else:
+        color_embedder = None
+
     return Embedder(
         mlp_1=mlp_1,
         mlp_2=mlp_2,
         group_size=group_size,
         sampling_ratio=sampling_ratio,
         random_start=random_start,
+        color_embedder=color_embedder,
     )
 
 
