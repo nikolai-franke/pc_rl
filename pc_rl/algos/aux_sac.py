@@ -130,7 +130,7 @@ class AuxPcSAC(SAC):
             color_loss = (
                 F.mse_loss(
                     prediction[..., 3:].reshape(B, M, -1, C - 3),
-                    prediction_nearest_neighbor[..., 3:].reshape(B, -1, C - 3),
+                    prediction_nearest_neighbor[..., 3:].reshape(B, M, -1, C - 3),
                 )
                 * self.color_loss_coeff
             )
