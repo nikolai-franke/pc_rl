@@ -124,11 +124,17 @@ def build(config: DictConfig):
         transformer_decoder=transformer_decoder,
         pos_embedder=decoder_pos_embedder,
     )
+    if config.env.observation_type == "point_cloud":
+        n_out_channels = 3
+    elif config.env.observation_type == "color_point_cloud":
+        n_out_channels = 6
+    else:
+        raise ValueError(f"Invalid observation_type: {config.env.observation_type}")
 
     mae_prediction_head = MaePredictionHead(
         dim=config.model.embedder.embedding_size,
         group_size=config.model.embedder.group_size,
-        n_out_channels=3 if not config.env.use_color else 6,
+        n_out_channels=n_out_channels,
     )
 
     finetune_encoder = FinetuneEncoder(

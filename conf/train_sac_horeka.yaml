@@ -1,5 +1,5 @@
 defaults:
-  - train_sac
+  - train_aux_sac
   - platform: horeka
   - _self_
 
@@ -10,5 +10,6 @@ use_slurm: True
 hydra:
   sweeper:
     params:
-      algo.ent_coeff_lr: 5e-5, 2e-5
+      algo.ent_coeff_lr: 2e-5
       env: thread_in_hole
+      env.observation_type: color_point_cloud

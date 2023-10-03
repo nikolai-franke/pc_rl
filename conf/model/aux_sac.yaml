@@ -15,7 +15,7 @@ masked_encoder:
 masked_decoder:
   transformer_decoder:
     _target_: pc_rl.builder.build_transformer_decoder
-    depth: 3
+    depth: 1
 
 pi_mlp_head:
   _target_: pc_rl.models.sac.q_and_pi_heads.PiMlpHead
