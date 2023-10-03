@@ -43,7 +43,8 @@ class Embedder(MessagePassing):
 
         self.mlp_1 = mlp_1
         self.mlp_2 = mlp_2
-        self.points_dim = self.mlp_1.channel_list[0]
+        self.color_embedder = MLP([3, 128, 384], act="gelu", norm=None)
+        self.points_dim = 6
 
         assert (
             self.mlp_1.channel_list[-1] * 2 == self.mlp_2.channel_list[0]
@@ -138,8 +139,8 @@ class Embedder(MessagePassing):
     def message(self, pos_i: Tensor, pos_j: Tensor, x_j: Tensor):
         neighborhood = pos_j - pos_i
 
-        if x_j is not None:
-            neighborhood = torch.cat([neighborhood, x_j], dim=1)
+        # if x_j is not None:
+        #     neighborhood = torch.cat([neighborhood, x_j], dim=1)
 
         msg = self.mlp_1(neighborhood)
         # reshape into shape [G, M, mlp_1_out_dim]
@@ -149,6 +150,11 @@ class Embedder(MessagePassing):
         # add the neighborhood max to the original msg for each node
         msg = torch.cat([msg_max.expand(-1, self.group_size, -1), msg], dim=2)
         msg = self.mlp_2(msg.reshape(-1, msg.shape[-1]))
+
+        if x_j is not None:
+            color_embedding = self.color_embedder(x_j).reshape(-1, msg.shape[-1])
+            msg = msg + color_embedding
+            neighborhood = torch.cat([neighborhood, x_j], dim=1)
 
         return msg, neighborhood
 

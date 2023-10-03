@@ -39,8 +39,8 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.color_loss_coeff = color_loss_coeff
         self.loss_fn = functools.partial(chamfer_distance, return_x_nn=True)
 
-    def forward(self, pos: Tensor, batch: Tensor):
-        x, neighborhoods, center_points = self.embedder(pos, batch)
+    def forward(self, pos: Tensor, batch: Tensor, color: Tensor | None = None):
+        x, neighborhoods, center_points = self.embedder(pos, batch, color)
         x_vis, ae_mask, padding_mask = self.masked_encoder(x, center_points)
         x_recovered = self.masked_decoder(x_vis, ae_mask, center_points)
         pos_recovered = self.mae_prediction_head(x_recovered)
@@ -48,14 +48,14 @@ class MaskedAutoEncoder(pl.LightningModule):
         return pos_recovered, neighborhoods, ae_mask, padding_mask, center_points
 
     def training_step(self, data, batch_idx):
-        prediction, neighborhoods, mask, padding_mask, _ = self.forward(
-            data.pos, data.batch
+        prediction, neighborhoods, ae_mask, padding_mask, _ = self.forward(
+            data.pos, data.batch, data.x
         )
         B, M, *_, C = prediction.shape
         padding_mask = padding_mask.reshape(B, -1)
-        padding_mask = padding_mask[mask].reshape(B, -1)
+        padding_mask = padding_mask[ae_mask].reshape(B, -1)
 
-        ground_truth = neighborhoods[mask].reshape(B, M, -1, C)
+        ground_truth = neighborhoods[ae_mask].reshape(B, M, -1, C)
 
         prediction = prediction.reshape(B, M, -1, C)
 
@@ -79,6 +79,7 @@ class MaskedAutoEncoder(pl.LightningModule):
                 * self.color_loss_coeff
             )
             loss += color_loss
+            self.log("train/color_loss", color_loss.item(), batch_size=B)
 
         self.log("train/loss", loss.item(), batch_size=B)
         return loss
@@ -95,7 +96,7 @@ class MaskedAutoEncoder(pl.LightningModule):
             self.ae_mask,
             self.padding_mask,
             self.center_points,
-        ) = self.forward(data.pos, data.batch)
+        ) = self.forward(data.pos, data.batch, data.x)
         # save dimensions for point cloud logger
         self.B, self.M, self.G, self.C = self.prediction.shape
         B, M, G, C = self.B, self.M, self.G, self.C
