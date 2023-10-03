@@ -7,7 +7,6 @@ import numpy as np
 from gymnasium.wrappers.time_limit import TimeLimit
 from sofa_env.scenes.thread_in_hole.thread_in_hole_env import (ActionType,
                                                                ObservationType,
-                                                               RenderFramework,
                                                                RenderMode,
                                                                ThreadInHoleEnv)
 
@@ -23,6 +22,9 @@ def build(
     add_obs_to_info_dict: bool,
     render_mode: Literal["headless", "human"],
     action_type: Literal["discrete", "continuous"],
+    observation_type: Literal[
+        "point_cloud", "color_point_cloud", "rgb_image", "rgbd_image"
+    ],
     image_shape: list[int],
     frame_skip: int,
     time_step: float,
@@ -35,7 +37,6 @@ def build(
     reward_amount_dict: dict,
     voxel_grid_size: float | None,
     create_scene_kwargs: dict | None = None,
-    use_color: bool = False,
 ):
     image_shape = tuple(image_shape)  # type: ignore
     render_mode = RenderMode[render_mode.upper()]  # type: ignore
@@ -47,16 +48,21 @@ def build(
         hole_rotation_reset_noise = np.asarray(hole_rotation_reset_noise)
     if hole_position_reset_noise is not None:
         hole_position_reset_noise = np.asarray(hole_position_reset_noise)
+    if observation_type in ("point_cloud", "color_point_cloud", "rgbd_image"):
+        obs_type = ObservationType.RGBD
+    elif observation_type == "rgb_image":
+        obs_type = ObservationType.RGB
+    else:
+        raise ValueError(f"Invalis observation type: {observation_type}")
 
     if create_scene_kwargs is not None:
         convert_to_array(create_scene_kwargs)
 
     env = ThreadInHoleEnv(
-        observation_type=ObservationType.RGBD,
+        observation_type=obs_type,
         render_mode=render_mode,
         action_type=action_type,
         image_shape=image_shape,
-        # render_framework=RenderFramework.PYGAME,
         frame_skip=frame_skip,
         time_step=time_step,
         settle_steps=settle_steps,
@@ -78,14 +84,13 @@ def build(
             functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
         )
     post_processing_functions.append(normalize)
-    if use_color:
-        env = ColorPointCloudWrapper(
+    if observation_type == "point_cloud":
+        env = PointCloudFromDepthImageObservationWrapper(
             env, post_processing_functions=post_processing_functions
         )
-    else:
-        env = PointCloudFromDepthImageObservationWrapper(
-            env,
-            post_processing_functions=post_processing_functions,
+    elif observation_type == "color_point_cloud":
+        env = ColorPointCloudWrapper(
+            env, post_processing_functions=post_processing_functions
         )
     env = TimeLimit(env, max_episode_steps)
     return env
