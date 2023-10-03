@@ -57,9 +57,8 @@ def main(config: DictConfig):
     mae_prediction_head = MaePredictionHead(
         dim=config.model.embedder.embedding_size,
         group_size=config.model.embedder.group_size,
+        n_out_channels=6,
     )
-
-    loss_fn = get_loss_fn(name="chamfer")
 
     masked_autoencoder = MaskedAutoEncoder(
         embedder=embedder,
@@ -68,7 +67,6 @@ def main(config: DictConfig):
         mae_prediction_head=mae_prediction_head,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
-        loss_fn=loss_fn,
     )
 
     transforms = []
@@ -109,7 +107,7 @@ def main(config: DictConfig):
             transform=transform,
             split="val",
         )
-    elif config.dataset.name in ("reach", "thread_in_hole"):
+    elif config.dataset.name in ("reach", "thread_in_hole", "color_thread_in_hole"):
         dataset = PcInMemoryDataset(root=path, transform=transform)
         validation_dataset = dataset[int(0.9 * len(dataset)) :]
         dataset = dataset[: int(0.9 * len(dataset))]
