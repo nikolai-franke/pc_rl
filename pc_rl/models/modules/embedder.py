@@ -46,7 +46,7 @@ class Embedder(MessagePassing):
         self.mlp_2 = mlp_2
         self.color_embedder = color_embedder
         # TODO: Don't hardcode 3 and 6
-        self.points_dim = 3 if color_embedder is not None else 6
+        self.points_dim = 3 if color_embedder is None else 6
 
         assert (
             self.mlp_1.channel_list[-1] * 2 == self.mlp_2.channel_list[0]
