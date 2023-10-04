@@ -1,6 +1,6 @@
 defaults:
   - pos_embedder: default
-  - embedder: default
+  - embedder: color
   - transformer_block: default
   - _self_
 
