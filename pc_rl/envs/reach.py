@@ -20,20 +20,29 @@ def build(
     frame_skip: int,
     time_step: float,
     discrete_action_magnitude: float,
+    observation_type: Literal[
+        "point_cloud", "color_point_cloud", "rgb_image", "rgbd_image"
+    ],
     distance_to_target_threshold: float,
     reward_amount_dict: dict,
     create_scene_kwargs: dict,
     add_obs_to_info_dict: bool,
     voxel_grid_size: float | None,
-    use_color: bool = False,
 ):
     assert len(image_shape) == 2
     image_shape = tuple(image_shape)  # type: ignore
     render_mode = RenderMode[render_mode.upper()]  # type: ignore
     action_type = ActionType[action_type.upper()]  # type: ignore
 
+    if observation_type in ("point_cloud", "color_point_cloud", "rgbd_image"):
+        obs_type = ObservationType.RGBD
+    elif observation_type == "rgb_image":
+        obs_type = ObservationType.RGB
+    else:
+        raise ValueError(f"Invalis observation type: {observation_type}")
+
     env = ReachEnv(
-        observation_type=ObservationType.RGBD,
+        observation_type=obs_type,
         render_mode=render_mode,
         action_type=action_type,
         observe_target_position=False,
@@ -53,14 +62,13 @@ def build(
             functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
         )
     post_processing_functions.append(normalize)
-    if use_color:
-        env = ColorPointCloudWrapper(
+    if observation_type == "point_cloud":
+        env = PointCloudFromDepthImageObservationWrapper(
             env, post_processing_functions=post_processing_functions
         )
-    else:
-        env = PointCloudFromDepthImageObservationWrapper(
-            env,
-            post_processing_functions=post_processing_functions,
+    elif observation_type == "color_point_cloud":
+        env = ColorPointCloudWrapper(
+            env, post_processing_functions=post_processing_functions
         )
     env = TimeLimit(env, max_episode_steps)
     return env
