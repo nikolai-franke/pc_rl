@@ -1,20 +1,14 @@
 from __future__ import annotations
 
-import functools
 from typing import Literal
 
 import numpy as np
-from gymnasium.wrappers.time_limit import TimeLimit
 from sofa_env.scenes.thread_in_hole.thread_in_hole_env import (ActionType,
                                                                ObservationType,
                                                                RenderMode,
                                                                ThreadInHoleEnv)
 
-from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
-from pc_rl.envs.point_cloud_wrapper import (
-    ColorPointCloudWrapper, PointCloudFromDepthImageObservationWrapper)
-
-from .post_processing_functions import normalize, voxel_grid_sample
+from pc_rl.utils.add_env_wrappers import add_env_wrappers
 
 
 def build(
@@ -74,25 +68,14 @@ def build(
         insertion_ratio_threshold=insertion_ratio_threshold,
         simple_success_check=simple_success_check,
     )
+    env = add_env_wrappers(
+        env,
+        max_episode_steps=max_episode_steps,
+        add_obs_to_info_dict=add_obs_to_info_dict,
+        observation_type=observation_type,
+        voxel_grid_size=voxel_grid_size,
+    )
 
-    if add_obs_to_info_dict:
-        env = AddObsToInfoWrapper(env)
-
-    post_processing_functions = []
-    if voxel_grid_size is not None:
-        post_processing_functions.append(
-            functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
-        )
-    post_processing_functions.append(normalize)
-    if observation_type == "point_cloud":
-        env = PointCloudFromDepthImageObservationWrapper(
-            env, post_processing_functions=post_processing_functions
-        )
-    elif observation_type == "color_point_cloud":
-        env = ColorPointCloudWrapper(
-            env, post_processing_functions=post_processing_functions
-        )
-    env = TimeLimit(env, max_episode_steps)
     return env
 
 

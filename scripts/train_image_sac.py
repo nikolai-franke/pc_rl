@@ -27,8 +27,6 @@ import pc_rl.builder  # for hydra's instantiate
 import pc_rl.models.sac.q_and_pi_heads
 import wandb
 from pc_rl.agents.image_sac import ImageSacAgent
-from pc_rl.agents.sac import PcSacAgent
-from pc_rl.models.finetune_encoder import FinetuneEncoder
 
 
 @contextmanager

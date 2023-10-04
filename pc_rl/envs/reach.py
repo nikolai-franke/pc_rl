@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-import functools
+from typing import Literal
 
-from gymnasium.wrappers.time_limit import TimeLimit
 from sofa_env.scenes.reach.reach_env import (ActionType, ObservationType,
                                              ReachEnv, RenderMode)
 
-from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
-from pc_rl.envs.point_cloud_wrapper import (
-    ColorPointCloudWrapper, PointCloudFromDepthImageObservationWrapper)
-from pc_rl.envs.post_processing_functions import normalize, voxel_grid_sample
+from pc_rl.utils.add_env_wrappers import add_env_wrappers
 
 
 def build(
@@ -39,7 +35,7 @@ def build(
     elif observation_type == "rgb_image":
         obs_type = ObservationType.RGB
     else:
-        raise ValueError(f"Invalis observation type: {observation_type}")
+        raise ValueError(f"Invalid observation type: {observation_type}")
 
     env = ReachEnv(
         observation_type=obs_type,
@@ -54,21 +50,11 @@ def build(
         reward_amount_dict=reward_amount_dict,
         create_scene_kwargs=create_scene_kwargs,
     )
-    if add_obs_to_info_dict:
-        env = AddObsToInfoWrapper(env)
-    post_processing_functions = []
-    if voxel_grid_size is not None:
-        post_processing_functions.append(
-            functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
-        )
-    post_processing_functions.append(normalize)
-    if observation_type == "point_cloud":
-        env = PointCloudFromDepthImageObservationWrapper(
-            env, post_processing_functions=post_processing_functions
-        )
-    elif observation_type == "color_point_cloud":
-        env = ColorPointCloudWrapper(
-            env, post_processing_functions=post_processing_functions
-        )
-    env = TimeLimit(env, max_episode_steps)
+    env = add_env_wrappers(
+        env,
+        max_episode_steps=max_episode_steps,
+        add_obs_to_info_dict=add_obs_to_info_dict,
+        observation_type=observation_type,
+        voxel_grid_size=voxel_grid_size,
+    )
     return env
