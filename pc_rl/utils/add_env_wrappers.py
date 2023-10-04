@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 from typing import Literal
 
@@ -31,6 +33,7 @@ def add_env_wrappers(
             post_processing_functions.append(
                 functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
             )
+        post_processing_functions.append(normalize)
         if observation_type == "point_cloud":
             env = PointCloudFromDepthImageObservationWrapper(
                 env, post_processing_functions=post_processing_functions
@@ -40,3 +43,4 @@ def add_env_wrappers(
                 env, post_processing_functions=post_processing_functions
             )
     env = TimeLimit(env, max_episode_steps)
+    return env
