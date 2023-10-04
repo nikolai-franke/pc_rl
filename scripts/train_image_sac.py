@@ -20,14 +20,14 @@ from parllel.samplers import BasicSampler
 from parllel.samplers.eval import EvalSampler
 from parllel.torch.algos.sac import SAC, build_replay_buffer_tree
 from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
+from parllel.torch.models import Conv2dHeadModel
 from parllel.transforms.vectorized_video import RecordVectorizedVideo
 from parllel.types import BatchSpec
 
 import pc_rl.builder  # for hydra's instantiate
 import pc_rl.models.sac.q_and_pi_heads
 import wandb
-from pc_rl.agents.sac import PcSacAgent
-from pc_rl.models.finetune_encoder import FinetuneEncoder
+from pc_rl.agents.image_sac import ImageSacAgent
 
 
 @contextmanager
@@ -55,7 +55,6 @@ def build(config: DictConfig):
         batch_spec=batch_spec,
         parallel=parallel,
         full_size=replay_length,
-        keys_to_skip=("obs", "next_obs"),
     )
 
     obs_space, action_space = metadata.obs_space, metadata.action_space
@@ -66,47 +65,23 @@ def build(config: DictConfig):
         scale=action_space.high[0] * config.action_scale,
     )
 
-    sample_tree["observation"] = dict_map(
-        Array.from_numpy,
-        metadata.example_obs,
-        batch_shape=tuple(batch_spec),
-        max_mean_num_elem=obs_space.shape[0],
-        kind="jagged",
-        storage=storage,
-        padding=1,
-        full_size=replay_length,
-    )
-
-    sample_tree["next_observation"] = sample_tree["observation"].new_array(
-        padding=0,
-        inherit_full_size=True,
-    )
-
-    sample_tree["observation"][0] = obs_space.sample()
-    metadata.example_obs_batch = sample_tree["observation"][0]
+    # sample_tree["observation"][0] = obs_space.sample()
+    # metadata.example_obs_batch = sample_tree["observation"][0]
 
     device = config.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
     wandb.config.update({"device": device}, allow_val_change=True)
     device = torch.device(device)
 
-    transformer_block_factory = instantiate(
-        config.model.transformer_block,
-        embedding_size=config.model.embedder.embedding_size,
-        _partial_=True,
-    )
-    transformer_encoder = instantiate(
-        config.model.transformer_encoder,
-        transformer_block_factory=transformer_block_factory,
-    )
-
-    pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
-    embedder = instantiate(config.model.embedder, _convert_="partial")
-
-    finetune_encoder = FinetuneEncoder(
-        pos_embedder=pos_embedder, transformer_encoder=transformer_encoder
+    encoder = Conv2dHeadModel(
+        image_shape=obs_space.shape,
+        channels=[32, 64, 64],
+        kernel_sizes=[8, 4, 3],
+        strides=[4, 2, 1],
+        hidden_sizes=None,
+        output_size=384,
     )
 
-    mlp_input_size = finetune_encoder.dim
+    mlp_input_size = encoder.output_size
 
     pi_model = instantiate(
         config.model.pi_mlp_head,
@@ -128,28 +103,17 @@ def build(config: DictConfig):
         _convert_="partial",
     )
 
-    transformer_block_factory = instantiate(
-        config.model.transformer_block,
-        embedding_size=config.model.embedder.embedding_size,
-        _partial_=True,
-    )
-    transformer_encoder = instantiate(
-        config.model.transformer_encoder,
-        transformer_block_factory=transformer_block_factory,
-    )
-
     model = torch.nn.ModuleDict(
         {
             "pi": pi_model,
             "q1": q1_model,
             "q2": q2_model,
-            "embedder": embedder,
-            "encoder": finetune_encoder,
+            "encoder": encoder,
         }
     )
 
     # instantiate agent
-    agent = PcSacAgent(
+    agent = ImageSacAgent(
         model=model,
         distribution=distribution,
         device=device,
@@ -164,10 +128,10 @@ def build(config: DictConfig):
     )
 
     replay_buffer_tree = build_replay_buffer_tree(sample_tree)
+    replay_buffer_tree = replay_buffer_tree.to_ndarray()
+    replay_buffer_tree = replay_buffer_tree.apply(torch.from_numpy)
 
     def batch_transform(tree: ArrayDict[Array]) -> ArrayDict[torch.Tensor]:
-        tree = tree.to_ndarray()  # type: ignore
-        tree = tree.apply(torch.from_numpy)
         return tree.to(device=device)
 
     replay_buffer = ReplayBuffer(
@@ -198,10 +162,6 @@ def build(config: DictConfig):
 
     q_optimizer = torch.optim.Adam(
         [
-            {
-                "params": agent.model["embedder"].parameters(),
-                **per_module_conf.get("embedder", {}),
-            },
             {
                 "params": agent.model["encoder"].parameters(),
                 **per_module_conf.get("encoder", {}),
@@ -272,8 +232,6 @@ def build(config: DictConfig):
     eval_sample_tree = eval_tree_example.new_array(
         batch_shape=(1, config.eval.n_eval_envs)
     )
-    eval_sample_tree["observation"][0] = obs_space.sample()
-
     video_recorder = RecordVectorizedVideo(
         sample_tree=eval_sample_tree,
         buffer_key_to_record="env_info.rendering",
@@ -331,7 +289,7 @@ def main(config: DictConfig) -> None:
 
     run = wandb.init(
         project="pc_rl",
-        tags=["sac", "horeka"],
+        tags=["sac", "image"],
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
         sync_tensorboard=True,  # auto-upload any values logged to tensorboard
         save_code=True,  # save script used to start training, git commit, and patch
@@ -364,7 +322,7 @@ def main(config: DictConfig) -> None:
         },  # type: ignore
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
         model_save_path="model.pt",
-        # verbosity=Verbosity.DEBUG,
+        verbosity=Verbosity.DEBUG,
     )
 
     with build(config) as runner:
