@@ -6,6 +6,7 @@ from pathlib import Path
 import hydra
 import parllel.logger as logger
 import torch
+from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from parllel import Array, ArrayDict, dict_map
@@ -127,10 +128,10 @@ def build(config: DictConfig):
     )
 
     replay_buffer_tree = build_replay_buffer_tree(sample_tree)
+    replay_buffer_tree = replay_buffer_tree.to_ndarray()
+    replay_buffer_tree = replay_buffer_tree.apply(torch.from_numpy)
 
     def batch_transform(tree: ArrayDict[Array]) -> ArrayDict[torch.Tensor]:
-        tree = tree.to_ndarray()  # type: ignore
-        tree = tree.apply(torch.from_numpy)
         return tree.to(device=device)
 
     replay_buffer = ReplayBuffer(
@@ -231,8 +232,6 @@ def build(config: DictConfig):
     eval_sample_tree = eval_tree_example.new_array(
         batch_shape=(1, config.eval.n_eval_envs)
     )
-    eval_sample_tree["observation"][0] = obs_space.sample()
-
     video_recorder = RecordVectorizedVideo(
         sample_tree=eval_sample_tree,
         buffer_key_to_record="env_info.rendering",
@@ -323,7 +322,7 @@ def main(config: DictConfig) -> None:
         },  # type: ignore
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
         model_save_path="model.pt",
-        # verbosity=Verbosity.DEBUG,
+        verbosity=Verbosity.DEBUG,
     )
 
     with build(config) as runner:
