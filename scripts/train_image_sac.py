@@ -65,9 +65,6 @@ def build(config: DictConfig):
         scale=action_space.high[0],
     )
 
-    # sample_tree["observation"][0] = obs_space.sample()
-    # metadata.example_obs_batch = sample_tree["observation"][0]
-
     device = config.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
     wandb.config.update({"device": device}, allow_val_change=True)
     device = torch.device(device)

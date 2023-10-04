@@ -107,7 +107,12 @@ def main(config: DictConfig):
             transform=transform,
             split="val",
         )
-    elif config.dataset.name in ("reach", "thread_in_hole", "color_thread_in_hole"):
+    elif config.dataset.name in (
+        "reach",
+        "thread_in_hole",
+        "color_thread_in_hole",
+        "rope_cutting",
+    ):
         dataset = PcInMemoryDataset(root=path, transform=transform)
         validation_dataset = dataset[int(0.9 * len(dataset)) :]
         dataset = dataset[: int(0.9 * len(dataset))]

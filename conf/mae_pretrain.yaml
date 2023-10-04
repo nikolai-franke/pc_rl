@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - dataset: thread_in_hole
+  - dataset: rope_cutting
   - model: mae
   - loss_fn: chamfer
 
