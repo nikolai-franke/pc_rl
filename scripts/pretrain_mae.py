@@ -112,6 +112,7 @@ def main(config: DictConfig):
         "thread_in_hole",
         "color_thread_in_hole",
         "rope_cutting",
+        "deflect_spheres",
     ):
         dataset = PcInMemoryDataset(root=path, transform=transform)
         validation_dataset = dataset[int(0.9 * len(dataset)) :]

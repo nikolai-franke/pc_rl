@@ -1,4 +1,8 @@
-defaults:
- - default
-
-color_embedder_layers: [3, 128, 384]
+_target_: pc_rl.builder.build_embedder
+embedding_size: 384
+group_size: 32
+mlp_1_layers: [6, 128, 256]
+mlp_2_layers: [512, 512]
+mlp_act: relu
+sampling_ratio: 0.0625
+random_start: True
