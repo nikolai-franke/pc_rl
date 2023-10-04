@@ -66,6 +66,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         ground_truth = ground_truth.reshape(B * M, -1, C)
 
         loss, *_, x_idx = self.loss_fn(prediction[..., :3], ground_truth[..., :3])
+        self.log("train/chamfer_loss", loss.item(), batch_size=B)
         # if color
         if C > 3:
             prediction_nearest_neighbor = knn_gather(ground_truth, x_idx).reshape(
@@ -115,6 +116,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         loss, *_, x_idx = self.loss_fn(
             self.prediction[..., :3], self.ground_truth[..., :3]
         )
+        self.log("val/chamfer_loss", loss.item(), batch_size=B)
         if C > 3:
             prediction_nearest_neighbor = knn_gather(self.ground_truth, x_idx)
             color_loss = (
@@ -124,6 +126,7 @@ class MaskedAutoEncoder(pl.LightningModule):
                 )
                 * self.color_loss_coeff
             )
+            self.log("val/color_loss", color_loss.item(), batch_size=B)
             loss += color_loss
 
         self.log("val/loss", loss.item(), batch_size=B)
