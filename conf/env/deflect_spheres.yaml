@@ -5,10 +5,12 @@ defaults:
   - _self_
 
 max_episode_steps: 500
+settle_steps: 10
 
 num_objects: 5
 num_deflect_to_win: 1
 min_deflection_distance: 3.0
+single_agent: True
 
 reward_amount_dict:
   action_violated_cartesian_workspace: -0.0

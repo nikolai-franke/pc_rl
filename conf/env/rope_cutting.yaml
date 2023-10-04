@@ -5,6 +5,7 @@ defaults:
   - _self_
 
 max_episode_steps: 300
+settle_steps: 10
 
 num_ropes: 5
 num_ropes_to_cut: 1
