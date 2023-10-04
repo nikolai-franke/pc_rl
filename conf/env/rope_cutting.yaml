@@ -4,12 +4,7 @@ defaults:
   - base
   - _self_
 
-time_step: 0.1
-frame_skip: 1
-max_episode_steps: 200
-image_shape: [128, 128]
-voxel_grid_size: 5.0
-settle_steps: 10
+max_episode_steps: 300
 
 num_ropes: 5
 num_ropes_to_cut: 1

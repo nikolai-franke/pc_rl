@@ -5,4 +5,4 @@ observation_type: point_cloud
 image_shape: [128, 128]
 frame_skip: 1
 time_step: 0.1
-voxel_grid_size: 0.05
+voxel_grid_size: 5.0

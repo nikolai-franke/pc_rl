@@ -1,0 +1,25 @@
+_target_: pc_rl.envs.deflect_spheres.build
+
+defaults:
+  - base
+  - _self_
+
+max_episode_steps: 500
+
+num_objects: 5
+num_deflect_to_win: 1
+min_deflection_distance: 3.0
+
+reward_amount_dict:
+  action_violated_cartesian_workspace: -0.0
+  action_violated_state_limits: -0.0
+  tool_collision: -0.0
+  distance_to_active_sphere: -0.0
+  delta_distance_to_active_sphere: -10.0
+  deflection_of_inactive_spheres: -0.005
+  deflection_of_active_sphere: 0.0
+  delta_deflection_of_active_sphere: 1.0
+  done_with_active_sphere: 10.0
+  successful_task: 100.0
+  rcm_violation_xyz: -0.0
+  rcm_violation_rotation: -0.0
