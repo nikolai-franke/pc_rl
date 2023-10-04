@@ -3,7 +3,7 @@ from __future__ import annotations
 import gymnasium as gym
 
 
-class ImageToTensorWrapper(gym.ObservationWrapper):
+class TransposeImageWrapper(gym.ObservationWrapper):
     def __init__(self, env):
         super().__init__(env)
         obs_shape = self.env.observation_space.shape
@@ -12,6 +12,5 @@ class ImageToTensorWrapper(gym.ObservationWrapper):
         )
 
     def observation(self, observation):
-        observation = observation.transpose((2, 0, 1)).astype(float)
-        observation *= 1 / 255.0
+        observation = observation.transpose((2, 0, 1))
         return observation

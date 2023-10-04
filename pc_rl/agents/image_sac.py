@@ -24,10 +24,12 @@ class ImageSacAgent(SacAgent):
         model["target_encoder"].requires_grad_(False)
 
     def encode(self, observation: ArrayTree[Tensor]) -> Tensor:
+        observation = image_to_tensor(observation)
         encoder_out = self.model["encoder"](observation)
         return encoder_out
 
     def target_encode(self, observation: ArrayTree[Tensor]) -> Tensor:
+        observation = image_to_tensor(observation)
         encoder_out = self.model["target_encoder"](observation)
         return encoder_out
 
@@ -36,3 +38,9 @@ class ImageSacAgent(SacAgent):
         update_state_dict(
             self.model["target_encoder"], self.model["encoder"].state_dict(), tau
         )
+
+
+def image_to_tensor(observation: Tensor):
+    observation = observation.float()
+    observation *= 1 / 255.0
+    return observation

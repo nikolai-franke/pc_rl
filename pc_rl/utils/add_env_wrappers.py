@@ -6,10 +6,10 @@ from typing import Literal
 from gymnasium.wrappers.time_limit import TimeLimit
 
 from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
-from pc_rl.envs.image_to_tensor_wrapper import ImageToTensorWrapper
 from pc_rl.envs.point_cloud_wrapper import (
     ColorPointCloudWrapper, PointCloudFromDepthImageObservationWrapper)
 from pc_rl.envs.post_processing_functions import normalize, voxel_grid_sample
+from pc_rl.envs.transpose_image_wrapper import TransposeImageWrapper
 
 
 def add_env_wrappers(
@@ -25,7 +25,7 @@ def add_env_wrappers(
         env = AddObsToInfoWrapper(env)
 
     if observation_type in ("rgb_image", "rgbd_image"):
-        env = ImageToTensorWrapper(env)
+        env = TransposeImageWrapper(env)
     else:
         assert observation_type in ("point_cloud", "color_point_cloud")
         post_processing_functions = []
