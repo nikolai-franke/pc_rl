@@ -1,0 +1,15 @@
+# @package _global_
+
+defaults:
+  - override /env: thread_in_hole
+  - override /model/embedder: default
+  - _self_
+
+env:
+  observation_type: point_cloud
+
+runner:
+  n_steps: 1e6
+
+optimier:
+  lr: 5e-5

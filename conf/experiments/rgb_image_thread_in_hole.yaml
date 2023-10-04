@@ -1,0 +1,8 @@
+# @package _global_
+
+defaults:
+  - override /env: thread_in_hole
+  - _self_
+
+env:
+  observation_type: rgb_image
