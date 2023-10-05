@@ -5,11 +5,12 @@ from typing import Literal
 
 from gymnasium.wrappers.time_limit import TimeLimit
 
-from pc_rl.envs.post_processing_functions import normalize, voxel_grid_sample
 from pc_rl.envs.wrappers.add_obs_to_info_wrapper import AddObsToInfoWrapper
 from pc_rl.envs.wrappers.point_cloud_wrapper import (
     ColorPointCloudWrapper, PointCloudFromDepthImageObservationWrapper)
 from pc_rl.envs.wrappers.transpose_image_wrapper import TransposeImageWrapper
+from pc_rl.utils.point_cloud_post_processing_functions import (
+    normalize, voxel_grid_sample)
 
 
 def add_env_wrappers(
