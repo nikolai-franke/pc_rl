@@ -15,4 +15,3 @@ optimizer:
   lr: 5e-5
 
 tags: [deflect_spheres, color]
-
