@@ -242,6 +242,14 @@ def build(config: DictConfig):
                 },
             ]
         )
+    else:
+        # we still need to train the attention pooling layer and the norm layer
+        q_optimizer_param_groups.append(
+            {
+                "params": agent.model["encoder"].get_additional_parameters(),  # type: ignore
+                **per_module_conf.get("encoder", {}),
+            }
+        )
 
     q_optimizer = torch.optim.Adam(
         q_optimizer_param_groups,
