@@ -127,7 +127,7 @@ def main(config: DictConfig):
         num_workers=config.num_workers,
     )
 
-    wandb_logger = WandbLogger(project="MAE", log_model=True)
+    wandb_logger = WandbLogger(project="MAE", tags=config.tags, log_model=True)
     wandb_config = OmegaConf.to_container(config, resolve=True, throw_on_missing=True)
     log_point_cloud_callback = LogPointCloudCallback()
 
