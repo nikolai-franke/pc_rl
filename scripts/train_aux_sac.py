@@ -1,9 +1,6 @@
 import os
-import sys
-import traceback
 from contextlib import contextmanager
 from datetime import datetime
-from itertools import chain
 from pathlib import Path
 
 import hydra
@@ -13,7 +10,7 @@ from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from parllel import Array, ArrayDict, dict_map
-from parllel.cages import ProcessCage, SerialCage, TrajInfo
+from parllel.cages import ProcessCage, SerialCage
 from parllel.callbacks.recording_schedule import RecordingSchedule
 from parllel.logger import Verbosity
 from parllel.patterns import build_cages, build_sample_tree
@@ -34,6 +31,7 @@ from pc_rl.models.aux_mae import RLMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
+from pc_rl.utils.sofa_traj_info import SofaTrajInfo
 
 
 @contextmanager
@@ -41,7 +39,7 @@ def build(config: DictConfig):
     parallel = config.parallel
     discount = config.algo.discount
     batch_spec = BatchSpec(config.batch_T, config.batch_B)
-    TrajInfo.set_discount(discount)
+    SofaTrajInfo.set_discount(discount)
     CageCls = ProcessCage if parallel else SerialCage
     storage = "shared" if parallel else "local"
 
@@ -51,7 +49,7 @@ def build(config: DictConfig):
         EnvClass=env_factory,
         n_envs=batch_spec.B,
         env_kwargs={"add_obs_to_info_dict": False},
-        TrajInfoClass=TrajInfo,
+        TrajInfoClass=SofaTrajInfo,
         parallel=parallel,
     )
     replay_length = int(config.algo.replay_length) // batch_spec.B
@@ -276,7 +274,7 @@ def build(config: DictConfig):
     eval_cage_kwargs = dict(
         EnvClass=env_factory,
         env_kwargs={"add_obs_to_info_dict": True},
-        TrajInfoClass=TrajInfo,
+        TrajInfoClass=SofaTrajInfo,
         reset_automatically=True,
     )
 
