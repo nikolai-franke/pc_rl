@@ -1,0 +1,6 @@
+_target_: pc_rl.builder.build_embedder_separate_color
+
+defaults:
+ - default
+
+color_embedder_hidden_layers: [3, 128, 384]
