@@ -5,4 +5,5 @@ defaults:
   - override /model/embedder: color_separate_embedder
   - _self_
 
+use_color: True
 tags: [rope_cutting, color, separate_color_embedder]

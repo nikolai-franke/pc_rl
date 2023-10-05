@@ -5,4 +5,6 @@ defaults:
   - override /model/embedder: color
   - _self_
 
+use_color: True
+
 tags: [rope_cutting, color]

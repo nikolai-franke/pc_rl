@@ -7,5 +7,6 @@ defaults:
 
 group_size: 16
 sampling_ratio: 0.125
+use_color: True
 
 tags: [rope_cutting, color, small_groups]
