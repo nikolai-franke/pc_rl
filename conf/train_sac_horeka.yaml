@@ -10,6 +10,6 @@ use_slurm: True
 hydra:
   sweeper:
     params:
-      algo.ent_coeff_lr: 2e-5
-      env: thread_in_hole
-      env.observation_type: color_point_cloud
+      algo.ent_coeff_lr: 2e-5, 5e-5
+      algo.ent_coeff: 0.2, 0.4
+      optimizer.lr: 1e-5, 5e-5
