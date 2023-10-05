@@ -5,8 +5,11 @@ defaults:
   - override /model/embedder: color
   - _self_
 
-group_size: 16
-sampling_ratio: 0.125
+model:
+  embedder:
+    group_size: 16
+    sampling_ratio: 0.125
+
 use_color: True
 
 tags: [rope_cutting, color, small_groups]

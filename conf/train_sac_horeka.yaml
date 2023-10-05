@@ -1,5 +1,5 @@
 defaults:
-  - train_aux_sac
+  - train_sac
   - platform: horeka
   - _self_
 
