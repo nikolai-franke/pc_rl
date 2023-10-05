@@ -1,0 +1,8 @@
+# @package _global_
+
+defaults:
+  - override /dataset: rope_cutting
+  - override /model/embedder: color_separate_embedder
+  - _self_
+
+tags: [rope_cutting, color, separate_color_embedder]

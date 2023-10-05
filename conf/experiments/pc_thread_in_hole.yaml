@@ -13,3 +13,5 @@ runner:
 
 optimier:
   lr: 5e-5
+
+tags: [thread_in_hole]

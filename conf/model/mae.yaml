@@ -11,11 +11,11 @@ masked_encoder:
 
 transformer_encoder:
   _target_: pc_rl.builder.build_transformer_encoder
-  depth: 4
+  depth: 3
 
 transformer_decoder:
   _target_: pc_rl.builder.build_transformer_decoder
-  depth: 4
+  depth: 1
 
 transformer_block:
   dropout: 0.1

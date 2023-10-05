@@ -1,6 +1,0 @@
-defaults:
-  - default
-  - _self_
-
-group_size: 16
-sampling_ratio: 0.075

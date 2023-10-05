@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - override /dataset: rope_cutting
+  - override /model/embedder: color_separate_embedder
+  - _self_
+
+group_size: 16
+sampling_ratio: 0.125
+
+tags: [rope_cutting, color, small_groups, separate_color_embedder]

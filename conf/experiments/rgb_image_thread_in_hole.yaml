@@ -6,3 +6,5 @@ defaults:
 
 env:
   observation_type: rgb_image
+
+tags: [thread_in_hole, image_obs]
