@@ -286,7 +286,7 @@ def main(config: DictConfig) -> None:
 
     run = wandb.init(
         project="pc_rl",
-        tags=["sac", "image"],
+        tags=config.tags,
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
         sync_tensorboard=True,  # auto-upload any values logged to tensorboard
         save_code=True,  # save script used to start training, git commit, and patch
