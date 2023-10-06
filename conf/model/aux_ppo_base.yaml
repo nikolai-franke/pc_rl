@@ -1,6 +1,6 @@
 defaults:
   - pos_embedder : default
-  - embedder: default
+  - tokenizer: default
   - transformer_block: default
   - _self_
 
