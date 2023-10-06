@@ -5,7 +5,6 @@ from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers.wandb import WandbLogger
 from pytorch_lightning.trainer import Trainer
-from torch.optim.adamw import AdamW
 from torch_geometric.data.lightning import LightningDataset
 from torch_geometric.datasets import ModelNet, ShapeNet
 from torch_geometric.transforms import (Compose, FixedPoints, GridSampling,
@@ -19,7 +18,6 @@ from pc_rl.datasets.in_memory import PcInMemoryDataset
 from pc_rl.models.mae import MaskedAutoEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
-from pc_rl.utils.aux_loss import get_loss_fn
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="mae_pretrain")
@@ -110,7 +108,7 @@ def main(config: DictConfig):
     elif config.dataset.name in (
         "reach",
         "thread_in_hole",
-        "color_thread_in_hole",
+        "thread_in_hole_color",
         "rope_cutting",
         "deflect_spheres",
     ):

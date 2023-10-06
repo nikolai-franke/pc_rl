@@ -1,8 +1,10 @@
 # @package _global_
 
 defaults:
-  - override /dataset: thread_in_hole
+  - override /dataset: thread_in_hole_color
   - override /model/embedder: color_separate_embedder
   - _self_
+
+use_color: True
 
 tags: [thread_in_hole, color, separate_color_embedder]

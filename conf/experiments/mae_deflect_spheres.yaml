@@ -1,11 +1,10 @@
 # @package _global_
 
 defaults:
-  - override /dataset: thread_in_hole_color
+  - override /dataset: deflect_spheres
   - override /model/embedder: color
   - _self_
 
 use_color: True
 
-tags: [thread_in_hole, color]
-
+tags: [deflect_spheres, color]
