@@ -53,7 +53,7 @@ def main(config: DictConfig):
     )
 
     mae_prediction_head = MaePredictionHead(
-        dim=config.model.tokenizezr.embedding_size,
+        dim=config.model.tokenizer.embedding_size,
         group_size=config.model.tokenizer.group_size,
         n_out_channels=3 if not config.use_color else 6,
     )
