@@ -5,8 +5,8 @@ from knn_cuda import KNN
 from pointnet2_ops import pointnet2_utils
 from torch_geometric.nn import MLP
 
-from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.modules.prediction_head import MaePredictionHead
+from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
+from pc_rl.models.modules.tokenizer import Tokenizer
 # from pc_rl.models.modules.transformer import Attention as NewAttention
 from pc_rl.models.modules.transformer import MaskedDecoder as NewMaskedDecoder
 from pc_rl.models.modules.transformer import MaskedEncoder as NewMaskedEncoder
@@ -601,7 +601,7 @@ class TestPointMAE:
 
     embedder_mlp_1 = MLP([3, 128, 256])
     embedder_mlp_2 = MLP([512, 512, embedding_size])
-    embedder = Embedder(
+    embedder = Tokenizer(
         mlp_1=embedder_mlp_1,
         mlp_2=embedder_mlp_2,
         group_size=group_size,

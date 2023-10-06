@@ -22,20 +22,20 @@ class PcSacAgent(SacAgent):
         pretrain_std: float = 0.75,  # With squash 0.75 is near uniform.
     ) -> None:
         super().__init__(model, distribution, device, learning_starts, pretrain_std)
-        model["target_embedder"] = copy.deepcopy(model["embedder"])
-        model["target_embedder"].requires_grad_(False)
+        model["target_tokenizer"] = copy.deepcopy(model["tokenizer"])
+        model["target_tokenizer"].requires_grad_(False)
         model["target_encoder"] = copy.deepcopy(model["encoder"])
         model["target_encoder"].requires_grad_(False)
 
     def encode(self, observation: ArrayTree[Tensor]) -> Tensor:
         pos, batch, color = dict_to_batched_data(observation)
-        x, _, center_points = self.model["embedder"](pos, batch, color)
+        x, _, center_points = self.model["tokenizer"](pos, batch, color)
         encoder_out = self.model["encoder"](x, center_points)
         return encoder_out
 
     def target_encode(self, observation: ArrayTree[Tensor]) -> Tensor:
         pos, batch, color = dict_to_batched_data(observation)
-        x, _, center_points = self.model["target_embedder"](pos, batch, color)
+        x, _, center_points = self.model["target_tokenizer"](pos, batch, color)
         encoder_out = self.model["target_encoder"](x, center_points)
         return encoder_out
 
@@ -45,5 +45,5 @@ class PcSacAgent(SacAgent):
             self.model["target_encoder"], self.model["encoder"].state_dict(), tau
         )
         update_state_dict(
-            self.model["target_embedder"], self.model["embedder"].state_dict(), tau
+            self.model["target_tokenizer"], self.model["tokenizer"].state_dict(), tau
         )

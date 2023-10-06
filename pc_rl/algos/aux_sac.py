@@ -167,15 +167,15 @@ class AuxPcSAC(SAC):
             # mae_prediction_head_grad_norm = clip_grad_norm_(
             #     self.agent.model["rl_mae"].mae_prediction_head.parameters(), self.clip_grad_norm
             # )
-            embedder_grad_norm = clip_grad_norm_(
-                self.agent.model["embedder"].parameters(), self.clip_grad_norm
+            tokenizer_grad_norm = clip_grad_norm_(
+                self.agent.model["tokenizer"].parameters(), self.clip_grad_norm
             )
             self.algo_log_info["q1_grad_norm"].append(q1_grad_norm.item())
             self.algo_log_info["q2_grad_norm"].append(q2_grad_norm.item())
             self.algo_log_info["encoder_grad_norm"].append(
                 finetune_encoder_grad_norm.item()
             )
-            self.algo_log_info["embedder_grad_norm"].append(embedder_grad_norm.item())
+            self.algo_log_info["tokenizer_grad_norm"].append(tokenizer_grad_norm.item())
             # self.algo_log_info["masked_decoder_grad_norm"].append(masked_decoder_grad_norm.item())
             # self.algo_log_info["mae_prediction_head_grad_norm"].append(mae_prediction_head_grad_norm.item())
 

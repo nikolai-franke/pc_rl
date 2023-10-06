@@ -10,9 +10,10 @@ from torch.nn import MultiheadAttention
 from torch_geometric.nn import MLP
 
 from pc_rl.models.finetune_encoder import FinetuneEncoder
-from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.modules.embedder_separate_color import EmbedderSeparateColor
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
+from pc_rl.models.modules.tokenizer import Tokenizer
+from pc_rl.models.modules.tokenizer_separate_color import \
+    TokenizerSeparateColor
 from pc_rl.models.modules.transformer import (TransformerBlock,
                                               TransformerDecoder,
                                               TransformerEncoder)
@@ -22,7 +23,7 @@ from pc_rl.models.pg.finetune_categorical import CategoricalPgModel
 from pc_rl.models.pg.finetune_continuous import ContinuousPgModel
 
 
-def build_embedder(
+def build_tokenizer(
     embedding_size: int,
     mlp_1_layers: list[int],
     mlp_2_layers: list[int],
@@ -30,12 +31,12 @@ def build_embedder(
     group_size: int,
     sampling_ratio: float,
     random_start: bool,
-) -> Embedder:
+) -> Tokenizer:
     mlp_1 = MLP(mlp_1_layers, act=mlp_act)
     mlp_2_layers.append(embedding_size)
     mlp_2 = MLP(mlp_2_layers, act=mlp_act)
 
-    return Embedder(
+    return Tokenizer(
         mlp_1=mlp_1,
         mlp_2=mlp_2,
         group_size=group_size,
@@ -44,28 +45,28 @@ def build_embedder(
     )
 
 
-def build_embedder_separate_color(
+def build_tokenizezr_separate_color(
     embedding_size: int,
     mlp_1_layers: list[int],
     mlp_2_layers: list[int],
-    color_embedder_layers: list[int],
+    color_mlp_layers: list[int],
     mlp_act: str,
     group_size: int,
     sampling_ratio: float,
     random_start: bool,
-) -> Embedder:
+) -> Tokenizer:
     mlp_1 = MLP(mlp_1_layers, act=mlp_act)
     mlp_2_layers.append(embedding_size)
     mlp_2 = MLP(mlp_2_layers, act=mlp_act)
-    color_embedder = MLP(color_embedder_layers, act=mlp_act)
+    color_mlp = MLP(color_mlp_layers, act=mlp_act)
 
-    return EmbedderSeparateColor(
+    return TokenizerSeparateColor(
         mlp_1=mlp_1,
         mlp_2=mlp_2,
         group_size=group_size,
         sampling_ratio=sampling_ratio,
         random_start=random_start,
-        color_embedder=color_embedder,
+        color_mlp=color_mlp,
     )
 
 
@@ -129,7 +130,7 @@ def build_masked_encoder(
 
 
 def build_continuous_pg_model(
-    embedder: Embedder,
+    tokenizer: Tokenizer,
     finetune_encoder: FinetuneEncoder,
     n_actions: int,
     pi_mlp_hidden_sizes: list[int],
@@ -169,7 +170,7 @@ def build_continuous_pg_model(
         output_size=1,
     )
     return ContinuousPgModel(
-        embedder=embedder,
+        tokenizer=tokenizer,
         encoder=finetune_encoder,
         pi_mlp=pi_mlp,
         value_mlp=value_mlp,
@@ -178,7 +179,7 @@ def build_continuous_pg_model(
 
 
 def build_categorical_pg_model(
-    embedder: Embedder,
+    tokenizer: Tokenizer,
     finetune_encoder: FinetuneEncoder,
     n_actions: int,
     pi_mlp_hidden_sizes: list[int],
@@ -213,7 +214,7 @@ def build_categorical_pg_model(
     )
 
     return CategoricalPgModel(
-        embedder=embedder,
+        tokenizer=tokenizer,
         encoder=finetune_encoder,
         pi_mlp=pi_mlp,
         value_mlp=value_mlp,
@@ -221,7 +222,7 @@ def build_categorical_pg_model(
 
 
 def build_aux_categorical_pg_model(
-    embedder: Embedder,
+    tokenizer: Tokenizer,
     aux_mae: AuxMae,
     n_actions: int,
     pi_mlp_hidden_sizes: list[int],
@@ -254,7 +255,7 @@ def build_aux_categorical_pg_model(
     )
 
     return AuxMaeCategoricalPgModel(
-        embedder=embedder,
+        tokenizer=tokenizer,
         aux_mae=aux_mae,
         pi_mlp=pi_mlp,
         value_mlp=value_mlp,
@@ -262,7 +263,7 @@ def build_aux_categorical_pg_model(
 
 
 def build_aux_continuous_pg_model(
-    embedder: Embedder,
+    tokenizer: Tokenizer,
     aux_mae: AuxMae,
     n_actions: int,
     pi_mlp_hidden_sizes: list[int],
@@ -303,7 +304,7 @@ def build_aux_continuous_pg_model(
     )
 
     return AuxMaeContinuousPgModel(
-        embedder=embedder,
+        tokenizer=tokenizer,
         aux_mae=aux_mae,
         pi_mlp=pi_mlp,
         value_mlp=value_mlp,

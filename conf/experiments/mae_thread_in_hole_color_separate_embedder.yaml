@@ -2,7 +2,7 @@
 
 defaults:
   - override /dataset: thread_in_hole_color
-  - override /model/embedder: color_separate_embedder
+  - override /model/tokenizer: color_separate_embedder
   - _self_
 
 use_color: True

@@ -2,11 +2,11 @@
 
 defaults:
   - override /dataset: rope_cutting
-  - override /model/embedder: color
+  - override /model/tokenizer: color
   - _self_
 
 model:
-  embedder:
+  tokenizer:
     group_size: 16
     sampling_ratio: 0.125
 

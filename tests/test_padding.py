@@ -2,8 +2,8 @@ import torch
 from torch.nn import ModuleList, MultiheadAttention
 from torch_geometric.nn import MLP
 
-from pc_rl.models.modules.embedder import Embedder
-from pc_rl.models.modules.prediction_head import MaePredictionHead
+from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
+from pc_rl.models.modules.tokenizer import Tokenizer
 from pc_rl.models.modules.transformer import (MaskedDecoder, MaskedEncoder,
                                               TransformerBlock,
                                               TransformerDecoder,
@@ -31,7 +31,7 @@ pos = torch.cat((t1, t2))
 
 
 def test_padding_embedder():
-    embedder = Embedder(
+    embedder = Tokenizer(
         mlp_1,
         mlp_2,
         group_size=group_size,
@@ -56,7 +56,7 @@ def test_padding_masked_encoder():
     depth = 8
     pos_embedder = MLP([3, 128, 512], norm=None)
     padding_value = 0.0
-    embedder = Embedder(
+    embedder = Tokenizer(
         mlp_1,
         mlp_2,
         group_size=group_size,
@@ -93,7 +93,7 @@ def test_padding_masked_encoder():
     depth = 8
     pos_embedder = MLP([3, 128, 512], norm=None)
     padding_value = 1e9
-    embedder = Embedder(
+    embedder = Tokenizer(
         mlp_1,
         mlp_2,
         group_size=group_size,
@@ -145,7 +145,7 @@ def test_padding_encoder():
     pos_embedder = MLP([3, 128, 512], norm=None)
     torch.manual_seed(0)
     padding_value = 0.0
-    embedder = Embedder(
+    embedder = Tokenizer(
         mlp_1,
         mlp_2,
         group_size=5,
@@ -169,7 +169,7 @@ def test_padding_encoder():
 
     torch.manual_seed(0)
     padding_value = 1e9
-    embedder = Embedder(
+    embedder = Tokenizer(
         mlp_1,
         mlp_2,
         group_size=5,
@@ -199,7 +199,7 @@ def test_padding_block():
     EQUALS_DIM = int((batch1_size - batch2_size) * sampling_ratio)
     torch.manual_seed(0)
     padding_value = 0.0
-    embedder = Embedder(
+    embedder = Tokenizer(
         mlp_1,
         mlp_2,
         group_size=5,
@@ -217,7 +217,7 @@ def test_padding_block():
 
     torch.manual_seed(0)
     padding_value = 1e9
-    embedder = Embedder(
+    embedder = Tokenizer(
         mlp_1,
         mlp_2,
         group_size=5,

@@ -1,4 +1,4 @@
-_target_: pc_rl.builder.build_embedder
+_target_: pc_rl.builder.build_tokenizer
 defaults:
  - default
 

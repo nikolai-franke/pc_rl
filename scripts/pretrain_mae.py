@@ -22,11 +22,11 @@ from pc_rl.models.modules.masked_decoder import MaskedDecoder
 
 @hydra.main(version_base=None, config_path="../conf", config_name="mae_pretrain")
 def main(config: DictConfig):
-    embedder = instantiate(config.model.embedder, _convert_="partial")
+    tokenizer = instantiate(config.model.tokenizer, _convert_="partial")
 
     transformer_block_factory = instantiate(
         config.model.transformer_block,
-        embedding_size=config.model.embedder.embedding_size,
+        embedding_size=config.model.tokenizer.embedding_size,
         _partial_=True,
     )
 
@@ -53,13 +53,13 @@ def main(config: DictConfig):
     )
 
     mae_prediction_head = MaePredictionHead(
-        dim=config.model.embedder.embedding_size,
-        group_size=config.model.embedder.group_size,
+        dim=config.model.tokenizezr.embedding_size,
+        group_size=config.model.tokenizer.group_size,
         n_out_channels=3 if not config.use_color else 6,
     )
 
     masked_autoencoder = MaskedAutoEncoder(
-        embedder=embedder,
+        tokenizer=tokenizer,
         masked_encoder=masked_encoder,
         masked_decoder=masked_decoder,
         mae_prediction_head=mae_prediction_head,

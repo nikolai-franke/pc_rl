@@ -1,6 +1,6 @@
 defaults:
   - pos_embedder : default
-  - embedder: small_groups
+  - tokenizer: small_groups
   - transformer_block: default
   - _self_
 

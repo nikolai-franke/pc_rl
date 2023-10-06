@@ -95,7 +95,7 @@ def build(config: DictConfig):
 
     transformer_block_factory = instantiate(
         config.model.transformer_block,
-        embedding_size=config.model.embedder.embedding_size,
+        embedding_size=config.model.tokenizer.embedding_size,
         _partial_=True,
     )
     transformer_encoder = instantiate(
@@ -109,7 +109,7 @@ def build(config: DictConfig):
     )
 
     encoder_pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
-    embedder = instantiate(config.model.embedder, _convert_="partial")
+    tokenizer = instantiate(config.model.tokenizer, _convert_="partial")
 
     masked_encoder = instantiate(
         config.model.masked_encoder,
@@ -130,8 +130,8 @@ def build(config: DictConfig):
         raise ValueError(f"Invalid observation_type: {config.env.observation_type}")
 
     mae_prediction_head = MaePredictionHead(
-        dim=config.model.embedder.embedding_size,
-        group_size=config.model.embedder.group_size,
+        dim=config.model.tokenizer.embedding_size,
+        group_size=config.model.tokenizer.group_size,
         n_out_channels=n_out_channels,
     )
 
@@ -170,7 +170,7 @@ def build(config: DictConfig):
             "pi": pi_model,
             "q1": q1_model,
             "q2": q2_model,
-            "embedder": embedder,
+            "tokenizer": tokenizer,
             "encoder": finetune_encoder,
             "rl_mae": rl_mae,
         }
@@ -230,8 +230,8 @@ def build(config: DictConfig):
     q_optimizer = torch.optim.Adam(
         [
             {
-                "params": agent.model["embedder"].parameters(),
-                **per_module_conf.get("embedder", {}),
+                "params": agent.model["tokenizer"].parameters(),
+                **per_module_conf.get("tokenizer", {}),
             },
             {
                 "params": encoder_additional_params,

@@ -1,4 +1,4 @@
-_target_: pc_rl.builder.build_embedder_separate_color
+_target_: pc_rl.builder.build_tokenizer_separate_color
 
 defaults:
  - default

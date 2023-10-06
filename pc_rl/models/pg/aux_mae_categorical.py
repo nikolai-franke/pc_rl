@@ -8,10 +8,10 @@ from parllel.torch.distributions.categorical import DistParams
 from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 from torch import Tensor
 from typing_extensions import NotRequired
-from pc_rl.models.aux_mae import RLMae
 
+from pc_rl.models.aux_mae import RLMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
-from pc_rl.models.modules.embedder import Embedder
+from pc_rl.models.modules.tokenizer import Tokenizer
 from pc_rl.utils.array_dict import dict_to_batched_data
 
 
@@ -25,14 +25,14 @@ class ModelOutputs(TypedDict):
 class AuxMaeCategoricalPgModel(nn.Module):
     def __init__(
         self,
-        embedder: Embedder,
+        tokenizer: Tokenizer,
         encoder: FinetuneEncoder,
         aux_mae: RLMae,
         pi_mlp: nn.Module,
         value_mlp: nn.Module,
     ) -> None:
         super().__init__()
-        self.embedder = embedder
+        self.tokenizer = tokenizer
         self.encoder = encoder
         self.aux_mae = aux_mae
         self.pi = pi_mlp
@@ -40,7 +40,7 @@ class AuxMaeCategoricalPgModel(nn.Module):
 
     def forward(self, data):
         pos, batch = dict_to_batched_data(data)
-        embedder_out, neighborhoods, center_points = self.embedder(pos, batch)
+        embedder_out, neighborhoods, center_points = self.tokenizer(pos, batch)
         x = self.encoder(embedder_out, center_points)
         pos_prediction, pos_ground_truth = self.aux_mae(
             embedder_out, neighborhoods, center_points

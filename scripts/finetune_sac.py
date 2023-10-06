@@ -93,7 +93,7 @@ def build(config: DictConfig):
 
     transformer_block_factory = instantiate(
         config.model.transformer_block,
-        embedding_size=config.model.embedder.embedding_size,
+        embedding_size=config.model.tokenizer.embedding_size,
         _partial_=True,
     )
     transformer_encoder = instantiate(
@@ -102,7 +102,7 @@ def build(config: DictConfig):
     )
 
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
-    embedder = instantiate(config.model.embedder, _convert_="partial")
+    tokenizer = instantiate(config.model.tokenizer, _convert_="partial")
 
     model_weights = checkpoints["state_dict"]
     transformer_encoder_weights = {
@@ -115,14 +115,14 @@ def build(config: DictConfig):
         for key in model_weights
         if key.startswith("masked_encoder.pos_embedder")
     }
-    embedder_weights = {
-        key.replace("embedder.", ""): model_weights[key]
+    tokenizer_weights = {
+        key.replace("tokenizer.", ""): model_weights[key]
         for key in model_weights
-        if key.startswith("embedder")
+        if key.startswith("tokenizer")
     }
     transformer_encoder.load_state_dict(transformer_encoder_weights)
     pos_embedder.load_state_dict(pos_embedder_weights)
-    embedder.load_state_dict(embedder_weights)
+    tokenizer.load_state_dict(tokenizer_weights)
 
     finetune_encoder = FinetuneEncoder(
         pos_embedder=pos_embedder, transformer_encoder=transformer_encoder
@@ -152,7 +152,7 @@ def build(config: DictConfig):
 
     transformer_block_factory = instantiate(
         config.model.transformer_block,
-        embedding_size=config.model.embedder.embedding_size,
+        embedding_size=config.model.tokenizer.embedding_size,
         _partial_=True,
     )
     transformer_encoder = instantiate(
@@ -165,7 +165,7 @@ def build(config: DictConfig):
             "pi": pi_model,
             "q1": q1_model,
             "q2": q2_model,
-            "embedder": embedder,
+            "tokenizer": tokenizer,
             "encoder": finetune_encoder,
         }
     )
@@ -233,8 +233,8 @@ def build(config: DictConfig):
         q_optimizer_param_groups.extend(
             [
                 {
-                    "params": agent.model["embedder"].parameters(),
-                    **per_module_conf.get("embedder", {}),
+                    "params": agent.model["tokenizer"].parameters(),
+                    **per_module_conf.get("tokenizer", {}),
                 },
                 {
                     "params": agent.model["encoder"].parameters(),

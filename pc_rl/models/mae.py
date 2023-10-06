@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import functools
-from typing import Callable
 
 import pytorch_lightning as pl
 import torch
@@ -10,18 +9,17 @@ from pytorch3d.ops.knn import knn_gather
 from pytorch_lightning.utilities.grads import grad_norm
 from torch import Tensor
 
-from pc_rl.models.modules.embedder import Embedder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
-from pc_rl.utils.aux_loss import get_loss_fn
+from pc_rl.models.modules.tokenizer import Tokenizer
 from pc_rl.utils.chamfer import chamfer_distance
 
 
 class MaskedAutoEncoder(pl.LightningModule):
     def __init__(
         self,
-        embedder: Embedder,
+        tokenizer: Tokenizer,
         masked_encoder: MaskedEncoder,
         masked_decoder: MaskedDecoder,
         mae_prediction_head: MaePredictionHead,
@@ -30,7 +28,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         color_loss_coeff: float = 1.0,
     ):
         super().__init__()
-        self.embedder = embedder
+        self.tokenizer = tokenizer
         self.masked_encoder = masked_encoder
         self.masked_decoder = masked_decoder
         self.mae_prediction_head = mae_prediction_head
@@ -40,7 +38,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         self.loss_fn = functools.partial(chamfer_distance, return_x_nn=True)
 
     def forward(self, pos: Tensor, batch: Tensor, color: Tensor | None = None):
-        x, neighborhoods, center_points = self.embedder(pos, batch, color)
+        x, neighborhoods, center_points = self.tokenizer(pos, batch, color)
         x_vis, ae_mask, padding_mask = self.masked_encoder(x, center_points)
         x_recovered = self.masked_decoder(x_vis, ae_mask, center_points)
         pos_recovered = self.mae_prediction_head(x_recovered)

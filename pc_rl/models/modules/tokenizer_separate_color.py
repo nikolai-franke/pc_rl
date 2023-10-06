@@ -4,15 +4,15 @@ import torch
 from torch import Tensor
 from torch_geometric.nn import MLP
 
-from .embedder import Embedder
+from .tokenizer import Tokenizer
 
 
-class EmbedderSeparateColor(Embedder):
+class TokenizerSeparateColor(Tokenizer):
     def __init__(
         self,
         mlp_1: MLP,
         mlp_2: MLP,
-        color_embedder: MLP,
+        color_mlp: MLP,
         group_size: int,
         sampling_ratio: float,
         random_start: bool = True,
@@ -29,10 +29,8 @@ class EmbedderSeparateColor(Embedder):
             **kwargs,
         )
 
-        self.color_embedder = color_embedder
-        self.points_dim = (
-            self.mlp_1.channel_list[0] + self.color_embedder.channel_list[0]
-        )
+        self.color_mlp = color_mlp
+        self.points_dim = self.mlp_1.channel_list[0] + self.color_mlp.channel_list[0]
 
     def message(self, pos_i: Tensor, pos_j: Tensor, x_j: Tensor):
         neighborhood = pos_j - pos_i
@@ -47,7 +45,7 @@ class EmbedderSeparateColor(Embedder):
         msg = self.mlp_2(msg.reshape(-1, msg.shape[-1]))
 
         # add color embedding
-        color_embedding = self.color_embedder(x_j).reshape(msg.shape)
+        color_embedding = self.color_mlp(x_j).reshape(msg.shape)
         msg += color_embedding
         neighborhood = torch.cat([neighborhood, x_j], dim=1)
 

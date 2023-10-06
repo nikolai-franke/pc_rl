@@ -13,7 +13,7 @@ from torch_geometric.nn.inits import reset
 from torch_geometric.utils import unbatch
 
 
-class Embedder(MessagePassing):
+class Tokenizer(MessagePassing):
     def __init__(
         self,
         mlp_1: MLP,

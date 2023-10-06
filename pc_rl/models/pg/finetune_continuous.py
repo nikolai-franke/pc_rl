@@ -7,21 +7,21 @@ from parllel.torch.distributions.gaussian import DistParams
 from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 
 from pc_rl.models.finetune_encoder import FinetuneEncoder
-from pc_rl.models.modules.embedder import Embedder
+from pc_rl.models.modules.tokenizer import Tokenizer
 from pc_rl.utils.array_dict import dict_to_batched_data
 
 
 class ContinuousPgModel(nn.Module):
     def __init__(
         self,
-        embedder: Embedder,
+        tokenizer: Tokenizer,
         encoder: FinetuneEncoder,
         pi_mlp: nn.Module,
         value_mlp: nn.Module,
         init_log_std: float,
     ) -> None:
         super().__init__()
-        self.embedder = embedder
+        self.tokenizer = tokenizer
         self.encoder = encoder
         self.pi_mlp = pi_mlp
         self.value_mlp = value_mlp
@@ -52,7 +52,7 @@ class ContinuousPgModel(nn.Module):
 
     def forward(self, data):
         pos, batch = dict_to_batched_data(data)
-        x, _, center_points = self.embedder(pos, batch)
+        x, _, center_points = self.tokenizer(pos, batch)
         x = self.encoder(x, center_points)
         lead_dim, T, B, _ = infer_leading_dims(x, 1)
         obs_flat = x.view(T * B, -1)

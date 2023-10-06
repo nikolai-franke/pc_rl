@@ -2,7 +2,7 @@
 
 defaults:
   - override /env: thread_in_hole
-  - override /model/embedder: color
+  - override /model/tokenizer: color
   - _self_
 
 env:
