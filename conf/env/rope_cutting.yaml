@@ -12,10 +12,10 @@ num_ropes_to_cut: 1
 
 reward_amount_dict:
   distance_cauter_active_rope: -0.0
-  delta_distance_cauter_active_rope: -5.0
-  cut_active_rope: 5.0
-  cut_inactive_rope: -5.0
+  delta_distance_cauter_active_rope: -10.0
+  cut_active_rope: 10.0
+  cut_inactive_rope: -10.0
   worspace_violation: -0.0
   state_limits_violation: -0.0
-  successful_task: 10.0
+  successful_task: 100.0
   failed_task: -20.0
