@@ -1,0 +1,17 @@
+# @package _global_
+
+defaults:
+  - override /env: rope_cutting
+  - override /model/tokenizer: color
+  - _self_
+
+env:
+  observation_type: color_point_cloud
+
+runner:
+  n_steps: 2e6
+
+optimizer:
+  lr: 5e-5
+
+tags: [rope_cutting]

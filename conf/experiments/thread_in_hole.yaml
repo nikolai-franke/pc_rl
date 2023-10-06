@@ -11,7 +11,7 @@ env:
 runner:
   n_steps: 1e6
 
-optimier:
+optimizer:
   lr: 5e-5
 
 tags: [thread_in_hole]

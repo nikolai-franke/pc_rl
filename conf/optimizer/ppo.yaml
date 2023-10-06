@@ -1,6 +1,6 @@
 lr: 1e-4
 per_module:
-  embedder:
+  tokenizer:
     lr: 1e-4
   encoder:
     lr: 1e-4
