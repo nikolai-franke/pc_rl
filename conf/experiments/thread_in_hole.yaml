@@ -9,9 +9,12 @@ env:
   observation_type: point_cloud
 
 runner:
-  n_steps: 1e6
+  n_steps: 2e6
 
 optimizer:
-  lr: 5e-5
+  lr: 1e-4
+
+algo:
+  ent_coeff_lr: 2e-5
 
 tags: [thread_in_hole]

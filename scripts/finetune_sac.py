@@ -1,3 +1,4 @@
+import functools
 import os
 from contextlib import contextmanager
 from datetime import datetime
@@ -28,6 +29,7 @@ import pc_rl.models.sac.q_and_pi_heads
 import wandb
 from pc_rl.agents.sac import PcSacAgent
 from pc_rl.models.finetune_encoder import FinetuneEncoder
+from pc_rl.utils.finetune_scheduler_lambda import delayed_linear_lambda
 from pc_rl.utils.sofa_traj_info import SofaTrajInfo
 
 
@@ -256,12 +258,37 @@ def build(config: DictConfig):
         **optimizer_conf,
     )
 
-    if gamma := config.get("lr_scheduler_gamma") is not None:
-        pi_scheduler = torch.optim.lr_scheduler.ExponentialLR(pi_optimizer, gamma=gamma)
-        q_scheduler = torch.optim.lr_scheduler.ExponentialLR(q_optimizer, gamma=gamma)
-        lr_schedulers = [pi_scheduler, q_scheduler]
+    if not config.freeze_encoder:
+        lr_lambda = functools.partial(
+            delayed_linear_lambda,
+            zero_till_step=config.scheduler.zero_till_step,
+            increase_over_steps=config.scheduler.increase_over_steps,
+        )
+
+        def no_scheduler(step):
+            return 1.0
+
+        scheduler = torch.optim.lr_scheduler.LambdaLR(
+            q_optimizer,
+            lr_lambda=[
+                no_scheduler,
+                no_scheduler,
+                lr_lambda,
+                lr_lambda,
+            ],  # no scheduler for q1 and q2
+        )
+        lr_schedulers = [scheduler]
     else:
         lr_schedulers = None
+
+    # TODO: maybe chain schedulers (or remove gamma scheduler)
+    #
+    # if gamma := config.get("lr_scheduler_gamma") is not None:
+    #     pi_scheduler = torch.optim.lr_scheduler.ExponentialLR(pi_optimizer, gamma=gamma)
+    #     q_scheduler = torch.optim.lr_scheduler.ExponentialLR(q_optimizer, gamma=gamma)
+    #     lr_schedulers = [pi_scheduler, q_scheduler]
+    # else:
+    #     lr_schedulers = None
 
     # create algorithm
     algorithm = SAC(
