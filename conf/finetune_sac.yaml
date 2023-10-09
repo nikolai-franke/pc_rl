@@ -4,3 +4,5 @@ defaults:
 
 model_path: ???
 freeze_encoder: True
+
+tags: ["sac", "finetune"]

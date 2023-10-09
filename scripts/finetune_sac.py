@@ -104,7 +104,7 @@ def build(config: DictConfig):
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
     tokenizer = instantiate(config.model.tokenizer, _convert_="partial")
 
-    model_weights = checkpoints["state_dict"]
+    model_weights = checkpoint["state_dict"]
     transformer_encoder_weights = {
         key.replace("masked_encoder.transformer_encoder.", ""): model_weights[key]
         for key in model_weights
