@@ -1,0 +1,6 @@
+defaults:
+  - train_sac
+  - _self_
+
+model_path: ???
+freeze_encoder: True
