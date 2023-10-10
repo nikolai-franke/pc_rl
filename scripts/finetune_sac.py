@@ -235,12 +235,16 @@ def build(config: DictConfig):
         q_optimizer_param_groups.extend(
             [
                 {
-                    "params": agent.model["tokenizer"].parameters(),
-                    **per_module_conf.get("tokenizer", {}),
+                    "params": agent.model["encoder"].get_additional_parameters(),
+                    **per_module_conf.get("encoder", {}),
                 },
                 {
-                    "params": agent.model["encoder"].parameters(),
+                    "params": agent.model["encoder"].get_core_parameters(),
                     **per_module_conf.get("encoder", {}),
+                },
+                {
+                    "params": agent.model["tokenizer"].parameters(),
+                    **per_module_conf.get("tokenizer", {}),
                 },
             ]
         )
@@ -271,11 +275,12 @@ def build(config: DictConfig):
         scheduler = torch.optim.lr_scheduler.LambdaLR(
             q_optimizer,
             lr_lambda=[
-                no_scheduler,
-                no_scheduler,
-                lr_lambda,
-                lr_lambda,
-            ],  # no scheduler for q1 and q2
+                no_scheduler,  # q1
+                no_scheduler,  # q2
+                no_scheduler,  # encoder sequence pooling + layer norm
+                lr_lambda,  # encoder core params
+                lr_lambda,  # tokenizer
+            ],
         )
         lr_schedulers = [scheduler]
     else:

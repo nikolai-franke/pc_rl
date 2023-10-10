@@ -3,6 +3,10 @@ defaults:
   - _self_
 
 model_path: ???
-freeze_encoder: True
+freeze_encoder: False
+
+scheduler:
+  zero_till_step: 100_000
+  increase_over_steps: 100_000
 
 tags: ["sac", "finetune"]

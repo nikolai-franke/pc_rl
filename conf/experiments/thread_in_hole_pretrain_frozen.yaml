@@ -1,0 +1,20 @@
+# @package _global_
+
+defaults:
+  - override /env: thread_in_hole
+  - override /model/tokenizer: default
+  - _self_
+
+env:
+  observation_type: point_cloud
+
+runner:
+  n_steps: 1e6
+
+optimizer:
+  lr: 1e-4
+
+model_path: ???
+freee_encoder: True
+
+tags: [thread_in_hole, color]
