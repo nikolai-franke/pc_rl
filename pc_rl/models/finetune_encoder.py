@@ -28,6 +28,11 @@ class FinetuneEncoder(nn.Module):
         """
         return itertools.chain(self.norm.parameters(), self.attention_pool.parameters())
 
+    def get_core_parameters(self):
+        return itertools.chain(
+            self.transformer_encoder.parameters(), self.pos_embedder.parameters()
+        )
+
     def forward(self, x, center_points):
         pos = self.pos_embedder(center_points)
         x = self.transformer_encoder(x, pos)
