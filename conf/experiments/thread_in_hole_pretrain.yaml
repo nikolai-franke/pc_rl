@@ -20,4 +20,4 @@ scheduler:
   zero_till_step: 16_000
   increase_over_steps: 16_000
 
-tags: [thread_in_hole, color]
+tags: [sac, thread_in_hole, pretrain]

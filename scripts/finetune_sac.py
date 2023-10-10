@@ -34,8 +34,8 @@ from pc_rl.utils.sofa_traj_info import SofaTrajInfo
 
 
 @contextmanager
-def build(config: DictConfig):
-    checkpoint = torch.load(config.model_path)
+def build(config: DictConfig, model_path):
+    checkpoint = torch.load(model_path)
     parallel = config.parallel
     discount = config.algo.discount
     batch_spec = BatchSpec(config.batch_T, config.batch_B)
@@ -408,8 +408,7 @@ def main(config: DictConfig) -> None:
         reinit=True,
     )
     artifact = run.use_artifact(config.model_url, type="model")
-    artifact_dir = artifact.download()
-    config.update({"model_path": artifact_dir})
+    model_path = artifact.download() + "/model.ckpt"
 
     if config.use_slurm:  # TODO: check if launcher starts with submitit
         video_path = (
@@ -440,7 +439,7 @@ def main(config: DictConfig) -> None:
         # verbosity=Verbosity.DEBUG,
     )
 
-    with build(config) as runner:
+    with build(config, model_path) as runner:
         runner.run()
 
     logger.close()
