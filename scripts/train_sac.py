@@ -1,3 +1,4 @@
+import multiprocessing as mp
 import os
 from contextlib import contextmanager
 from datetime import datetime
@@ -376,4 +377,5 @@ def main(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+    # mp.set_start_method("spawn")
     main()
