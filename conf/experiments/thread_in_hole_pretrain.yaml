@@ -14,10 +14,10 @@ runner:
 optimizer:
   lr: 1e-4
 
-model_path: ???
+model_url: kirurc/MAE/model-rcoja9hx:v0
 freeze_encoder: False
 scheduler:
-  zero_till_step: 100_000
-  increase_over_steps: 100_000
+  zero_till_step: 16_000
+  increase_over_steps: 16_000
 
 tags: [thread_in_hole, color]

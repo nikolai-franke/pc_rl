@@ -2,7 +2,7 @@ defaults:
   - train_sac
   - _self_
 
-model_path: ???
+model_url: kirurc/MAE/model-rcoja9hx:v0
 freeze_encoder: False
 
 scheduler:

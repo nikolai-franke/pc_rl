@@ -407,6 +407,9 @@ def main(config: DictConfig) -> None:
         save_code=True,  # save script used to start training, git commit, and patch
         reinit=True,
     )
+    artifact = run.use_artifact(config.model_url, type="model")
+    artifact_dir = artifact.download()
+    config.update({"model_path": artifact_dir})
 
     if config.use_slurm:  # TODO: check if launcher starts with submitit
         video_path = (
