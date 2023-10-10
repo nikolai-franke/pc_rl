@@ -1,5 +1,5 @@
 defaults:
-  - train_sac
+  - finetune_sac
   - platform: horeka
   - _self_
 
