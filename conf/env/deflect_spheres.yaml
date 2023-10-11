@@ -21,7 +21,7 @@ reward_amount_dict:
   deflection_of_inactive_spheres: -0.005
   deflection_of_active_sphere: 0.0
   delta_deflection_of_active_sphere: 1.0
-  done_with_active_sphere: 10.0
-  successful_task: 100.0
+  done_with_active_sphere: 100.0
+  successful_task: 0.0
   rcm_violation_xyz: -0.0
   rcm_violation_rotation: -0.0
