@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - override /env: push_chair
+  - override /model/tokenizer: color
+  - _self_
+
+runner:
+  n_steps: 2e6
+
+tags: [push_chair, color]
