@@ -1,0 +1,17 @@
+_target_: pc_rl.envs.mani_skill.build
+
+env_id: PushChair-v1
+max_episode_steps: 300
+camera_name: overhead_camera_1
+add_obs_to_info_dict: False
+image_shape: [128, 128]
+control_mode: base_pd_joint_vel_arm_pd_ee_delta_pose
+reward_mode: normalized_dense
+voxel_grid_size: 0.05
+use_color: True
+z_far: 15.0
+z_near: 0.01
+fov: 1.0
+cam_pos: [0.5, 0.0, 3.0]
+cam_look_at: [0.5, 0.0, 0.0]
+
