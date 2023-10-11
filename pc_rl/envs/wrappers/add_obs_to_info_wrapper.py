@@ -15,12 +15,15 @@ class AddObsToInfoWrapper(gym.Wrapper):
 
 
 class ManiSkillAddObsToInfoWrapper(gym.Wrapper):
-    def __init__(self, env: gym.Env, key: str = "rendering"):
+    def __init__(
+        self, env: gym.Env, key: str = "rendering", camera_name: str = "base_camera"
+    ):
         super().__init__(env)
         self.env = env
         self.key = key
+        self.camera_name = camera_name
 
     def step(self, action):
         observation, reward, terminated, truncated, info = self.env.step(action)
-        info[self.key] = self.env.unwrapped.render_rgb_array()  # type: ignore
+        info[self.key] = observation["image"][self.camera_name]["rgb"]
         return observation, reward, terminated, truncated, info

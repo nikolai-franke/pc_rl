@@ -59,7 +59,8 @@ def build(
         camera_cfgs={camera_name: camera_config},
     )
     if add_obs_to_info_dict:
-        env = ManiSkillAddObsToInfoWrapper(env)
+        env = ManiSkillAddObsToInfoWrapper(env, camera_name=camera_name)
+
     env = SuccessInfoWrapper(env)
 
     post_processing_functions = [

@@ -1,0 +1,17 @@
+_target_: pc_rl.envs.mani_skill.build
+
+env_id: Hang-v0
+max_episode_steps: 300
+camera_name: base_camera
+add_obs_to_info_dict: False
+image_shape: [128, 128]
+control_mode: pd_ee_delta_pose
+reward_mode: normalized_dense
+voxel_grid_size: 0.03
+use_color: True
+z_far: 1.5
+z_near: 0.01
+fov: 1.0
+cam_pos: [0.2, 1.0, 0.5]
+cam_look_at: [0.0, 0.0, 0.1]
+

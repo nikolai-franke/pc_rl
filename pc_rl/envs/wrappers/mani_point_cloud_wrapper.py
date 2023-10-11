@@ -29,6 +29,7 @@ class ManiSkillPointCloudWrapper(gym.ObservationWrapper):
         )
         self.post_processing_functions = post_processing_functions
         self.use_color = use_color
+        self.counter = 0
 
     def observation(self, observation):
         if self.use_color:
@@ -41,10 +42,12 @@ class ManiSkillPointCloudWrapper(gym.ObservationWrapper):
                 point_cloud = function(point_cloud)
 
         # np.savetxt(
-        #     "obs.csv",
+        #     f"obs{self.counter}.csv",
         #     point_cloud,
         #     delimiter=",",
         # )
+        # self.counter += 1
+
         return point_cloud
 
     def _create_point_cloud(self, observation):
