@@ -1,8 +1,11 @@
 _target_: pc_rl.envs.reach.build
 
-defaults:
-  - base
-  - _self_
+action_type: continuous
+max_episode_steps: 200
+observation_type: point_cloud
+image_shape: [128, 128]
+frame_skip: 1
+time_step: 0.1
 
 discrete_action_magnitude: 100.0
 distance_to_target_threshold: 0.02

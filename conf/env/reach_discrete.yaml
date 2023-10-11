@@ -1,7 +1,0 @@
-_target_: pc_rl.envs.reach.build
-
-defaults:
-  - reach
-  - _self_
-
-action_type: continuous

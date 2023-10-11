@@ -1,12 +1,13 @@
 _target_: pc_rl.envs.thread_in_hole.build
 
-defaults:
-  - base
-  - _self_
-
 time_step: 0.01
 frame_skip: 10
 max_episode_steps: 300
+action_type: continuous
+render_mode: headless
+observation_type: point_cloud
+image_shape: [128, 128]
+voxel_grid_size: 5.0
 
 camera_reset_noise: [20.0, 20.0, 20.0, 20.0, 20.0, 20.0]
 hole_rotation_reset_noise: [0.0, 0.0, 0.0]

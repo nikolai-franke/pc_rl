@@ -1,9 +1,12 @@
 _target_: pc_rl.envs.rope_cutting.build
 
-defaults:
-  - base
-  - _self_
-
+action_type: continuous
+render_mode: headless
+observation_type: point_cloud
+image_shape: [128, 128]
+frame_skip: 1
+time_step: 0.1
+voxel_grid_size: 5.0
 max_episode_steps: 300
 settle_steps: 10
 
