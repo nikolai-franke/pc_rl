@@ -1,3 +1,0 @@
-_target_: pc_rl.envs.pick_cube.build
-
-max_episode_steps: 300
