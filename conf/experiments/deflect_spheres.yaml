@@ -11,10 +11,4 @@ env:
 runner:
   n_steps: 2e6
 
-optimizer:
-  lr: 5e-5
-
-algo:
-  ent_coeff_lr: 2e-5
-
 tags: [deflect_spheres, color]
