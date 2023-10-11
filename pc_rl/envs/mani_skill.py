@@ -8,7 +8,8 @@ from mani_skill2.utils.sapien_utils import look_at
 
 from pc_rl.envs.wrappers.add_obs_to_info_wrapper import \
     ManiSkillAddObsToInfoWrapper
-from pc_rl.envs.wrappers.point_cloud_wrapper import ManiSkillPointCloudWrapper
+from pc_rl.envs.wrappers.mani_point_cloud_wrapper import \
+    ManiSkillPointCloudWrapper
 from pc_rl.utils.point_cloud_post_processing_functions import (
     normalize, voxel_grid_sample)
 

@@ -22,5 +22,5 @@ class ManiSkillAddObsToInfoWrapper(gym.Wrapper):
 
     def step(self, action):
         observation, reward, terminated, truncated, info = self.env.step(action)
-        info[self.key] = self.env.unwrapped.render_rgb_array()
+        info[self.key] = self.env.unwrapped.render_rgb_array()  # type: ignore
         return observation, reward, terminated, truncated, info
