@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+from typing import Literal
 
 import gymnasium as gym
 from gymnasium.wrappers.time_limit import TimeLimit
@@ -8,8 +9,10 @@ from mani_skill2.utils.sapien_utils import look_at
 
 from pc_rl.envs.wrappers.add_obs_to_info_wrapper import \
     ManiSkillAddObsToInfoWrapper
+from pc_rl.envs.wrappers.mani_image_wrapper import ManiSkillImageWrapper
 from pc_rl.envs.wrappers.mani_point_cloud_wrapper import \
     ManiSkillPointCloudWrapper
+from pc_rl.envs.wrappers.transpose_image_wrapper import TransposeImageWrapper
 from pc_rl.utils.point_cloud_post_processing_functions import (
     normalize, voxel_grid_sample)
 
@@ -25,12 +28,14 @@ def build(
     env_id: str,
     camera_name: str,
     max_episode_steps: int,
+    observation_type: Literal[
+        "point_cloud", "color_point_cloud", "rgb_image", "rgbd_image"
+    ],
     add_obs_to_info_dict: bool,
     image_shape: list[int],
     control_mode: str,
     reward_mode: str,
     voxel_grid_size: float,
-    use_color: bool,
     z_far: float,
     z_near: float,
     fov: float,
@@ -67,11 +72,17 @@ def build(
         functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size),
         normalize,
     ]
-    env = ManiSkillPointCloudWrapper(
-        env,
-        camera_name=camera_name,
-        post_processing_functions=post_processing_functions,
-        use_color=use_color,
-    )
+    if observation_type in ("point_cloud", "color_point_cloud"):
+        env = ManiSkillPointCloudWrapper(
+            env,
+            camera_name=camera_name,
+            post_processing_functions=post_processing_functions,
+            use_color=observation_type == "color_point_cloud",
+        )
+    elif observation_type == "rgb_image":
+        env = ManiSkillImageWrapper(env, camera_name=camera_name)
+        env = TransposeImageWrapper(env)
+    else:
+        raise NotImplementedError
     env = TimeLimit(env, max_episode_steps)
     return env
