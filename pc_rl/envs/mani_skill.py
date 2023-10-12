@@ -65,7 +65,7 @@ def build(
         control_mode=control_mode,
         camera_cfgs={camera_name: camera_config},
     )
-    env.set_main_rng(np.random.randint(1e9))
+    env.unwrapped.set_main_rng(np.random.randint(1e9))
     if add_obs_to_info_dict:
         env = ManiSkillAddObsToInfoWrapper(env, camera_name=camera_name)
 
