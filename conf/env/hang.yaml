@@ -8,7 +8,7 @@ image_shape: [128, 128]
 control_mode: pd_ee_delta_pose
 reward_mode: normalized_dense
 voxel_grid_size: 0.03
-use_color: True
+observation_type: point_cloud
 z_far: 1.5
 z_near: 0.01
 fov: 1.0

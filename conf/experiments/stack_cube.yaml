@@ -1,14 +1,11 @@
 # @package _global_
 
 defaults:
-  - override /env: hang
+  - override /env: stack_cube
   - override /model/tokenizer: color
   - _self_
 
 runner:
   n_steps: 2e6
 
-algo:
-  ent_coeff: 0.05
-
-tags: [hang, color]
+tags: [stack_cube, color]
