@@ -17,5 +17,4 @@ hydra:
       cpu:
       cuda:
         gpus: [0, 1, 2, 3]
-      pyglet:
-        gpus: [0, 1, 2, 3]
+      headless_render:
