@@ -4,6 +4,7 @@ import functools
 from typing import Literal
 
 import gymnasium as gym
+import numpy as np
 from gymnasium.wrappers.time_limit import TimeLimit
 from mani_skill2.utils.sapien_utils import look_at
 
@@ -64,6 +65,7 @@ def build(
         control_mode=control_mode,
         camera_cfgs={camera_name: camera_config},
     )
+    env.set_main_rng(np.random.randint(1e9))
     if add_obs_to_info_dict:
         env = ManiSkillAddObsToInfoWrapper(env, camera_name=camera_name)
 
