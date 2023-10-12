@@ -9,6 +9,7 @@ from mani_skill2.utils.sapien_utils import look_at
 
 from pc_rl.envs.wrappers.add_obs_to_info_wrapper import \
     ManiSkillAddObsToInfoWrapper
+from pc_rl.envs.wrappers.continuous_task_wrapper import ContinuousTaskWrapper
 from pc_rl.envs.wrappers.mani_image_wrapper import ManiSkillImageWrapper
 from pc_rl.envs.wrappers.mani_point_cloud_wrapper import \
     ManiSkillPointCloudWrapper
@@ -67,6 +68,7 @@ def build(
         env = ManiSkillAddObsToInfoWrapper(env, camera_name=camera_name)
 
     env = SuccessInfoWrapper(env)
+    env = ContinuousTaskWrapper(env)
 
     post_processing_functions = [
         functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size),
