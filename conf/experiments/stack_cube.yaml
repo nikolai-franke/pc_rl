@@ -5,10 +5,14 @@ defaults:
   - override /model/tokenizer: color
   - _self_
 
+batch_B: 10
+batch_T: 256
+
 runner:
   n_steps: 2e6
 
 optimizer:
   lr: 5e-5
+
 
 tags: [stack_cube, color]
