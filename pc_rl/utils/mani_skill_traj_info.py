@@ -7,7 +7,7 @@ from parllel.cages.traj_info import (ActionType, DoneType, EnvInfoType,
 
 
 @dataclass
-class SofaTrajInfo(TrajInfo):
+class ManiTrajInfo(TrajInfo):
     Success: bool = False
     SuccessLength: int = 0
 

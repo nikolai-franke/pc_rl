@@ -22,10 +22,13 @@ def build(
     image_shape: list[int],
     control_mode: str,
     reward_mode: str,
+    render_mode: str | None = None,
     filter_points_below_z: float | None = None,
     z_far: float | None = None,
     z_near: float | None = None,
     fov: float | None = None,
+    sim_freq: int = 500,
+    control_freq: int = 20,
 ):
     import mani_skill2.envs
 
@@ -46,6 +49,9 @@ def build(
         reward_mode=reward_mode,
         control_mode=control_mode,
         camera_cfgs=camera_cfgs,
+        render_mode=render_mode,
+        sim_freq=sim_freq,
+        control_freq=control_freq,
     )
     # If we don't set a random seed manually, all parallel environments have the same seed
     env.unwrapped.set_main_rng(np.random.randint(1e9))
@@ -53,7 +59,6 @@ def build(
     if add_obs_to_info_dict:
         env = ManiSkillAddObsToInfoWrapper(env)
 
-    env = SuccessInfoWrapper(env)
     env = ContinuousTaskWrapper(env)
 
     post_processing_functions = []
