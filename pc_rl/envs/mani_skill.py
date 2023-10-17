@@ -14,8 +14,7 @@ from pc_rl.envs.wrappers.mani_image_wrapper import ManiSkillImageWrapper
 from pc_rl.envs.wrappers.mani_point_cloud_wrapper import \
     ManiSkillPointCloudWrapper
 from pc_rl.envs.wrappers.transpose_image_wrapper import TransposeImageWrapper
-from pc_rl.utils.point_cloud_post_processing_functions import (
-    normalize, voxel_grid_sample)
+from pc_rl.utils.point_cloud_post_processing_functions import normalize
 
 
 class SuccessInfoWrapper(gym.Wrapper):
@@ -57,7 +56,7 @@ def build(
         control_mode=control_mode,
         camera_cfgs=camera_cfgs,
     )
-    # If we don't set the seed manually, all parallel environments have the same seed
+    # If we don't set a random seed manually, all parallel environments have the same seed
     env.unwrapped.set_main_rng(np.random.randint(1e9))
 
     if add_obs_to_info_dict:
@@ -67,7 +66,9 @@ def build(
     env = ContinuousTaskWrapper(env)
 
     env = ManiSkillPointCloudWrapper(
-        env, use_color=observation_type.startswith("color")
+        env,
+        use_color=observation_type.startswith("color"),
+        post_processing_functions=[normalize],
     )
 
     env = TimeLimit(env, max_episode_steps)
