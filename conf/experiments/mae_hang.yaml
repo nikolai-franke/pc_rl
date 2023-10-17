@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - override /dataset: hang
+  - override /model/tokenizer: default
+  - _self_
+
+use_color: False
+
+tags: [hang, no_voxel_grid]
+

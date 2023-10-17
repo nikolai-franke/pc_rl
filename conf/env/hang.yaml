@@ -2,7 +2,7 @@ _target_: pc_rl.envs.mani_skill.build
 
 env_id: Hang-v0
 max_episode_steps: 350
-image_shape: [96, 96]
+image_shape: [64, 64]
 control_mode: pd_ee_delta_pose
 reward_mode: normalized_dense
 observation_type: point_cloud
