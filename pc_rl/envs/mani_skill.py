@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 from typing import Literal
 
 import gymnasium as gym
@@ -28,65 +27,48 @@ class SuccessInfoWrapper(gym.Wrapper):
 
 def build(
     env_id: str,
-    camera_name: str,
     max_episode_steps: int,
-    observation_type: Literal[
-        "point_cloud", "color_point_cloud", "rgb_image", "rgbd_image"
-    ],
+    observation_type: Literal["point_cloud", "color_point_cloud"],
     add_obs_to_info_dict: bool,
     image_shape: list[int],
     control_mode: str,
     reward_mode: str,
-    voxel_grid_size: float,
-    z_far: float,
-    z_near: float,
-    fov: float,
-    cam_pos: list[float] | None = None,
-    cam_look_at: list[float] | None = None,
+    z_far: float | None = None,
+    z_near: float | None = None,
+    fov: float | None = None,
 ):
     import mani_skill2.envs
 
-    camera_config = {
+    camera_cfgs = {
         "width": image_shape[0],
         "height": image_shape[1],
-        "far": z_far,
-        "near": z_near,
-        "fov": fov,
     }
-    if cam_pos is not None:
-        cam_look_at = cam_look_at or [0, 0, 0]
-        cam_pose = look_at(cam_pos, cam_look_at)
-        camera_config.update({"p": cam_pose.p, "q": cam_pose.q})
+    if z_far is not None:
+        camera_cfgs.update({"far": z_far})  # type: ignore
+    if z_near is not None:
+        camera_cfgs.update({"near": z_near})  # type: ignore
+    if fov is not None:
+        camera_cfgs.update({"fov": fov})  # type: ignore
 
     env = gym.make(
         env_id,
-        obs_mode="rgbd",
+        obs_mode="pointcloud",
         reward_mode=reward_mode,
         control_mode=control_mode,
-        camera_cfgs={camera_name: camera_config},
+        camera_cfgs=camera_cfgs,
     )
+    # If we don't set the seed manually, all parallel environments have the same seed
     env.unwrapped.set_main_rng(np.random.randint(1e9))
+
     if add_obs_to_info_dict:
-        env = ManiSkillAddObsToInfoWrapper(env, camera_name=camera_name)
+        env = ManiSkillAddObsToInfoWrapper(env)
 
     env = SuccessInfoWrapper(env)
     env = ContinuousTaskWrapper(env)
 
-    post_processing_functions = [
-        functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size),
-        normalize,
-    ]
-    if observation_type in ("point_cloud", "color_point_cloud"):
-        env = ManiSkillPointCloudWrapper(
-            env,
-            camera_name=camera_name,
-            post_processing_functions=post_processing_functions,
-            use_color=observation_type == "color_point_cloud",
-        )
-    elif observation_type == "rgb_image":
-        env = ManiSkillImageWrapper(env, camera_name=camera_name)
-        env = TransposeImageWrapper(env)
-    else:
-        raise NotImplementedError
+    env = ManiSkillPointCloudWrapper(
+        env, use_color=observation_type.startswith("color")
+    )
+
     env = TimeLimit(env, max_episode_steps)
     return env

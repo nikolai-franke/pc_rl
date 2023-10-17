@@ -2,14 +2,7 @@ _target_: pc_rl.envs.mani_skill.build
 
 env_id: StackCube-v0
 max_episode_steps: 200
-camera_name: base_camera
-image_shape: [128, 128]
+image_shape: [96, 96]
 control_mode: pd_ee_delta_pose
 reward_mode: normalized_dense
 observation_type: color_point_cloud
-voxel_grid_size: 0.025
-z_far: 1.3
-z_near: 0.01
-fov: 1.0
-cam_pos: [0.7, 0., 0.15]
-cam_look_at: [-0.0, 0.0, 0.1]
