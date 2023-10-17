@@ -14,13 +14,6 @@ from pc_rl.envs.wrappers.mani_point_cloud_wrapper import \
 from pc_rl.utils.point_cloud_post_processing_functions import normalize
 
 
-class SuccessInfoWrapper(gym.Wrapper):
-    def step(self, action):
-        observation, reward, terminated, truncated, info = super().step(action)
-        info["successful_task"] = info["success"]
-        return observation, reward, terminated, truncated, info
-
-
 def build(
     env_id: str,
     max_episode_steps: int,
