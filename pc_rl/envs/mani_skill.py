@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from typing import Literal
 
 import gymnasium as gym
@@ -11,7 +12,8 @@ from pc_rl.envs.wrappers.add_obs_to_info_wrapper import \
 from pc_rl.envs.wrappers.continuous_task_wrapper import ContinuousTaskWrapper
 from pc_rl.envs.wrappers.mani_point_cloud_wrapper import \
     ManiSkillPointCloudWrapper
-from pc_rl.utils.point_cloud_post_processing_functions import normalize
+from pc_rl.utils.point_cloud_post_processing_functions import (
+    normalize, voxel_grid_sample)
 
 
 def build(
@@ -22,6 +24,7 @@ def build(
     image_shape: list[int],
     control_mode: str,
     reward_mode: str,
+    voxel_grid_size: float | None = None,
     render_mode: str | None = None,
     filter_points_below_z: float | None = None,
     z_far: float | None = None,
@@ -65,6 +68,11 @@ def build(
     if filter_points_below_z is not None:
         post_processing_functions.append(
             lambda point_cloud: point_cloud[point_cloud[..., 2] > filter_points_below_z]
+        )
+
+    if voxel_grid_size is not None:
+        post_processing_functions.append(
+            functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
         )
     post_processing_functions.append(normalize)
 
