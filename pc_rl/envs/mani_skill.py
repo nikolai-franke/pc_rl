@@ -5,15 +5,12 @@ from typing import Literal
 import gymnasium as gym
 import numpy as np
 from gymnasium.wrappers.time_limit import TimeLimit
-from mani_skill2.utils.sapien_utils import look_at
 
 from pc_rl.envs.wrappers.add_obs_to_info_wrapper import \
     ManiSkillAddObsToInfoWrapper
 from pc_rl.envs.wrappers.continuous_task_wrapper import ContinuousTaskWrapper
-from pc_rl.envs.wrappers.mani_image_wrapper import ManiSkillImageWrapper
 from pc_rl.envs.wrappers.mani_point_cloud_wrapper import \
     ManiSkillPointCloudWrapper
-from pc_rl.envs.wrappers.transpose_image_wrapper import TransposeImageWrapper
 from pc_rl.utils.point_cloud_post_processing_functions import normalize
 
 
@@ -32,6 +29,7 @@ def build(
     image_shape: list[int],
     control_mode: str,
     reward_mode: str,
+    filter_points_below_z: float | None = None,
     z_far: float | None = None,
     z_near: float | None = None,
     fov: float | None = None,
@@ -65,10 +63,17 @@ def build(
     env = SuccessInfoWrapper(env)
     env = ContinuousTaskWrapper(env)
 
+    post_processing_functions = []
+    if filter_points_below_z is not None:
+        post_processing_functions.append(
+            lambda point_cloud: point_cloud[point_cloud[..., 2] > filter_points_below_z]
+        )
+    post_processing_functions.append(normalize)
+
     env = ManiSkillPointCloudWrapper(
         env,
         use_color=observation_type.startswith("color"),
-        post_processing_functions=[normalize],
+        post_processing_functions=post_processing_functions,
     )
 
     env = TimeLimit(env, max_episode_steps)
