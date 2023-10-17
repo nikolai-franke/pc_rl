@@ -10,6 +10,5 @@ use_slurm: True
 hydra:
   sweeper:
     params:
-      scheduler:
-        zero_till_step: 0, 2, 5, 10
-        increase_over_steps: 0, 2
+      scheduler.zero_till_step: 0, 2, 5, 10
+      scheduler.increase_over_steps: 0, 2
