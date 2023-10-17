@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - override /dataset: stack_cube
+  - override /model/tokenizer: color
+  - _self_
+
+use_color: True
+
+tags: [stack_cube]
+
