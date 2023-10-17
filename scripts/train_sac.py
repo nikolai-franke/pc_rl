@@ -29,6 +29,7 @@ import pc_rl.models.sac.q_and_pi_heads
 import wandb
 from pc_rl.agents.sac import PcSacAgent
 from pc_rl.models.finetune_encoder import FinetuneEncoder
+from pc_rl.utils.mani_skill_traj_info import ManiTrajInfo
 from pc_rl.utils.sofa_traj_info import SofaTrajInfo
 
 
@@ -37,7 +38,11 @@ def build(config: DictConfig):
     parallel = config.parallel
     discount = config.algo.discount
     batch_spec = BatchSpec(config.batch_T, config.batch_B)
-    SofaTrajInfo.set_discount(discount)
+    if "env_id" in config["env"].keys():
+        TrajInfoClass = ManiTrajInfo
+    else:
+        TrajInfoClass = SofaTrajInfo
+    TrajInfoClass.set_discount(discount)
     CageCls = ProcessCage if parallel else SerialCage
     storage = "shared" if parallel else "local"
 
@@ -47,7 +52,7 @@ def build(config: DictConfig):
         EnvClass=env_factory,
         n_envs=batch_spec.B,
         env_kwargs={"add_obs_to_info_dict": False},
-        TrajInfoClass=SofaTrajInfo,
+        TrajInfoClass=TrajInfoClass,
         parallel=parallel,
     )
     replay_length = int(config.algo.replay_length) // batch_spec.B
@@ -241,7 +246,7 @@ def build(config: DictConfig):
     eval_cage_kwargs = dict(
         EnvClass=env_factory,
         env_kwargs={"add_obs_to_info_dict": True},
-        TrajInfoClass=SofaTrajInfo,
+        TrajInfoClass=TrajInfoClass,
         reset_automatically=True,
     )
 
