@@ -55,7 +55,7 @@ def build(
         render_mode=render_mode,
         sim_freq=sim_freq,
         control_freq=control_freq,
-        renderer_kwargs={"offscreen_only": True},
+        renderer_kwargs={"offscreen_only": True, "device": "cuda"},
     )
     # If we don't set a random seed manually, all parallel environments have the same seed
     env.unwrapped.set_main_rng(np.random.randint(1e9))
