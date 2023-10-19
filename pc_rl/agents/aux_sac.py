@@ -28,6 +28,6 @@ class AuxPcSacAgent(PcSacAgent):
 
     def auto_encoder(self, observation: ArrayTree[Tensor]) -> tuple[Tensor, Tensor]:
         pos, batch, color = dict_to_batched_data(observation)
-        x, neighborhoods, center_points = self.model["embedder"](pos, batch, color)
+        x, neighborhoods, center_points = self.model["tokenizer"](pos, batch, color)
         prediction, ground_truth = self.model["rl_mae"](x, neighborhoods, center_points)
         return prediction, ground_truth
