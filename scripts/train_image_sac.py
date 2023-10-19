@@ -320,7 +320,7 @@ def main(config: DictConfig) -> None:
         },  # type: ignore
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
         model_save_path=Path("model.pt"),
-        verbosity=Verbosity.DEBUG,
+        # verbosity=Verbosity.DEBUG,
     )
 
     with build(config) as runner:
