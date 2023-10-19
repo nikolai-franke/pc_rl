@@ -33,6 +33,7 @@ def build(
     sim_freq: int = 500,
     control_freq: int = 20,
     n_goal_points: int | None = None,
+    obs_frame: Literal["world", "ee"] = "ee",
 ):
     import mani_skill2.envs
 
@@ -72,6 +73,7 @@ def build(
         use_color=observation_type.startswith("color"),
         filter_points_below_z=filter_points_below_z,
         voxel_grid_size=voxel_grid_size,
+        obs_frame=obs_frame,
     )
 
     env = TimeLimit(env, max_episode_steps)

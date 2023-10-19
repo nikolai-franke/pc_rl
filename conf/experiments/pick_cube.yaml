@@ -5,14 +5,17 @@ defaults:
   - override /model/tokenizer: color
   - _self_
 
-batch_B: 10
-batch_T: 256
+batch_B: 8
+batch_T: 320
 
 runner:
-  n_steps: 2e6
+  n_steps: 3e6
 
 optimizer:
   lr: 5e-5
+
+eval:
+  n_eval_envs: 1
 
 
 tags: [pick_cube, color]
