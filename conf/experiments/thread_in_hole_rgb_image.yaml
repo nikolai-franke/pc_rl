@@ -17,4 +17,4 @@ algo:
   ent_coeff: 0.4
   ent_coeff_lr: 5e-5
 
-tags: [thread_in_hole, image_obs]
+tags: [thread_in_hole, image_obs, final]
