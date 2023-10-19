@@ -1,14 +1,32 @@
 from __future__ import annotations
 
-from typing import Callable
-
 import gymnasium as gym
 import numpy as np
-from maniskill2_learn.utils.lib3d.mani_skill2_contrib import \
-    apply_pose_to_points
 from sapien.core import Pose
 
 from pc_rl.utils.point_cloud_post_processing_functions import voxel_grid_sample
+
+
+def apply_pose_to_points(x, pose):
+    return to_normal(to_generalized(x) @ pose.to_transformation_matrix().T)
+
+
+def to_generalized(x):
+    if x.shape[-1] == 4:
+        return x
+    assert x.shape[-1] == 3
+    output_shape = list(x.shape)
+    output_shape[-1] = 4
+    ret = np.ones(output_shape)
+    ret[..., :3] = x
+    return ret
+
+
+def to_normal(x):
+    if x.shape[-1] == 3:
+        return x
+    assert x.shape[-1] == 4
+    return x[..., :3] / x[..., 3:]
 
 
 class ManiSkillPointCloudWrapper(gym.ObservationWrapper):
