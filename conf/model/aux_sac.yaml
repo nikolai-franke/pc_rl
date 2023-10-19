@@ -15,7 +15,7 @@ masked_encoder:
 masked_decoder:
   transformer_decoder:
     _target_: pc_rl.builder.build_transformer_decoder
-    depth: 1
+    depth: 3
 
 pi_mlp_head:
   _target_: pc_rl.models.sac.q_and_pi_heads.PiMlpHead
@@ -27,4 +27,5 @@ q_mlp_head:
   hidden_sizes: [128, 128]
   hidden_nonlinearity: ReLU
 
-
+transformer_block:
+  dropout: 0.1
