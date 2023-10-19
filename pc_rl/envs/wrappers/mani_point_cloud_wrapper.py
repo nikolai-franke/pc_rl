@@ -4,7 +4,8 @@ import gymnasium as gym
 import numpy as np
 from sapien.core import Pose
 
-from pc_rl.utils.point_cloud_post_processing_functions import voxel_grid_sample
+from pc_rl.utils.point_cloud_post_processing_functions import (
+    normalize, voxel_grid_sample)
 
 
 def apply_pose_to_points(x, pose):
@@ -38,6 +39,7 @@ class ManiSkillPointCloudWrapper(gym.ObservationWrapper):
         use_color: bool = False,
         filter_points_below_z: float | None = None,
         voxel_grid_size: float | None = None,
+        normalize: bool = True,
     ):
         super().__init__(env)
         num_points = env.observation_space["pointcloud"]["xyzw"].shape[0]
@@ -107,6 +109,9 @@ class ManiSkillPointCloudWrapper(gym.ObservationWrapper):
 
         if self.voxel_grid_size is not None:
             point_cloud = voxel_grid_sample(point_cloud, self.voxel_grid_size)
+
+        if self.normalize:
+            point_cloud = normalize(point_cloud)
 
         return point_cloud
 
