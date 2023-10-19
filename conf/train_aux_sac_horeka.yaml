@@ -1,0 +1,15 @@
+defaults:
+  - train_aux_sac
+  - platform: horeka
+  - _self_
+
+batch_T: 128
+batch_B: 20
+use_slurm: True
+
+# hydra:
+#   sweeper:
+#     params:
+#       # algo.ent_coeff_lr: 2e-5, 1e-5
+#       # algo.ent_coeff: 0.1, 0.05, 0.02, 0.01
+#       scheduler.increase_over_steps: 0, 10

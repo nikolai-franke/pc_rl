@@ -16,12 +16,12 @@ optimizer:
 
 algo:
   ent_coeff: 0.4
-  ent_coeff_lr: 5e-5
+  ent_coeff_lr: 2e-5
 
 model_url: kirurc/MAE/model-rcoja9hx:v0
 freeze_encoder: False
 scheduler:
-  zero_till_step: 2
+  zero_till_step: 5
   increase_over_steps: 10
 
 tags: [sac, thread_in_hole, pretrain]
