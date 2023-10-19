@@ -21,7 +21,7 @@ algo:
 model_url: kirurc/MAE/model-rcoja9hx:v0
 freeze_encoder: False
 scheduler:
-  zero_till_step: 0
-  increase_over_steps: 0
+  zero_till_step: 2
+  increase_over_steps: 10
 
 tags: [sac, thread_in_hole, pretrain]
