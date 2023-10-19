@@ -1,0 +1,18 @@
+# @package _global_
+
+defaults:
+  - override /env: pick_cube
+  - override /model/tokenizer: color
+  - _self_
+
+batch_B: 10
+batch_T: 256
+
+runner:
+  n_steps: 2e6
+
+optimizer:
+  lr: 5e-5
+
+
+tags: [pick_cube, color]
