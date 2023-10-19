@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 from typing import Literal
 
 import gymnasium as gym
@@ -12,8 +11,6 @@ from pc_rl.envs.wrappers.add_obs_to_info_wrapper import \
 from pc_rl.envs.wrappers.continuous_task_wrapper import ContinuousTaskWrapper
 from pc_rl.envs.wrappers.mani_point_cloud_wrapper import \
     ManiSkillPointCloudWrapper
-from pc_rl.utils.point_cloud_post_processing_functions import (
-    normalize, voxel_grid_sample)
 
 
 def build(
