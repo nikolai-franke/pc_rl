@@ -1,3 +1,4 @@
+import multiprocessing as mp
 import os
 from contextlib import contextmanager
 from datetime import datetime
@@ -318,7 +319,7 @@ def main(config: DictConfig) -> None:
             # "csv": "progress.csv",
         },  # type: ignore
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
-        model_save_path="model.pt",
+        model_save_path=Path("model.pt"),
         verbosity=Verbosity.DEBUG,
     )
 
@@ -330,4 +331,5 @@ def main(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn")
     main()
