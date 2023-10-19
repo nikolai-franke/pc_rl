@@ -32,6 +32,7 @@ def build(
     fov: float | None = None,
     sim_freq: int = 500,
     control_freq: int = 20,
+    n_goal_points: int | None = None,
 ):
     import mani_skill2.envs
 
@@ -65,22 +66,12 @@ def build(
 
     env = ContinuousTaskWrapper(env)
 
-    post_processing_functions = []
-    if filter_points_below_z is not None:
-        post_processing_functions.append(
-            lambda point_cloud: point_cloud[point_cloud[..., 2] > filter_points_below_z]
-        )
-
-    if voxel_grid_size is not None:
-        post_processing_functions.append(
-            functools.partial(voxel_grid_sample, voxel_grid_size=voxel_grid_size)
-        )
-    post_processing_functions.append(normalize)
-
     env = ManiSkillPointCloudWrapper(
         env,
+        n_goal_points=n_goal_points,
         use_color=observation_type.startswith("color"),
-        post_processing_functions=post_processing_functions,
+        filter_points_below_z=filter_points_below_z,
+        voxel_grid_size=voxel_grid_size,
     )
 
     env = TimeLimit(env, max_episode_steps)
