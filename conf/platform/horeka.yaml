@@ -7,7 +7,7 @@ defaults:
 hydra:
   mode: MULTIRUN
   launcher:
-    timeout_min: 1200
+    timeout_min: 1440
     parallel_runs_per_node: 8
     wait_for_completion: False
     partition: accelerated
