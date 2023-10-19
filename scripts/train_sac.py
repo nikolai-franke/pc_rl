@@ -370,7 +370,7 @@ def main(config: DictConfig) -> None:
             # "csv": "progress.csv",
         },  # type: ignore
         config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
-        model_save_path="model.pt",
+        model_save_path=Path("model.pt"),
         # verbosity=Verbosity.DEBUG,
     )
 

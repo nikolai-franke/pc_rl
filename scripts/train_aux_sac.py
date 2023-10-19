@@ -1,3 +1,4 @@
+import multiprocessing as mp
 import os
 from contextlib import contextmanager
 from datetime import datetime
@@ -31,6 +32,7 @@ from pc_rl.models.aux_mae import RLMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
+from pc_rl.utils.mani_skill_traj_info import ManiTrajInfo
 from pc_rl.utils.sofa_traj_info import SofaTrajInfo
 
 
@@ -39,7 +41,11 @@ def build(config: DictConfig):
     parallel = config.parallel
     discount = config.algo.discount
     batch_spec = BatchSpec(config.batch_T, config.batch_B)
-    SofaTrajInfo.set_discount(discount)
+    if "env_id" in config["env"].keys():
+        TrajInfoClass = ManiTrajInfo
+    else:
+        TrajInfoClass = SofaTrajInfo
+    TrajInfoClass.set_discount(discount)
     CageCls = ProcessCage if parallel else SerialCage
     storage = "shared" if parallel else "local"
 
@@ -49,7 +55,7 @@ def build(config: DictConfig):
         EnvClass=env_factory,
         n_envs=batch_spec.B,
         env_kwargs={"add_obs_to_info_dict": False},
-        TrajInfoClass=SofaTrajInfo,
+        TrajInfoClass=TrajInfoClass,
         parallel=parallel,
     )
     replay_length = int(config.algo.replay_length) // batch_spec.B
@@ -274,7 +280,7 @@ def build(config: DictConfig):
     eval_cage_kwargs = dict(
         EnvClass=env_factory,
         env_kwargs={"add_obs_to_info_dict": True},
-        TrajInfoClass=SofaTrajInfo,
+        TrajInfoClass=TrajInfoClass,
         reset_automatically=True,
     )
 
@@ -410,4 +416,5 @@ def main(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn")
     main()
