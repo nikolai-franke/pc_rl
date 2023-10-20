@@ -53,6 +53,7 @@ class ManiSkillPointCloudWrapper(gym.ObservationWrapper):
         self.use_color = use_color
         self.filter_points_below_z = filter_points_below_z
         self.voxel_grid_size = voxel_grid_size
+        self.normalize = normalize
 
     def observation(self, observation):
         if self.obs_frame in ["base", "world"]:
@@ -77,21 +78,17 @@ class ManiSkillPointCloudWrapper(gym.ObservationWrapper):
         mask = point_cloud[..., -1] == 1
         point_cloud = point_cloud[mask][..., :-1]
 
-        filter_mask = None
+        rgb = observation["pointcloud"]["rgb"].astype(float)
+        rgb = rgb[mask]
+        rgb *= 1 / 255.0
+
         if self.filter_points_below_z is not None:
             filter_mask = point_cloud[..., 2] > self.filter_points_below_z
             point_cloud = point_cloud[filter_mask]
-
-        if self.use_color:
-            rgb = observation["pointcloud"]["rgb"].astype(float)
-            rgb = rgb[mask]
-            rgb *= 1 / 255.0
-            if filter_mask is not None:
-                rgb = rgb[filter_mask]
+            rgb = rgb[filter_mask]
 
         if self.n_goal_points is not None:
             assert (goal_pos := observation["extra"]["goal_pos"]) is not None
-            assert self.use_color
             goal_pts_xyz = (
                 np.random.uniform(low=-1.0, high=1.0, size=(self.n_goal_points, 3))
                 * 0.01
