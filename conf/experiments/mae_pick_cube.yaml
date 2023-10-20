@@ -1,0 +1,10 @@
+# @package _global_
+
+defaults:
+  - override /dataset: pick_cube
+  - _self_
+
+use_color: False
+
+tags: [pick_cube]
+
