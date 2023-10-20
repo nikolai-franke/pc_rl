@@ -105,18 +105,10 @@ def main(config: DictConfig):
             transform=transform,
             split="val",
         )
-    elif config.dataset.name in (
-        "reach",
-        "thread_in_hole",
-        "thread_in_hole_color",
-        "rope_cutting",
-        "deflect_spheres",
-    ):
+    else:
         dataset = PcInMemoryDataset(root=path, transform=transform)
         validation_dataset = dataset[int(0.9 * len(dataset)) :]
         dataset = dataset[: int(0.9 * len(dataset))]
-    else:
-        raise NotImplementedError
 
     data_module = LightningDataset(
         dataset,
