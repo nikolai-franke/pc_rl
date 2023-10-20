@@ -2,7 +2,6 @@
 
 defaults:
   - override /env: pick_cube
-  - override /model/tokenizer: color
   - _self_
 
 batch_B: 8
@@ -18,4 +17,4 @@ eval:
   n_eval_envs: 1
 
 
-tags: [pick_cube, color]
+tags: [pick_cube]
