@@ -21,6 +21,6 @@ class ManiTrajInfo(TrajInfo):
         env_info: EnvInfoType,
     ) -> None:
         super().step(observation, action, reward, terminated, truncated, env_info)
-        self.Success = env_info["success"]
+        self.Success = env_info["success"] or self.Success
         if not self.Success:
             self.SuccessLength += 1
