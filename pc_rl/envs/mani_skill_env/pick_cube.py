@@ -23,7 +23,7 @@ class PickCube(PickCubeEnv):
         reward += reaching_reward
         if self.old_dist_from_cube != -1.0:
             reward += self.old_dist_from_cube - tcp_to_obj_dist
-            self.old_dist_from_target = tcp_to_obj_dist
+            self.old_dist_from_cube = tcp_to_obj_dist
 
         is_grasped = self.agent.check_grasp(self.obj, max_angle=30)
         if is_grasped and not self.was_grasped:
