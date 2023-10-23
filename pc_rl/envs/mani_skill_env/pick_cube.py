@@ -19,7 +19,7 @@ class PickCube(PickCubeEnv):
 
         tcp_to_obj_pos = self.obj.pose.p - self.tcp.pose.p
         tcp_to_obj_dist = np.linalg.norm(tcp_to_obj_pos)
-        reaching_reward = -np.tanh(5 * tcp_to_obj_dist)
+        reaching_reward = -1.0 - np.tanh(5 * tcp_to_obj_dist)
         reward += reaching_reward
         if self.old_dist_from_cube != -1.0:
             reward += self.old_dist_from_cube - tcp_to_obj_dist
