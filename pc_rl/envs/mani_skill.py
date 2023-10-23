@@ -35,6 +35,8 @@ def build(
 ):
     import mani_skill2.envs
 
+    import pc_rl.envs.mani_skill.pick_cube
+
     camera_cfgs = {
         "width": image_shape[0],
         "height": image_shape[1],
@@ -63,7 +65,7 @@ def build(
     if add_obs_to_info_dict:
         env = ManiSkillAddObsToInfoWrapper(env)
 
-    env = ContinuousTaskWrapper(env)
+    # env = ContinuousTaskWrapper(env)
 
     env = ManiSkillPointCloudWrapper(
         env,
