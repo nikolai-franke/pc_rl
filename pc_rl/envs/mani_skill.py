@@ -33,9 +33,9 @@ def build(
     obs_frame: Literal["world", "ee"] = "ee",
     normalize: bool = False,
 ):
+    import pc_rl.envs.mani_skill_env.pick_cube
     import mani_skill2.envs
 
-    import pc_rl.envs.mani_skill.pick_cube
 
     camera_cfgs = {
         "width": image_shape[0],
