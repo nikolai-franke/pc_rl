@@ -12,4 +12,5 @@ obs_frame: ee
 n_goal_points: 50
 is_grasped_reward: 1.0
 normalize: True
+always_target_dist_reward: False
 

@@ -5,12 +5,20 @@ from mani_skill2.utils.registration import register_env
 
 @register_env("PickCube-v1", max_episode_steps=200)
 class PickCube(PickCubeEnv):
-    def __init__(self, *args, obj_init_rot_z=True, is_grasped_reward=1.0, **kwargs):
+    def __init__(
+        self,
+        *args,
+        obj_init_rot_z=True,
+        is_grasped_reward=1.0,
+        always_target_dist_reward=False,
+        **kwargs
+    ):
         super().__init__(*args, obj_init_rot_z=obj_init_rot_z, **kwargs)
         self.was_grasped = False
         self.old_dist_from_cube = -1.0
         self.old_dist_from_target = -1.0
         self.is_grasped_reward = is_grasped_reward
+        self.always_target_dist_reward = always_target_dist_reward
 
     def _load_actors(self):
         self.cube_half_size = np.array([0.015] * 3, np.float32)
@@ -33,7 +41,7 @@ class PickCube(PickCubeEnv):
             #     reward += self.old_dist_from_cube - tcp_to_obj_dist
             # self.old_dist_from_cube = tcp_to_obj_dist
 
-        if is_grasped:
+        if is_grasped or self.always_target_dist_reward:
             obj_to_goal_dist = np.linalg.norm(self.goal_pos - self.obj.pose.p)
             place_reward = -np.tanh(5 * obj_to_goal_dist)
             reward += place_reward
