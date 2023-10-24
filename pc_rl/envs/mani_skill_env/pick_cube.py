@@ -17,20 +17,21 @@ class PickCube(PickCubeEnv):
         if info["success"]:
             return 100.0
 
-        tcp_to_obj_pos = self.obj.pose.p - self.tcp.pose.p
-        tcp_to_obj_dist = np.linalg.norm(tcp_to_obj_pos)
-        reaching_reward = -1.0 - np.tanh(5 * tcp_to_obj_dist)
-        reward += reaching_reward
-        if self.old_dist_from_cube != -1.0:
-            reward += self.old_dist_from_cube - tcp_to_obj_dist
-            self.old_dist_from_cube = tcp_to_obj_dist
-
         is_grasped = self.agent.check_grasp(self.obj, max_angle=30)
         if is_grasped and not self.was_grasped:
             reward += 5.0
         if not is_grasped and self.was_grasped:
             reward -= 5.0
         self.was_grasped = is_grasped
+
+        if not is_grasped:
+            tcp_to_obj_pos = self.obj.pose.p - self.tcp.pose.p
+            tcp_to_obj_dist = np.linalg.norm(tcp_to_obj_pos)
+            reaching_reward = -1.0 - np.tanh(5 * tcp_to_obj_dist)
+            reward += reaching_reward
+            if self.old_dist_from_cube != -1.0:
+                reward += self.old_dist_from_cube - tcp_to_obj_dist
+                self.old_dist_from_cube = tcp_to_obj_dist
 
         if is_grasped:
             obj_to_goal_dist = np.linalg.norm(self.goal_pos - self.obj.pose.p)
