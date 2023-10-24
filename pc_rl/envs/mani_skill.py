@@ -21,6 +21,7 @@ def build(
     image_shape: list[int],
     control_mode: str,
     reward_mode: str,
+    is_grasped_reward: float = 1.0,
     voxel_grid_size: float | None = None,
     render_mode: str | None = None,
     filter_points_below_z: float | None = None,
@@ -33,13 +34,14 @@ def build(
     obs_frame: Literal["world", "ee"] = "ee",
     normalize: bool = False,
 ):
-    import pc_rl.envs.mani_skill_env.pick_cube
     import mani_skill2.envs
 
+    import pc_rl.envs.mani_skill_env.pick_cube
 
     camera_cfgs = {
         "width": image_shape[0],
         "height": image_shape[1],
+        # "add_segmentation": True,
     }
     if z_far is not None:
         camera_cfgs.update({"far": z_far})  # type: ignore
@@ -58,6 +60,7 @@ def build(
         sim_freq=sim_freq,
         control_freq=control_freq,
         renderer_kwargs={"offscreen_only": True, "device": "cuda"},
+        is_grasped_reward=is_grasped_reward,
     )
     # If we don't set a random seed manually, all parallel environments have the same seed
     env.unwrapped.set_main_rng(np.random.randint(1e9))
