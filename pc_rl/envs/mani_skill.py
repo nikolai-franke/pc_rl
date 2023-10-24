@@ -22,6 +22,7 @@ def build(
     control_mode: str,
     reward_mode: str,
     is_grasped_reward: float = 1.0,
+    always_target_dist_reward: bool = False,
     voxel_grid_size: float | None = None,
     render_mode: str | None = None,
     filter_points_below_z: float | None = None,
