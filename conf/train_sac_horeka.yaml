@@ -5,8 +5,8 @@ defaults:
 
 use_slurm: True
 
-hydra:
-  sweeper:
-    params:
-      algo.ent_coeff_lr: 1e-5, 5e-6
-      algo.ent_coeff: 0.03, 0.04, 0.05, 0.06
+# hydra:
+#   sweeper:
+#     params:
+#       algo.ent_coeff_lr: 1e-5, 5e-6
+#       algo.ent_coeff: 0.03, 0.04, 0.05, 0.06
