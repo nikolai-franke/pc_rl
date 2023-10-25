@@ -8,7 +8,7 @@ batch_B: 8
 batch_T: 320
 
 runner:
-  n_steps: 3e6
+  n_steps: 5e6
 
 optimizer:
   lr: 5e-5
