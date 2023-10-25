@@ -8,7 +8,7 @@ use_slurm: True
 hydra:
   sweeper:
     params:
-      algo.ent_coeff_lr: 1e-5
-      algo.ent_coeff: 0.05
-      env.is_grasped_reward: 1.0, 3.0, 5.0, 10.0
-      env.always_target_dist_reward: True
+      algo.ent_coeff_lr: 5e-6
+      algo.ent_coeff: 0.03, 0.06
+      env.is_grasped_reward: 1.0, 2.0
+      env.always_target_dist_reward: False
