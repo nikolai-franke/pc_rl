@@ -1,9 +1,5 @@
 _target_: pc_rl.envs.deflect_spheres.build
 
-defaults:
-  - base
-  - _self_
-
 action_type: continuous
 max_episode_steps: 500
 settle_steps: 10
