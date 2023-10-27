@@ -1,4 +1,0 @@
-pi_mlp_hidden_sizes: [256, 128]
-pi_mlp_act: Tanh
-value_mlp_hidden_sizes: [256, 128]
-value_mlp_act: Tanh

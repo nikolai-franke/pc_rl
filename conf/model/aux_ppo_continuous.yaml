@@ -1,8 +1,0 @@
-defaults:
-  - aux_ppo_base
-  - rl_model: ppo_continuous
-  - _self_
-
-rl_model:
-  _target_: pc_rl.builder.build_aux_continuous_pg_model
-

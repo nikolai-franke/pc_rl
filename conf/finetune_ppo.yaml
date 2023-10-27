@@ -1,6 +1,0 @@
-defaults:
-  - train_ppo
-  - _self_
-
-model_path: ???
-freeze_encoder: False

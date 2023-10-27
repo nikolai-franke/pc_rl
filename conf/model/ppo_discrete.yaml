@@ -1,7 +1,0 @@
-defaults:
-  - ppo_base
-  - rl_model: ppo_discrete
-  - _self_
-
-rl:model:
-  _target_: pc_rl.builder.build_categorical_pg_model
