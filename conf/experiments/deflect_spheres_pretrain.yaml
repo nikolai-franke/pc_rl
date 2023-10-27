@@ -26,4 +26,4 @@ scheduler:
   zero_till_step: 20
   increase_over_steps: 20
 
-tags: [deflect_spheres, pretrain, color, final, ds, longer]
+tags: [deflect_spheres, pretrain, color, final, shapenet]
