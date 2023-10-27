@@ -18,4 +18,10 @@ algo:
 optimizer:
   lr: 5e-5
 
-tags: [deflect_spheres, color, final]
+model_url: kirurc/MAE/model-95rmnz2o:v0
+freeze_encoder: False
+scheduler:
+  zero_till_step: 5
+  increase_over_steps: 10
+
+tags: [deflect_spheres, pretrain, color, final, ds]
