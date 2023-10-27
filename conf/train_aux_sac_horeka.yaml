@@ -10,4 +10,4 @@ use_slurm: True
 hydra:
   sweeper:
     params:
-      algo.aux_loss_coeff: 0.1, 0.5
+      algo.aux_loss_coeff: 0.01, 0.1
