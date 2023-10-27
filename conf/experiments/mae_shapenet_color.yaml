@@ -1,0 +1,10 @@
+# @package _global_
+
+defaults:
+  - override /dataset: shapenet
+  - override /model/tokenizer: color
+  - _self_
+
+use_color: True
+
+tags: [shapenet, color]

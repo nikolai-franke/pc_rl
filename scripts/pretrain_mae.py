@@ -18,6 +18,7 @@ from pc_rl.datasets.in_memory import PcInMemoryDataset
 from pc_rl.models.mae import MaskedAutoEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
+from pc_rl.utils.color_point_cloud_transform import ColorPointCloud
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="mae_pretrain")
@@ -81,6 +82,10 @@ def main(config: DictConfig):
     transforms.append(RandomRotate(180, 1))
     transforms.append(RandomRotate(180, 2))
     transforms.append(NormalizeScale())
+
+    if config.dataset.name == "shapenet" and config.use_color:
+        transforms.append(ColorPointCloud())
+
     transform = Compose(transforms)
 
     path = str(Path(__file__).parent.resolve() / config.dataset.path)
