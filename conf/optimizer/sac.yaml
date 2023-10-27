@@ -1,11 +1,4 @@
 lr: 1e-4
 per_module:
-  tokenizer:
-    lr: 1e-4
-  encoder:
-    lr: 1e-4
-  pi:
-    lr: 1e-4
-  q:
-    lr: 1e-4
+  aux: 1e-5
 

@@ -29,6 +29,7 @@ class AuxPcSAC(SAC):
         replay_buffer: ReplayBuffer[ArrayDict[Tensor]],
         q_optimizer: torch.optim.Optimizer,
         pi_optimizer: torch.optim.Optimizer,
+        aux_optimizer: torch.optim.Optimizer,
         discount: float,
         learning_starts: int,
         replay_ratio: int,  # data_consumption / data_generation
@@ -63,6 +64,7 @@ class AuxPcSAC(SAC):
         self.aux_loss_coeff = aux_loss_coeff
         self.color_loss_coeff = color_loss_coeff
         self.detach_encoder = detach_encoder
+        self.aux_optimizer = aux_optimizer
 
     def train_once(self, samples: ArrayDict[Tensor]) -> None:
         """
@@ -137,6 +139,10 @@ class AuxPcSAC(SAC):
             self.algo_log_info["color_loss"].append(color_loss.item())
             mae_loss += color_loss
 
+        self.aux_optimizer.zero_grad()
+        mae_loss.backward(retain_graph=True)
+        self.aux_optimizer.step()
+
         q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
 
         self.algo_log_info["critic_loss"].append(q_loss.item())
@@ -146,7 +152,6 @@ class AuxPcSAC(SAC):
 
         # update Q model parameters according to Q loss
         self.q_optimizer.zero_grad()
-        mae_loss.backward()
         q_loss.backward()
 
         if self.clip_grad_norm is not None:
