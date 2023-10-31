@@ -1,0 +1,28 @@
+_target_: pc_rl.envs.deflect_spheres.build
+
+action_type: continuous
+max_episode_steps: 500
+settle_steps: 10
+render_mode: headless
+observation_type: point_cloud
+image_shape: [128, 128]
+frame_skip: 1
+time_step: 0.1
+voxel_grid_size: 5.0
+
+rows_to_cut: 2
+camera_reset_noise: null
+
+
+reward_amount_dict:
+  unstable_deformation: -1.0
+  distance_cauter_border_point: -10.0
+  delta_distance_cauter_border_point: -10.0
+  cut_connective_tissue: 0.5
+  cut_tissue: -0.1
+  workspace_violation: -0.0
+  state_limits_violation: -0.0
+  rcm_violation_xyz: -0.0
+  rcm_violation_rpy: -0.0
+  collision_with_board: -0.1
+  successful_task: 50.0
