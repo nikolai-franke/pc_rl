@@ -5,6 +5,9 @@ from mani_skill2.utils.registration import register_env
 
 @register_env("PickCube-v1", max_episode_steps=200)
 class PickCube(PickCubeEnv):
+    goal_thresh = 0.05
+    min_goal_dist = 0.1
+
     def __init__(
         self,
         *args,
@@ -20,9 +23,9 @@ class PickCube(PickCubeEnv):
         self.is_grasped_reward = is_grasped_reward
         self.always_target_dist_reward = always_target_dist_reward
 
-    def _load_actors(self):
-        self.cube_half_size = np.array([0.015] * 3, np.float32)
-        return super()._load_actors()
+    # def _load_actors(self):
+    #     self.cube_half_size = np.array([0.015] * 3, np.float32)
+    #     return super()._load_actors()
 
     def compute_dense_reward(self, info, **kwargs):
         reward = 0.0
