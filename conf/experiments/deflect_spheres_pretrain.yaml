@@ -16,7 +16,7 @@ algo:
   ent_coeff_lr: 2e-5
 
 optimizer:
-  lr: 5e-5
+  lr: 1e-4
 
 # model_url: kirurc/MAE/model-95rmnz2o:v0 # domain specific
 model_url: kirurc/MAE/model-e6n0nhmi:v0 # shapenet
