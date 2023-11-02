@@ -31,12 +31,17 @@ class TransformerBlock(nn.Module):
                     f"The first and the layer of the MLP must have the same size as the embedding_dim: {self.dim}"
                 ) from e
 
-    def forward(self, x, padding_mask=None):
+    def forward(self, x, padding_mask=None, attn_mask=None):
         x = self.norm_1(x)
         x = (
             x
             + self.attention(
-                x, x, x, need_weights=False, key_padding_mask=padding_mask
+                x,
+                x,
+                x,
+                need_weights=False,
+                key_padding_mask=padding_mask,
+                attn_mask=attn_mask,
             )[0]
         )
         x = self.norm_2(x)
@@ -50,9 +55,9 @@ class TransformerEncoder(nn.Module):
         self.dim = blocks[0].dim
         self.blocks = nn.ModuleList(blocks)
 
-    def forward(self, x, pos, padding_mask=None):
+    def forward(self, x, pos, padding_mask=None, attn_mask=None):
         for block in self.blocks:
-            x = block(x + pos, padding_mask)
+            x = block(x + pos, padding_mask=padding_mask, attn_mask=attn_mask)
         return x
 
 
@@ -78,9 +83,9 @@ class TransformerDecoder(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward(self, x, pos, return_token_num, padding_mask=None):
+    def forward(self, x, pos, return_token_num, padding_mask=None, attn_mask=None):
         for block in self.blocks:
-            x = block(x + pos, padding_mask)
+            x = block(x + pos, padding_mask=padding_mask, attn_mask=attn_mask)
 
         x = self.norm(x[:, -return_token_num:])
         return x
