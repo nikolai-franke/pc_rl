@@ -83,9 +83,11 @@ class TransformerDecoder(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def forward(self, x, pos, return_token_num, padding_mask=None, attn_mask=None):
+    def forward(self, x, pos, return_token_num=None, padding_mask=None, attn_mask=None):
         for block in self.blocks:
             x = block(x + pos, padding_mask=padding_mask, attn_mask=attn_mask)
 
-        x = self.norm(x[:, -return_token_num:])
+        if return_token_num is not None:
+            x = x[:, -return_token_num]
+        x = self.norm(x)
         return x
