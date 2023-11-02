@@ -21,9 +21,7 @@ class MaskedEncoder(nn.Module):
         self.pos_embedder = pos_embedder
         self.transformer_encoder = transformer_encoder
         self.dim = self.transformer_encoder.dim
-        self.padding_token = nn.Parameter(
-            torch.full((1, 3), padding_value), requires_grad=False
-        )
+        self.padding_value = padding_value
         self.norm = nn.LayerNorm(self.dim)
         self._check_pos_embedder()
         self.apply(self._init_weights)
@@ -110,7 +108,7 @@ class MaskedEncoder(nn.Module):
         return overall_mask.bool().to(center.device)
 
     def forward(self, x, center_points, noaug=False):
-        padding_mask = torch.all(center_points == self.padding_token, dim=-1)
+        padding_mask = torch.all(center_points == self.padding_value, dim=-1)
         if self.mask_type == "rand":
             ae_mask = self._mask_center_rand(center_points, padding_mask, noaug=noaug)
         else:
@@ -124,7 +122,7 @@ class MaskedEncoder(nn.Module):
         pos = self.pos_embedder(center_points_vis)
 
         # recalculate padding mask
-        vis_padding_mask = torch.all(center_points_vis == self.padding_token, dim=-1)
+        vis_padding_mask = torch.all(center_points_vis == self.padding_value, dim=-1)
         x_vis = self.transformer_encoder(x_vis, pos, vis_padding_mask)
         x_vis = self.norm(x_vis)
 

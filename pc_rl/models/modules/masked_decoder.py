@@ -23,10 +23,8 @@ class MaskedDecoder(nn.Module):
         assert (
             pos_dim := self.pos_embedder.channel_list[-1]
         ) == self.dim, f"pos_embedder and decoder don't have matching dimensions: {pos_dim} != {self.dim}"
-        self.mask_token = nn.Parameter(torch.zeros(1, 1, self.dim), requires_grad=False)
-        self.padding_token = nn.Parameter(
-            torch.full((1, 3), padding_value), requires_grad=False
-        )
+        self.mask_token = nn.Parameter(torch.zeros(1, 1, self.dim))
+        self.padding_value = padding_value
         nn.init.trunc_normal_(self.mask_token, std=0.02)
 
     def forward(self, x_vis, mask, center_points):
@@ -39,7 +37,7 @@ class MaskedDecoder(nn.Module):
             [center_points_visible, center_points_masked], dim=1
         )
         # since we reordered the center points, we have to recalculate the padding mask
-        padding_mask = torch.all(center_points_full == self.padding_token, dim=-1)
+        padding_mask = torch.all(center_points_full == self.padding_value, dim=-1)
 
         pos_full = self.pos_embedder(center_points_full).reshape(B, -1, C)
 
