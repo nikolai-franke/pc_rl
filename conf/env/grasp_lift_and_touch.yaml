@@ -1,21 +1,17 @@
 _target_: pc_rl.envs.grasp_lift_and_touch.build
 
-defaults: 
-  - base
-  - _self_
-
 action_type: continuous
 render_mode: headless
 observation_type: point_cloud
+settle_steps: 10
 max_episode_steps: 500
 frame_skip: 2
 time_step: 0.05
 image_shape: [128, 128]
 voxel_grid_size: 5.0
 
-discrete_action_magnitude: 100.0
 goal_tolerance: 0.02
-start_in_phase: touch
+start_in_phase: lift
 end_in_phase: done
 collision_punish_mode: constant
 phase_any_rewards:

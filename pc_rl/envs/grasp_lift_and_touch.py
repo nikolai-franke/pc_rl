@@ -2,25 +2,25 @@ from __future__ import annotations
 
 from typing import Literal
 
-from gymnasium.wrappers.time_limit import TimeLimit
 from sofa_env.scenes.grasp_lift_touch.grasp_lift_touch_env import (
     ActionType, CollisionEffect, GraspLiftTouchEnv, ObservationType, Phase,
     RenderMode)
 
-from pc_rl.envs.add_obs_to_info_wrapper import AddObsToInfoWrapper
-from pc_rl.envs.point_cloud_wrapper import \
-    PointCloudFromDepthImageObservationWrapper
+from pc_rl.utils.add_env_wrappers import add_env_wrappers
 
 
 def build(
     max_episode_steps: int,
     render_mode: Literal["headless", "human"],
     action_type: Literal["discrete", "continuous"],
+    observation_type: Literal[
+        "point_cloud", "color_point_cloud", "rgb_image", "rgbd_image"
+    ],
+    settle_steps: int,
     image_shape: list[int],
     frame_skip: int,
     time_step: float,
     goal_tolerance: float,
-    discrete_action_magnitude: float,
     add_obs_to_info_dict: bool,
     collision_punish_mode: Literal["proportional", "constant", "failure"],
     start_in_phase: Literal["grasp", "lift", "touch", "done", "any"],
@@ -28,6 +28,7 @@ def build(
     phase_any_rewards: dict,
     phase_grasp_rewards: dict,
     phase_touch_rewards: dict,
+    voxel_grid_size: float | None,
     create_scene_kwargs: dict | None = None,
 ):
     assert len(image_shape) == 2
@@ -38,14 +39,24 @@ def build(
     start_in_phase = Phase[start_in_phase.upper()]  # type: ignore
     end_in_phase = Phase[end_in_phase.upper()]  # type: ignore
 
+    if observation_type in ("point_cloud", "color_point_cloud", "rgbd_image"):
+        obs_type = ObservationType.RGBD
+    elif observation_type == "rgb_image":
+        obs_type = ObservationType.RGB
+    else:
+        raise ValueError(f"Invalid observation type: {observation_type}")
+
+    if create_scene_kwargs is not None:
+        convert_to_array(create_scene_kwargs)
+
     env = GraspLiftTouchEnv(
-        observation_type=ObservationType.RGBD,
-        render_mode=render_mode,
-        action_type=action_type,
-        image_shape=image_shape,
+        observation_type=obs_type,
+        render_mode=render_mode,  # type: ignore
+        action_type=action_type,  # type: ignore
+        image_shape=image_shape,  # type: ignore
         frame_skip=frame_skip,
         time_step=time_step,
-        discrete_action_magnitude=discrete_action_magnitude,
+        settle_steps=settle_steps,
         create_scene_kwargs=create_scene_kwargs,
         reward_amount_dict={
             Phase.ANY: phase_any_rewards,
@@ -53,12 +64,24 @@ def build(
             Phase.TOUCH: phase_touch_rewards,
         },
         goal_tolerance=goal_tolerance,
-        start_in_phase=start_in_phase,
-        end_in_phase=end_in_phase,
+        start_in_phase=start_in_phase,  # type: ignore
+        end_in_phase=end_in_phase,  # type: ignore
     )
 
-    if add_obs_to_info_dict:
-        env = AddObsToInfoWrapper(env)
-    env = PointCloudFromDepthImageObservationWrapper(env)
-    env = TimeLimit(env, max_episode_steps)
+    env = add_env_wrappers(
+        env,
+        max_episode_steps=max_episode_steps,
+        add_obs_to_info_dict=add_obs_to_info_dict,
+        observation_type=observation_type,
+        voxel_grid_size=voxel_grid_size,
+    )
+
     return env
+
+
+def convert_to_array(kwargs_dict):
+    for k, v in kwargs_dict.items():
+        if isinstance(v, list):
+            kwargs_dict[k] = np.asarray(v)
+        elif isinstance(v, dict):
+            convert_to_array(v)
