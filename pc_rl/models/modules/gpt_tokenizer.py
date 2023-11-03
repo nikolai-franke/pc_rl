@@ -137,14 +137,16 @@ class GptTokenizer(MessagePassing):
         center_points = torch.gather(
             center_points,
             dim=1,
-            index=idxs.repeat_interleave(self.points_dim).reshape(center_points.shape),
+            index=idxs.repeat_interleave(center_points.shape[-1]).reshape(
+                center_points.shape
+            ),
         )
 
         # reorder x
         x = torch.gather(
             x,
             dim=1,
-            index=idxs.repeat_interleave(self.embedding_size).reshape(x.shape),
+            index=idxs.repeat_interleave(x.shape[-1]).reshape(x.shape),
         )
 
         # reorder neighborhoods
@@ -152,7 +154,7 @@ class GptTokenizer(MessagePassing):
             neighborhoods,
             dim=1,
             index=idxs.repeat_interleave(
-                neighborhoods.shape[-2] * self.points_dim
+                neighborhoods.shape[-2] * neighborhoods.shape[-1]
             ).reshape(neighborhoods.shape),
         )
 
