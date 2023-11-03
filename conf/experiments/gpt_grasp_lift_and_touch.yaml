@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - override /dataset: grsp_lift_and_touch
+  - override /dataset: grasp_lift_and_touch
   - override /model/tokenizer: point_gpt_color
   - _self_
 
