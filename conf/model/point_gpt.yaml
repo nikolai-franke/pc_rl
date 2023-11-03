@@ -1,0 +1,21 @@
+defaults:
+  - transformer_block: default
+  - tokenizer: point_gpt
+  - pos_embedder: default
+  - _self_
+
+gpt_encoder:
+  _target_: pc_rl.builder.build_gpt_encoder
+  mask_ratio: 0.8
+  keep_first_tokens_ratio: 0.1
+
+transformer_encoder:
+  _target_: pc_rl.builder.build_transformer_encoder
+  depth: 3
+
+transformer_decoder:
+  _target_: pc_rl.builder.build_transformer_decoder
+  depth: 3
+
+transformer_block:
+  dropout: 0.1

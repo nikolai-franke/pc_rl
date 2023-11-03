@@ -10,6 +10,8 @@ from torch.nn import MultiheadAttention
 from torch_geometric.nn import MLP
 
 from pc_rl.models.finetune_encoder import FinetuneEncoder
+from pc_rl.models.modules.gpt_encoder import GptEncoder
+from pc_rl.models.modules.gpt_tokenizer import GptTokenizer
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
 from pc_rl.models.modules.tokenizer import Tokenizer
 from pc_rl.models.modules.tokenizer_separate_color import \
@@ -21,6 +23,28 @@ from pc_rl.models.pg.aux_mae_categorical import AuxMaeCategoricalPgModel
 from pc_rl.models.pg.aux_mae_continuous import AuxMaeContinuousPgModel
 from pc_rl.models.pg.finetune_categorical import CategoricalPgModel
 from pc_rl.models.pg.finetune_continuous import ContinuousPgModel
+
+
+def build_gpt_tokenizer(
+    embedding_size: int,
+    mlp_1_layers: list[int],
+    mlp_2_layers: list[int],
+    mlp_act: str,
+    group_size: int,
+    sampling_ratio: float,
+    random_start: bool,
+) -> GptTokenizer:
+    mlp_1 = MLP(mlp_1_layers, act=mlp_act)
+    mlp_2_layers.append(embedding_size)
+    mlp_2 = MLP(mlp_2_layers, act=mlp_act)
+
+    return GptTokenizer(
+        mlp_1=mlp_1,
+        mlp_2=mlp_2,
+        group_size=group_size,
+        sampling_ratio=sampling_ratio,
+        random_start=random_start,
+    )
 
 
 def build_tokenizer(
@@ -124,6 +148,20 @@ def build_masked_encoder(
     return MaskedEncoder(
         mask_ratio=mask_ratio,
         mask_type=mask_type,
+        transformer_encoder=transformer_encoder,
+        pos_embedder=pos_embedder,
+    )
+
+
+def build_gpt_encoder(
+    mask_ratio: float,
+    keep_first_tokens_ratio: float,
+    transformer_encoder: TransformerEncoder,
+    pos_embedder: MLP,
+):
+    return GptEncoder(
+        mask_ratio=mask_ratio,
+        keep_first_tokens_ratio=keep_first_tokens_ratio,
         transformer_encoder=transformer_encoder,
         pos_embedder=pos_embedder,
     )
