@@ -12,7 +12,7 @@ from torch import Tensor
 from pc_rl.utils.array_dict import dict_to_batched_data
 
 
-class PcSacAgent(SacAgent):
+class PointNetSacAgent(SacAgent):
     def __init__(
         self,
         model: torch.nn.ModuleDict,

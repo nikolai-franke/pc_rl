@@ -27,7 +27,7 @@ from parllel.types import BatchSpec
 import pc_rl.builder  # for hydra's instantiate
 import pc_rl.models.sac.q_and_pi_heads
 import wandb
-from pc_rl.agents.sac_pn import PcSacAgent
+from pc_rl.agents.sac_pn import PointNetSacAgent
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.pointnet import PointNet
 from pc_rl.utils.mani_skill_traj_info import ManiTrajInfo
@@ -131,7 +131,7 @@ def build(config: DictConfig):
     )
 
     # instantiate agent
-    agent = PcSacAgent(
+    agent = PointNetSacAgent(
         model=model,
         distribution=distribution,
         device=device,
