@@ -1,0 +1,8 @@
+# @package _global_
+
+defaults:
+  - override /dataset: thread_in_hole
+  - _self_
+
+tags: [thread_in_hole, gpt]
+
