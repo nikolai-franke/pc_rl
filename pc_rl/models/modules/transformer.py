@@ -88,6 +88,6 @@ class TransformerDecoder(nn.Module):
             x = block(x + pos, padding_mask=padding_mask, attn_mask=attn_mask)
 
         if return_token_num is not None:
-            x = x[:, -return_token_num]
+            x = x[:, -return_token_num:]
         x = self.norm(x)
         return x
