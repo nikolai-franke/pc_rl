@@ -64,7 +64,7 @@ class PointGpt(pl.LightningModule):
         ground_truth = ground_truth.reshape(B * M, -1, C)
 
         loss, *_, x_idx = self.loss_fn(prediction[..., :3], ground_truth[..., :3])
-        loss_2 = self.loss_fn_2(prediction[..., :3], ground_truth[..., :3])
+        loss_2, *_ = self.loss_fn_2(prediction[..., :3], ground_truth[..., :3])
         self.log("train/chamfer_loss", loss.item(), batch_size=B)
         # if color
         if C > 3:
