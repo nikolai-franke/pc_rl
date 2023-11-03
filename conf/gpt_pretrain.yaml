@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - dataset: rope_cutting
+  - dataset: shapenet
   - model: point_gpt
   - loss_fn: chamfer
 
@@ -9,6 +9,6 @@ num_workers: 8
 max_epochs: 400
 log_every_n_steps: 5
 
-learning_rate: 1e-3
+learning_rate: 1e-4
 weight_decay: 0.05
 use_color: False
