@@ -111,6 +111,7 @@ class GptEncoder(nn.Module):
         start_token = torch.full(
             (batch_size, 1, self.dim), self.start_token_value, device=x.device
         )
+        # since the last token is never used during pretraining, we can discard it and the corresponding center_point
         x = torch.cat([start_token, x[:, :-1, :]], dim=1)
         pos = self.pos_embedder(center_points[:, :-1:, :])
 
@@ -132,8 +133,8 @@ class GptEncoder(nn.Module):
         eye_mask = torch.eye(max_num_groups, dtype=torch.bool, device=x.device)
 
         attn_mask = vanilla_mask | random_mask.unsqueeze(1) & ~eye_mask
-        # the attention module expects one mask for every attention head
-        attn_mask = attn_mask.repeat_interleave(self.num_attention_heads, dim=0)
+        # the attention module expects one mask for every attention head when attn_mask is 3D
+        attn_mask = attn_mask.repeat_interleave(self.num_attention_heads, dim=0)  # type: ignore
 
         x = self.transformer_encoder(
             x, pos, padding_mask=padding_mask, attn_mask=attn_mask

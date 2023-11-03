@@ -25,8 +25,6 @@ class GptDecoder(nn.Module):
         ) == self.dim, f"pos_embedder and decoder don't have matching dimensions: {pos_dim} != {self.dim}"
 
         # mask token is Parameter so it gets automatically put on the correct device
-        self.mask_token = nn.Parameter(torch.zeros(self.dim), requires_grad=False)
-        nn.init.trunc_normal_(self.mask_token, std=0.02)
         self.padding_value = padding_value
         self.norm = nn.LayerNorm(self.dim)
 

@@ -17,8 +17,6 @@ from pc_rl.callbacks.log_pointclouds import LogGPTPointCloudCallback
 from pc_rl.datasets.in_memory import PcInMemoryDataset
 from pc_rl.models.modules.gpt_decoder import GptDecoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
-# from pc_rl.models.modules.masked_decoder import MaskedDecoder
-# from pc_rl.models.mae import MaskedAutoEncoder
 from pc_rl.models.point_gpt import PointGpt
 from pc_rl.utils.color_point_cloud_transform import ColorPointCloud
 
