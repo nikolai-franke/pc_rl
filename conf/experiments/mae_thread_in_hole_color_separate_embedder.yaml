@@ -7,4 +7,4 @@ defaults:
 
 use_color: True
 
-tags: [thread_in_hole, color, separate_color_embedder]
+tags: [thread_in_hole, color, separate_color_embedder, MAE]

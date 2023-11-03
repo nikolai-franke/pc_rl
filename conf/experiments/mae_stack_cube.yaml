@@ -7,5 +7,5 @@ defaults:
 
 use_color: True
 
-tags: [stack_cube]
+tags: [stack_cube, color, MAE]
 

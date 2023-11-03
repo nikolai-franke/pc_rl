@@ -12,4 +12,4 @@ model:
 
 use_color: True
 
-tags: [rope_cutting, color, small_groups, separate_color_embedder]
+tags: [rope_cutting, color, small_groups, separate_color_embedder, MAE]

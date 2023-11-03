@@ -7,4 +7,4 @@ defaults:
 
 use_color: True
 
-tags: [rope_cutting, color]
+tags: [rope_cutting, color, MAE]

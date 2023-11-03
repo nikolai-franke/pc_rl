@@ -1,11 +1,10 @@
 # @package _global_
 
 defaults:
-  - override /dataset: thread_in_hole_color
+  - override /dataset: grasp_lift_and_touch
   - override /model/tokenizer: color
   - _self_
 
 use_color: True
 
-tags: [thread_in_hole, color, MAE]
-
+tags: [graps_lift_and_touch, color, MAE]

@@ -4,5 +4,5 @@ defaults:
   - override /dataset: thread_in_hole
   - _self_
 
-tags: [thread_in_hole, gpt]
+tags: [thread_in_hole, GPT]
 

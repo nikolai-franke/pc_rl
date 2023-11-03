@@ -6,4 +6,4 @@ defaults:
   - _self_
 
 use_color: True
-tags: [rope_cutting, color, separate_color_embedder]
+tags: [rope_cutting, color, separate_color_embedder, MAE]

@@ -7,5 +7,5 @@ defaults:
 
 use_color: False
 
-tags: [hang, no_voxel_grid]
+tags: [hang, no_voxel_grid, MAE]
 

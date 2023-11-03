@@ -1,10 +1,10 @@
 # @package _global_
 
 defaults:
-  - override /dataset: deflect_spheres
+  - override /dataset: grsp_lift_and_touch
   - override /model/tokenizer: point_gpt_color
   - _self_
 
 use_color: True
 
-tags: [deflect_spheres, color, GPT]
+tags: [grasp_lift_and_touch, color, GPT]

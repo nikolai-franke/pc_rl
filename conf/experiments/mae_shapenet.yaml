@@ -5,4 +5,4 @@ defaults:
   - _self_
 
 
-tags: [shapenet, GPT]
+tags: [shapenet, MAE]
