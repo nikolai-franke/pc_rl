@@ -6,8 +6,8 @@ defaults:
 
 gpt_encoder:
   _target_: pc_rl.builder.build_gpt_encoder
-  mask_ratio: 0.8
-  keep_first_tokens_ratio: 0.1
+  mask_ratio: 0.7
+  keep_first_tokens_ratio: 0.15
 
 transformer_encoder:
   _target_: pc_rl.builder.build_transformer_encoder
