@@ -112,6 +112,26 @@ def build(config: DictConfig, model_path):
     tokenizer = instantiate(config.model.tokenizer, _convert_="partial")
 
     model_weights = checkpoint["state_dict"]
+
+    # check for encoder and tokenizer keys
+    for key in model_weights:
+        if key.startswith("encoder.transformer_encoder."):
+            break
+    else:
+        raise ValueError("Missing encoder.transformer_encoder weights")
+
+    for key in model_weights:
+        if key.startswith("encoder.pos_embedder."):
+            break
+    else:
+        raise ValueError("Missing encoder.pos_embedder weights")
+
+    for key in model_weights:
+        if key.startswith("tokenizer."):
+            break
+    else:
+        raise ValueError("Missing tokenizer weights")
+
     transformer_encoder_weights = {
         key.replace("encoder.transformer_encoder.", ""): model_weights[key]
         for key in model_weights
