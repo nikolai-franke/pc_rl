@@ -113,14 +113,14 @@ def build(config: DictConfig, model_path):
 
     model_weights = checkpoint["state_dict"]
     transformer_encoder_weights = {
-        key.replace("masked_encoder.transformer_encoder.", ""): model_weights[key]
+        key.replace("encoder.transformer_encoder.", ""): model_weights[key]
         for key in model_weights
-        if key.startswith("masked_encoder.transformer_encoder")
+        if key.startswith("encoder.transformer_encoder")
     }
     pos_embedder_weights = {
-        key.replace("masked_encoder.pos_embedder.", ""): model_weights[key]
+        key.replace("encoder.pos_embedder.", ""): model_weights[key]
         for key in model_weights
-        if key.startswith("masked_encoder.pos_embedder")
+        if key.startswith("encoder.pos_embedder")
     }
     tokenizer_weights = {
         key.replace("tokenizer.", ""): model_weights[key]
