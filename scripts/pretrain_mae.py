@@ -15,9 +15,9 @@ import pc_rl.builder  # for hydra's instantiate
 import wandb
 from pc_rl.callbacks.log_pointclouds import LogPointCloudCallback
 from pc_rl.datasets.in_memory import PcInMemoryDataset
-from pc_rl.models.mae import MaskedAutoEncoder
 from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
+from pc_rl.models.point_mae import PointMAE
 from pc_rl.utils.color_point_cloud_transform import ColorPointCloud
 
 
@@ -59,10 +59,10 @@ def main(config: DictConfig):
         n_out_channels=3 if not config.use_color else 6,
     )
 
-    masked_autoencoder = MaskedAutoEncoder(
+    masked_autoencoder = PointMAE(
         tokenizer=tokenizer,
-        masked_encoder=masked_encoder,
-        masked_decoder=masked_decoder,
+        encoder=masked_encoder,
+        decoder=masked_decoder,
         mae_prediction_head=mae_prediction_head,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,

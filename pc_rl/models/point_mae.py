@@ -16,12 +16,12 @@ from pc_rl.models.modules.tokenizer import Tokenizer
 from pc_rl.utils.chamfer import chamfer_distance
 
 
-class MaskedAutoEncoder(pl.LightningModule):
+class PointMAE(pl.LightningModule):
     def __init__(
         self,
         tokenizer: Tokenizer,
-        masked_encoder: MaskedEncoder,
-        masked_decoder: MaskedDecoder,
+        encoder: MaskedEncoder,
+        decoder: MaskedDecoder,
         mae_prediction_head: MaePredictionHead,
         learning_rate: float,
         weight_decay: float,
@@ -29,9 +29,9 @@ class MaskedAutoEncoder(pl.LightningModule):
     ):
         super().__init__()
         self.tokenizer = tokenizer
-        self.masked_encoder = masked_encoder
-        self.masked_decoder = masked_decoder
-        self.mae_prediction_head = mae_prediction_head
+        self.encoder = encoder
+        self.decoder = decoder
+        self.prediction_head = mae_prediction_head
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.color_loss_coeff = color_loss_coeff
@@ -39,9 +39,9 @@ class MaskedAutoEncoder(pl.LightningModule):
 
     def forward(self, pos: Tensor, batch: Tensor, color: Tensor | None = None):
         x, neighborhoods, center_points = self.tokenizer(pos, batch, color)
-        x_vis, ae_mask, padding_mask = self.masked_encoder(x, center_points)
-        x_recovered = self.masked_decoder(x_vis, ae_mask, center_points)
-        pos_recovered = self.mae_prediction_head(x_recovered)
+        x_vis, ae_mask, padding_mask = self.encoder(x, center_points)
+        x_recovered = self.decoder(x_vis, ae_mask, center_points)
+        pos_recovered = self.prediction_head(x_recovered)
 
         return pos_recovered, neighborhoods, ae_mask, padding_mask, center_points
 
@@ -84,7 +84,7 @@ class MaskedAutoEncoder(pl.LightningModule):
         return loss
 
     def on_before_optimizer_step(self, optimizer) -> None:
-        norms = grad_norm(self.masked_encoder, norm_type=2)
+        norms = grad_norm(self.encoder, norm_type=2)
         self.log_dict(norms)
 
     @torch.no_grad()

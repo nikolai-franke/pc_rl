@@ -31,7 +31,7 @@ class PointGpt(pl.LightningModule):
         self.tokenizer = tokenizer
         self.encoder = encoder
         self.decoder = decoder
-        self.mae_prediction_head = prediction_head
+        self.prediction_head = prediction_head
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.color_loss_coeff = color_loss_coeff
@@ -44,7 +44,7 @@ class PointGpt(pl.LightningModule):
         x_recovered = self.decoder(
             x, center_points, padding_mask=padding_mask, attn_mask=attn_mask
         )
-        pos_recovered = self.mae_prediction_head(x_recovered)
+        pos_recovered = self.prediction_head(x_recovered)
 
         return pos_recovered, neighborhoods, padding_mask, center_points
 
