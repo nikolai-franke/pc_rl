@@ -1,7 +1,7 @@
 defaults:
   - _self_
   - dataset: shapenet
-  - model: mae
+  - model: point_mae
   - loss_fn: chamfer
 
 batch_size: 128
