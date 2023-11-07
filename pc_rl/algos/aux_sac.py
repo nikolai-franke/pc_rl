@@ -90,8 +90,9 @@ class AuxPcSAC(SAC):
         self.algo_log_info.clear()
 
         if elapsed_steps < self.rl_starts:
-            replay_samples = self.replay_buffer.sample_batch()
-            self.train_aux_once(replay_samples)
+            for _ in range(self.updates_per_optimize):
+                replay_samples = self.replay_buffer.sample_batch()
+                self.train_aux_once(replay_samples)
             return self.algo_log_info
 
         for _ in range(self.updates_per_optimize):
