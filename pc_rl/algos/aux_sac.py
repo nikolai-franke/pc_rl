@@ -121,7 +121,7 @@ class AuxPcSAC(SAC):
             prediction[..., :3], ground_truth[..., :3]
         )
         self.algo_log_info["chamfer_loss"].append(mae_loss.item())
-        mae_loss *= self.aux_loss_coeff
+        mae_loss = mae_loss * self.aux_loss_coeff
 
         # if color
         if C > 3:
