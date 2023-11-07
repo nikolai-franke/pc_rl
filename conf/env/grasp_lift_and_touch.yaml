@@ -10,7 +10,7 @@ time_step: 0.05
 image_shape: [128, 128]
 voxel_grid_size: 5.0
 
-goal_tolerance: 0.02
+goal_tolerance: 5.0
 start_in_phase: lift
 end_in_phase: done
 collision_punish_mode: constant
