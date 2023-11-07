@@ -137,7 +137,7 @@ class AuxPcSAC(SAC):
                 * self.color_loss_coeff
             )
             self.algo_log_info["color_loss"].append(color_loss.item())
-            mae_loss += color_loss
+            mae_loss = mae_loss + color_loss
 
         self.aux_optimizer.zero_grad()
         mae_loss.backward(retain_graph=True)
