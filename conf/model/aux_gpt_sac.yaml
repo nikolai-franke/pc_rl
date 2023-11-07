@@ -1,0 +1,32 @@
+defaults:
+  - pos_embedder: default
+  - tokenizer: point_gpt
+  - transformer_block: default
+  - prediction_head: default
+  - _self_
+
+gpt_encoder:
+  _target_: pc_rl.builder.build_gpt_encoder
+  mask_ratio: 0.7
+  keep_first_tokens_ratio: 0.15
+  transformer_encoder:
+    _target_: pc_rl.builder.build_transformer_encoder
+    depth: 3
+
+masked_decoder:
+  transformer_decoder:
+    _target_: pc_rl.builder.build_transformer_decoder
+    depth: 3
+
+pi_mlp_head:
+  _target_: pc_rl.models.sac.q_and_pi_heads.PiMlpHead
+  hidden_sizes: [128, 128]
+  hidden_nonlinearity: ReLU
+
+q_mlp_head:
+  _target_: pc_rl.models.sac.q_and_pi_heads.QMlpHead
+  hidden_sizes: [128, 128]
+  hidden_nonlinearity: ReLU
+
+transformer_block:
+  dropout: 0.1
