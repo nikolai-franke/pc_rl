@@ -234,10 +234,6 @@ def build(config: DictConfig):
                 **per_module_conf.get("tokenizer", {}),
             },
             {
-                "params": agent.model["encoder"].parameters(),
-                **per_module_conf.get("encoder", {}),
-            },
-            {
                 "params": encoder_additional_params,
                 **per_module_conf.get("encoder", {}),
             },
