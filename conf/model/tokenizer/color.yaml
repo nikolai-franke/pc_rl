@@ -1,5 +1,6 @@
 _target_: pc_rl.builder.build_tokenizer
 defaults:
- - default
+  - default
+  - _self_
 
-mlp_1_layers: [6, 128, 256]
+point_dim: 6

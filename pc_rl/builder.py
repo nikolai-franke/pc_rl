@@ -26,6 +26,7 @@ from pc_rl.models.pg.finetune_continuous import ContinuousPgModel
 
 
 def build_gpt_tokenizer(
+    point_dim: int,
     embedding_size: int,
     mlp_1_layers: list[int],
     mlp_2_layers: list[int],
@@ -34,6 +35,7 @@ def build_gpt_tokenizer(
     sampling_ratio: float,
     random_start: bool,
 ) -> GptTokenizer:
+    mlp_1_layers.insert(0, point_dim)
     mlp_1 = MLP(mlp_1_layers, act=mlp_act)
     mlp_2_layers.append(embedding_size)
     mlp_2 = MLP(mlp_2_layers, act=mlp_act)
@@ -48,6 +50,7 @@ def build_gpt_tokenizer(
 
 
 def build_tokenizer(
+    point_dim: int,
     embedding_size: int,
     mlp_1_layers: list[int],
     mlp_2_layers: list[int],
@@ -56,6 +59,7 @@ def build_tokenizer(
     sampling_ratio: float,
     random_start: bool,
 ) -> Tokenizer:
+    mlp_1_layers.insert(0, point_dim)
     mlp_1 = MLP(mlp_1_layers, act=mlp_act)
     mlp_2_layers.append(embedding_size)
     mlp_2 = MLP(mlp_2_layers, act=mlp_act)
@@ -70,6 +74,7 @@ def build_tokenizer(
 
 
 def build_tokenizezr_separate_color(
+    point_dim: int,
     embedding_size: int,
     mlp_1_layers: list[int],
     mlp_2_layers: list[int],
@@ -79,6 +84,7 @@ def build_tokenizezr_separate_color(
     sampling_ratio: float,
     random_start: bool,
 ) -> Tokenizer:
+    mlp_1_layers.insert(0, point_dim)
     mlp_1 = MLP(mlp_1_layers, act=mlp_act)
     mlp_2_layers.append(embedding_size)
     mlp_2 = MLP(mlp_2_layers, act=mlp_act)

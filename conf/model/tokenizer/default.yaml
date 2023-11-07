@@ -1,4 +1,5 @@
 _target_: pc_rl.builder.build_tokenizer
+point_dim: 3
 embedding_size: 384
 group_size: 32
 mlp_1_layers: [3, 128, 256]
