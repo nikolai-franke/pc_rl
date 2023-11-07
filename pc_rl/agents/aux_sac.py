@@ -43,5 +43,5 @@ class AuxPcSacAgent(PcSacAgent):
         data = transform(data)
         pos, color = data.pos, data.x
         x, neighborhoods, center_points = self.model["tokenizer"](pos, batch, color)
-        prediction, ground_truth = self.model["rl_mae"](x, neighborhoods, center_points)
+        prediction, ground_truth = self.model["aux"](x, neighborhoods, center_points)
         return prediction, ground_truth

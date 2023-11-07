@@ -172,7 +172,7 @@ def build(config: DictConfig):
             "q2": q2_model,
             "tokenizer": tokenizer,
             "encoder": finetune_encoder,
-            "aux_mae": aux_mae,
+            "aux": aux_mae,
         }
     )
 
@@ -234,7 +234,7 @@ def build(config: DictConfig):
                 **per_module_conf.get("aux", {}),
             },
             {
-                "params": agent.model["aux_mae"].parameters(),
+                "params": agent.model["aux"].parameters(),
                 **per_module_conf.get("aux", {}),
             },
         ],
@@ -255,7 +255,7 @@ def build(config: DictConfig):
             #     **per_module_conf.get("encoder", {}),
             # },
             # {
-            #     "params": agent.model["aux_mae"].parameters(),
+            #     "params": agent.model["aux"].parameters(),
             #     **per_module_conf.get("encoder", {}),
             # },
             {
