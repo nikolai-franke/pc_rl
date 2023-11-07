@@ -138,12 +138,12 @@ def build(config: DictConfig):
     finetune_encoder = FinetuneEncoder(
         transformer_encoder=transformer_encoder, pos_embedder=encoder_pos_embedder
     )
-    rl_mae = AuxMAE(
+    aux_mae = AuxMAE(
         masked_encoder=masked_encoder,
         masked_decoder=masked_decoder,
-        mae_prediction_head=mae_prediction_head,
+        prediction_head=mae_prediction_head,
     )
-    mlp_input_size = rl_mae.dim
+    mlp_input_size = aux_mae.dim
 
     pi_model = instantiate(
         config.model.pi_mlp_head,
@@ -172,7 +172,7 @@ def build(config: DictConfig):
             "q2": q2_model,
             "tokenizer": tokenizer,
             "encoder": finetune_encoder,
-            "rl_mae": rl_mae,
+            "aux_mae": aux_mae,
         }
     )
 
@@ -234,7 +234,7 @@ def build(config: DictConfig):
                 **per_module_conf.get("aux", {}),
             },
             {
-                "params": agent.model["rl_mae"].parameters(),
+                "params": agent.model["aux_mae"].parameters(),
                 **per_module_conf.get("aux", {}),
             },
         ],
@@ -255,7 +255,7 @@ def build(config: DictConfig):
             #     **per_module_conf.get("encoder", {}),
             # },
             # {
-            #     "params": agent.model["rl_mae"].parameters(),
+            #     "params": agent.model["aux_mae"].parameters(),
             #     **per_module_conf.get("encoder", {}),
             # },
             {
