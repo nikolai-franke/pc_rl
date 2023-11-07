@@ -6,4 +6,6 @@ defaults:
   - override /model/prediction_head: color
   - _self_
 
+learning_rate: 5e-4
+
 tags: [graps_lift_and_touch, color, MAE]
