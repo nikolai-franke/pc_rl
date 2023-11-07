@@ -106,12 +106,12 @@ def build(config: DictConfig):
         _partial_=True,
     )
     transformer_encoder = instantiate(
-        config.model.masked_encoder.transformer_encoder,
+        config.model.gpt_encoder.transformer_encoder,
         transformer_block_factory=transformer_block_factory,
     )
 
     transformer_decoder = instantiate(
-        config.model.masked_decoder.transformer_decoder,
+        config.model.transformer_decoder,
         transformer_block_factory=transformer_block_factory,
     )
 
@@ -125,12 +125,12 @@ def build(config: DictConfig):
     )
 
     decoder_pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
-    masked_decoder = GPTDecoder(
+    gpt_decoder = GPTDecoder(
         transformer_decoder=transformer_decoder,
         pos_embedder=decoder_pos_embedder,
     )
 
-    mae_prediction_head = PredictionHead(
+    prediction_head = PredictionHead(
         dim=config.model.tokenizer.embedding_size,
         group_size=config.model.tokenizer.group_size,
         point_dim=config.model.prediction_head.point_dim,
@@ -141,8 +141,8 @@ def build(config: DictConfig):
     )
     aux_mae = AuxGPT(
         gpt_encoder=gpt_encoder,
-        gpt_decoder=masked_decoder,
-        prediction_head=mae_prediction_head,
+        gpt_decoder=gpt_decoder,
+        prediction_head=prediction_head,
     )
     mlp_input_size = aux_mae.dim
 
