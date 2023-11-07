@@ -3,11 +3,5 @@ defaults:
   - platform: horeka
   - _self_
 
-batch_T: 128
-batch_B: 20
 use_slurm: True
 
-hydra:
-  sweeper:
-    params:
-      optimizer.aux.lr: 5e-5, 1e-5

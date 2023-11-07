@@ -21,7 +21,7 @@ from pc_rl.models.point_gpt import PointGpt
 from pc_rl.utils.color_point_cloud_transform import ColorPointCloud
 
 
-@hydra.main(version_base=None, config_path="../conf", config_name="gpt_pretrain")
+@hydra.main(version_base=None, config_path="../conf", config_name="pretrain_gpt")
 def main(config: DictConfig):
     tokenizer = instantiate(config.model.tokenizer, _convert_="partial")
 

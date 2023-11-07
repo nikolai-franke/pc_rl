@@ -21,7 +21,7 @@ from pc_rl.models.point_mae import PointMAE
 from pc_rl.utils.color_point_cloud_transform import ColorPointCloud
 
 
-@hydra.main(version_base=None, config_path="../conf", config_name="mae_pretrain")
+@hydra.main(version_base=None, config_path="../conf", config_name="pretrain_mae")
 def main(config: DictConfig):
     tokenizer = instantiate(config.model.tokenizer, _convert_="partial")
 
