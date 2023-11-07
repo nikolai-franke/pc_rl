@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 from typing import Sequence
 
+import parllel.logger as logger
 import torch
 import torch.nn.functional as F
 from parllel import ArrayDict
@@ -92,7 +93,6 @@ class AuxPcSAC(SAC):
             replay_samples = self.replay_buffer.sample_batch()
             self.train_aux_once(replay_samples)
             return self.algo_log_info
-
 
         for _ in range(self.updates_per_optimize):
             # get a random batch of samples from the replay buffer and move them
