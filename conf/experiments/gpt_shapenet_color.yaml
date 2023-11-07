@@ -3,8 +3,7 @@
 defaults:
   - override /dataset: shapenet
   - override /model/tokenizer: point_gpt_color
+  - override /model/prediction_head: default
   - _self_
-
-use_color: True
 
 tags: [shapenet, color, GPT]

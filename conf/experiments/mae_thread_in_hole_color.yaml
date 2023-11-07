@@ -3,9 +3,8 @@
 defaults:
   - override /dataset: thread_in_hole_color
   - override /model/tokenizer: color
+  - override /model/prediction_head: color
   - _self_
-
-use_color: True
 
 tags: [thread_in_hole, color, MAE]
 

@@ -18,7 +18,6 @@ algo:
 optimizer:
   lr: 1e-4
 
-# model_url: kirurc/MAE/model-95rmnz2o:v0 # domain specific
 model_url: kirurc/MAE/model-e6n0nhmi:v0 # shapenet
 
 freeze_encoder: False
@@ -26,4 +25,4 @@ scheduler:
   zero_till_step: 5
   increase_over_steps: 10
 
-tags: [deflect_spheres, pretrain, color, final, shapenet]
+tags: [deflect_spheres, finetune, shapenet, MAE]

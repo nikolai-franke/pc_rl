@@ -3,8 +3,7 @@
 defaults:
   - override /dataset: deflect_spheres
   - override /model/tokenizer: color
+  - override /model/prediction_head: color
   - _self_
-
-use_color: True
 
 tags: [deflect_spheres, color, MAE]

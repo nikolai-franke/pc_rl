@@ -18,11 +18,11 @@ algo:
   ent_coeff: 0.4
   ent_coeff_lr: 2e-5
 
-model_url: kirurc/MAE/model-vbv20vzs:v0 # Domain-Specific
-
+model_url: kirurc/MAE/model-rcoja9hx:v0 # Domain-specific
 freeze_encoder: False
+
 scheduler:
   zero_till_step: 5
   increase_over_steps: 10
 
-tags: [sac, thread_in_hole, pretrain, shapenet]
+tags: [sac, thread_in_hole, finetune, dom_spec, MAE]

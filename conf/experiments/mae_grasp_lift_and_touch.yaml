@@ -3,8 +3,7 @@
 defaults:
   - override /dataset: grasp_lift_and_touch
   - override /model/tokenizer: color
+  - override /model/prediction_head: color
   - _self_
-
-use_color: True
 
 tags: [graps_lift_and_touch, color, MAE]

@@ -3,13 +3,12 @@
 defaults:
   - override /dataset: rope_cutting
   - override /model/tokenizer: color
+  - override /model/prediction_head: color
   - _self_
 
 model:
   tokenizer:
     group_size: 16
     sampling_ratio: 0.125
-
-use_color: True
 
 tags: [rope_cutting, color, small_groups, MAE]

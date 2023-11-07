@@ -3,8 +3,7 @@
 defaults:
   - override /dataset: rope_cutting
   - override /model/tokenizer: color
+  - override /model/prediction_head: color
   - _self_
-
-use_color: True
 
 tags: [rope_cutting, color, MAE]
