@@ -7,7 +7,7 @@ from pc_rl.models.modules.masked_encoder import MaskedEncoder
 from pc_rl.models.modules.prediction_head import PredictionHead
 
 
-class RLMae(nn.Module):
+class AuxMAE(nn.Module):
     def __init__(
         self,
         masked_encoder: MaskedEncoder,

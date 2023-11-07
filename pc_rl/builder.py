@@ -10,7 +10,7 @@ from torch.nn import MultiheadAttention
 from torch_geometric.nn import MLP
 
 from pc_rl.models.finetune_encoder import FinetuneEncoder
-from pc_rl.models.modules.gpt_encoder import GptEncoder
+from pc_rl.models.modules.gpt_encoder import GPTEncoder
 from pc_rl.models.modules.gpt_tokenizer import GptTokenizer
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
 from pc_rl.models.modules.tokenizer import Tokenizer
@@ -165,7 +165,7 @@ def build_gpt_encoder(
     transformer_encoder: TransformerEncoder,
     pos_embedder: MLP,
 ):
-    return GptEncoder(
+    return GPTEncoder(
         mask_ratio=mask_ratio,
         keep_first_tokens_ratio=keep_first_tokens_ratio,
         transformer_encoder=transformer_encoder,

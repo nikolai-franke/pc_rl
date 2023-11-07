@@ -6,7 +6,7 @@ import torch.nn as nn
 from .transformer import TransformerEncoder
 
 
-class GptEncoder(nn.Module):
+class GPTEncoder(nn.Module):
     def __init__(
         self,
         mask_ratio: float,

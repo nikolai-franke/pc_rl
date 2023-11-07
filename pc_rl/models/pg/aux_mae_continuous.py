@@ -10,7 +10,7 @@ from parllel.torch.utils import infer_leading_dims, restore_leading_dims
 from torch import Tensor
 from typing_extensions import NotRequired
 
-from pc_rl.models.aux_mae import RLMae
+from pc_rl.models.aux_mae import AuxMAE
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.tokenizer import Tokenizer
 from pc_rl.utils.array_dict import dict_to_batched_data
@@ -28,7 +28,7 @@ class AuxMaeContinuousPgModel(nn.Module):
         self,
         tokenizer: Tokenizer,
         encoder: FinetuneEncoder,
-        aux_mae: RLMae,
+        aux_mae: AuxMAE,
         pi_mlp: nn.Module,
         value_mlp: nn.Module,
         init_log_std: float,

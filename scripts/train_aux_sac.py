@@ -28,7 +28,7 @@ import pc_rl.builder  # for hydra's instantiate
 import pc_rl.models.sac.q_and_pi_heads
 import wandb
 from pc_rl.agents.aux_sac import AuxPcSacAgent
-from pc_rl.models.aux_mae import RLMae
+from pc_rl.models.aux_mae import AuxMAE
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 from pc_rl.models.modules.prediction_head import PredictionHead
@@ -138,7 +138,7 @@ def build(config: DictConfig):
     finetune_encoder = FinetuneEncoder(
         transformer_encoder=transformer_encoder, pos_embedder=encoder_pos_embedder
     )
-    rl_mae = RLMae(
+    rl_mae = AuxMAE(
         masked_encoder=masked_encoder,
         masked_decoder=masked_decoder,
         mae_prediction_head=mae_prediction_head,

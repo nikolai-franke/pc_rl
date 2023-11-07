@@ -15,9 +15,9 @@ import pc_rl.builder  # for hydra's instantiate
 import wandb
 from pc_rl.callbacks.log_pointclouds import LogGPTPointCloudCallback
 from pc_rl.datasets.in_memory import PcInMemoryDataset
-from pc_rl.models.modules.gpt_decoder import GptDecoder
+from pc_rl.models.modules.gpt_decoder import GPTDecoder
 from pc_rl.models.modules.prediction_head import PredictionHead
-from pc_rl.models.point_gpt import PointGpt
+from pc_rl.models.point_gpt import PointGPT
 from pc_rl.utils.color_point_cloud_transform import ColorPointCloud
 
 
@@ -49,7 +49,7 @@ def main(config: DictConfig):
         transformer_block_factory=transformer_block_factory,
     )
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
-    gpt_decoder = GptDecoder(
+    gpt_decoder = GPTDecoder(
         transformer_decoder=transformer_decoder, pos_embedder=pos_embedder
     )
 
@@ -59,7 +59,7 @@ def main(config: DictConfig):
         point_dim=config.model.prediction_head.point_dim,
     )
 
-    masked_autoencoder = PointGpt(
+    masked_autoencoder = PointGPT(
         tokenizer=tokenizer,
         encoder=gpt_encoder,
         decoder=gpt_decoder,

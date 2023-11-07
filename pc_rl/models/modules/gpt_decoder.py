@@ -6,7 +6,7 @@ import torch.nn as nn
 from .transformer import TransformerDecoder
 
 
-class GptDecoder(nn.Module):
+class GPTDecoder(nn.Module):
     def __init__(
         self,
         transformer_decoder: TransformerDecoder,

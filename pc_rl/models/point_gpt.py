@@ -16,7 +16,7 @@ from pc_rl.models.modules.prediction_head import PredictionHead
 from pc_rl.utils.chamfer import chamfer_distance
 
 
-class PointGpt(pl.LightningModule):
+class PointGPT(pl.LightningModule):
     def __init__(
         self,
         tokenizer: GptTokenizer,
