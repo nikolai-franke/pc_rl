@@ -29,7 +29,6 @@ class AuxPcSAC(SAC):
         replay_buffer: ReplayBuffer[ArrayDict[Tensor]],
         q_optimizer: torch.optim.Optimizer,
         pi_optimizer: torch.optim.Optimizer,
-        aux_optimizer: torch.optim.Optimizer,
         discount: float,
         learning_starts: int,
         replay_ratio: int,  # data_consumption / data_generation
@@ -64,7 +63,6 @@ class AuxPcSAC(SAC):
         self.aux_loss_coeff = aux_loss_coeff
         self.color_loss_coeff = color_loss_coeff
         self.detach_encoder = detach_encoder
-        self.aux_optimizer = aux_optimizer
 
     def train_once(self, samples: ArrayDict[Tensor]) -> None:
         """
@@ -121,7 +119,7 @@ class AuxPcSAC(SAC):
             prediction[..., :3], ground_truth[..., :3]
         )
         self.algo_log_info["chamfer_loss"].append(mae_loss.item())
-        mae_loss = mae_loss * self.aux_loss_coeff
+        mae_loss *= self.aux_loss_coeff
 
         # if color
         if C > 3:
@@ -137,11 +135,7 @@ class AuxPcSAC(SAC):
                 * self.color_loss_coeff
             )
             self.algo_log_info["color_loss"].append(color_loss.item())
-            mae_loss = mae_loss + color_loss
-
-        self.aux_optimizer.zero_grad()
-        mae_loss.backward(retain_graph=True)
-        self.aux_optimizer.step()
+            mae_loss += color_loss
 
         q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
 
@@ -150,6 +144,7 @@ class AuxPcSAC(SAC):
         self.algo_log_info["ent_coeff"].append(entropy_coeff.item())
         self.algo_log_info["mae_loss"].append(mae_loss.item())
 
+        q_loss += mae_loss
         # update Q model parameters according to Q loss
         self.q_optimizer.zero_grad()
         q_loss.backward()

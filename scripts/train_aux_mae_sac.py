@@ -225,21 +225,8 @@ def build(config: DictConfig):
     )
     encoder = agent.model["encoder"]
 
-    # encoder_additional_params = encoder.get_additional_parameters()
+    encoder_additional_params = encoder.get_additional_parameters()
 
-    aux_optimizer = torch.optim.Adam(
-        [
-            {
-                "params": agent.model["tokenizer"].parameters(),
-                **per_module_conf.get("aux", {}),
-            },
-            {
-                "params": agent.model["aux"].parameters(),
-                **per_module_conf.get("aux", {}),
-            },
-        ],
-        **optimizer_conf,
-    )
     q_optimizer = torch.optim.Adam(
         [
             {
@@ -250,14 +237,14 @@ def build(config: DictConfig):
                 "params": agent.model["encoder"].parameters(),
                 **per_module_conf.get("encoder", {}),
             },
-            # {
-            #     "params": encoder_additional_params,
-            #     **per_module_conf.get("encoder", {}),
-            # },
-            # {
-            #     "params": agent.model["aux"].parameters(),
-            #     **per_module_conf.get("encoder", {}),
-            # },
+            {
+                "params": encoder_additional_params,
+                **per_module_conf.get("encoder", {}),
+            },
+            {
+                "params": agent.model["aux"].parameters(),
+                **per_module_conf.get("encoder", {}),
+            },
             {
                 "params": agent.model["q1"].parameters(),
                 **config.optimizer.get("q", {}),
