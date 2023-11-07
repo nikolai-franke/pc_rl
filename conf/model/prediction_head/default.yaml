@@ -1,0 +1,3 @@
+_target_: pc_rl.model.module.prediction_head.PredictionHead
+
+point_dim: 3

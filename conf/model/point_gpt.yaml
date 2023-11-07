@@ -2,6 +2,7 @@ defaults:
   - transformer_block: default
   - tokenizer: point_gpt
   - pos_embedder: default
+  - prediction_head: default
   - _self_
 
 gpt_encoder:

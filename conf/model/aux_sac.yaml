@@ -2,6 +2,7 @@ defaults:
   - pos_embedder: default
   - tokenizer: default
   - transformer_block: default
+  - prediction_head: default
   - _self_
 
 masked_encoder:

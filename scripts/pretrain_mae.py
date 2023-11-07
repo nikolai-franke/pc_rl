@@ -56,7 +56,7 @@ def main(config: DictConfig):
     mae_prediction_head = PredictionHead(
         dim=config.model.tokenizer.embedding_size,
         group_size=config.model.tokenizer.group_size,
-        n_out_channels=3 if not config.use_color else 6,
+        point_dim=config.model.prediction_head.point_dim,
     )
 
     masked_autoencoder = PointMAE(
