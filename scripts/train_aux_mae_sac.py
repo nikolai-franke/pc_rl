@@ -267,7 +267,6 @@ def build(config: DictConfig):
         replay_buffer=replay_buffer,
         pi_optimizer=pi_optimizer,
         q_optimizer=q_optimizer,
-        aux_optimizer=aux_optimizer,
         lr_schedulers=lr_schedulers,
         _convert_="partial",
     )

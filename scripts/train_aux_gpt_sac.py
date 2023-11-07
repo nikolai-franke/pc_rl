@@ -226,21 +226,8 @@ def build(config: DictConfig):
     )
     encoder = agent.model["encoder"]
 
-    # encoder_additional_params = encoder.get_additional_parameters()
+    encoder_additional_params = encoder.get_additional_parameters()
 
-    aux_optimizer = torch.optim.Adam(
-        [
-            {
-                "params": agent.model["tokenizer"].parameters(),
-                **per_module_conf.get("aux", {}),
-            },
-            {
-                "params": agent.model["aux"].parameters(),
-                **per_module_conf.get("aux", {}),
-            },
-        ],
-        **optimizer_conf,
-    )
     q_optimizer = torch.optim.Adam(
         [
             {
@@ -248,17 +235,13 @@ def build(config: DictConfig):
                 **per_module_conf.get("tokenizer", {}),
             },
             {
-                "params": agent.model["encoder"].parameters(),
+                "params": encoder_additional_params,
                 **per_module_conf.get("encoder", {}),
             },
-            # {
-            #     "params": encoder_additional_params,
-            #     **per_module_conf.get("encoder", {}),
-            # },
-            # {
-            #     "params": agent.model["aux"].parameters(),
-            #     **per_module_conf.get("encoder", {}),
-            # },
+            {
+                "params": agent.model["aux"].parameters(),
+                **per_module_conf.get("encoder", {}),
+            },
             {
                 "params": agent.model["q1"].parameters(),
                 **config.optimizer.get("q", {}),
@@ -285,7 +268,6 @@ def build(config: DictConfig):
         replay_buffer=replay_buffer,
         pi_optimizer=pi_optimizer,
         q_optimizer=q_optimizer,
-        aux_optimizer=aux_optimizer,
         lr_schedulers=lr_schedulers,
         _convert_="partial",
     )
