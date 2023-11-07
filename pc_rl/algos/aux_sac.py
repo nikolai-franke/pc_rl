@@ -166,12 +166,6 @@ class AuxPcSAC(SAC):
             finetune_encoder_grad_norm = clip_grad_norm_(
                 self.agent.model["encoder"].parameters(), self.clip_grad_norm
             )
-            # masked_decoder_grad_norm = clip_grad_norm_(
-            #     self.agent.model["rl_mae"].masked_decoder.parameters(), self.clip_grad_norm
-            # )
-            # mae_prediction_head_grad_norm = clip_grad_norm_(
-            #     self.agent.model["rl_mae"].mae_prediction_head.parameters(), self.clip_grad_norm
-            # )
             tokenizer_grad_norm = clip_grad_norm_(
                 self.agent.model["tokenizer"].parameters(), self.clip_grad_norm
             )
@@ -181,8 +175,6 @@ class AuxPcSAC(SAC):
                 finetune_encoder_grad_norm.item()
             )
             self.algo_log_info["tokenizer_grad_norm"].append(tokenizer_grad_norm.item())
-            # self.algo_log_info["masked_decoder_grad_norm"].append(masked_decoder_grad_norm.item())
-            # self.algo_log_info["mae_prediction_head_grad_norm"].append(mae_prediction_head_grad_norm.item())
 
         self.q_optimizer.step()
 
