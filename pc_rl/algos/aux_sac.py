@@ -31,6 +31,7 @@ class AuxPcSAC(SAC):
         pi_optimizer: torch.optim.Optimizer,
         discount: float,
         learning_starts: int,
+        rl_starts: int,
         replay_ratio: int,  # data_consumption / data_generation
         target_update_tau: float,  # tau=1 for hard update.
         target_update_interval: int,  # 1000 for hard update, 1 for soft.
@@ -63,6 +64,89 @@ class AuxPcSAC(SAC):
         self.aux_loss_coeff = aux_loss_coeff
         self.color_loss_coeff = color_loss_coeff
         self.detach_encoder = detach_encoder
+        self.rl_starts = rl_starts
+
+    def optimize_agent(
+        self,
+        elapsed_steps: int,
+        samples: ArrayDict[Array],
+    ) -> dict[str, int | list[float]]:
+        """
+        Extracts the needed fields from input samples and stores them in the
+        replay buffer.  Then samples from the replay buffer to train the agent
+        by gradient updates (with the number of updates determined by replay
+        ratio, sampler batch size, and training batch size).
+        """
+        self.replay_buffer.next_iteration()
+
+        if elapsed_steps < self.learning_starts:
+            logger.debug(
+                f"Skipping optimization at {elapsed_steps} steps, waiting until {self.learning_starts} steps."
+            )
+            return {}
+
+        self.agent.train_mode(elapsed_steps)
+        self.algo_log_info.clear()
+
+        if elapsed_steps < self.rl_starts:
+            replay_samples = self.replay_buffer.sample_batch()
+            self.train_aux_once(replay_samples)
+            return self.algo_log_info
+
+
+        for _ in range(self.updates_per_optimize):
+            # get a random batch of samples from the replay buffer and move them
+            # to the GPU
+            replay_samples = self.replay_buffer.sample_batch()
+
+            self.train_once(replay_samples)
+
+            self.update_counter += 1
+            if self.update_counter % self.target_update_interval == 0:
+                self.agent.update_target(self.target_update_tau)
+
+        if self.lr_schedulers is not None:
+            for lr_scheduler in self.lr_schedulers:
+                lr_scheduler.step()
+            # fmt: off
+            self.algo_log_info["pi_learning_rate"] = self.pi_optimizer.param_groups[0]["lr"]
+            self.algo_log_info["q_learning_rate"] = self.q_optimizer.param_groups[0]["lr"]
+            # fmt: on
+
+        self.algo_log_info["n_updates"] = self.update_counter
+
+        return self.algo_log_info
+
+    def train_aux_once(self, samples: ArrayDict[Tensor]) -> None:
+        prediction, ground_truth = self.agent.auto_encoder(samples["observation"])
+        B, M, *_, C = prediction.shape
+        prediction = prediction.reshape(B * M, -1, C)
+        ground_truth = ground_truth.reshape(B * M, -1, C)
+
+        mae_loss, _, x_idx = self.aux_loss_fn(  # type: ignore
+            prediction[..., :3], ground_truth[..., :3]
+        )
+        self.algo_log_info["chamfer_loss"].append(mae_loss.item())
+        mae_loss *= self.aux_loss_coeff
+
+        # if color
+        if C > 3:
+            assert x_idx is not None
+            prediction_nearest_neighbor = knn_gather(ground_truth, x_idx).reshape(
+                B, M, -1, C
+            )
+            color_loss = (
+                F.mse_loss(
+                    prediction[..., 3:].reshape(B, M, -1, C - 3),
+                    prediction_nearest_neighbor[..., 3:].reshape(B, M, -1, C - 3),
+                )
+                * self.color_loss_coeff
+            )
+            self.algo_log_info["color_loss"].append(color_loss.item())
+            mae_loss += color_loss
+        self.q_optimizer.zero_grad()
+        mae_loss.backward()
+        self.q_optimizer.step()
 
     def train_once(self, samples: ArrayDict[Tensor]) -> None:
         """

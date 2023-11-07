@@ -5,4 +5,5 @@ defaults:
 _target_: pc_rl.algos.aux_sac.AuxPcSAC
 aux_loss_coeff: 1.0
 detach_encoder: false
+rl_starts: 20_000
 
