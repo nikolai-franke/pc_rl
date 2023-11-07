@@ -4,6 +4,8 @@ defaults:
   - override /hydra/launcher: clusterduck_slurm
   - _self_
 
+use_slurm: True
+
 hydra:
   mode: MULTIRUN
   launcher:
