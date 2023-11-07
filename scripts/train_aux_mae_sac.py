@@ -374,7 +374,7 @@ def build(config: DictConfig):
             cage.close()
 
 
-@hydra.main(version_base=None, config_path="../conf", config_name="train_aux_sac")
+@hydra.main(version_base=None, config_path="../conf", config_name="train_aux_mae_sac")
 def main(config: DictConfig) -> None:
     if config.use_slurm:
         os.system("wandb enabled")

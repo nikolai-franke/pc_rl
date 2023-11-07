@@ -1,6 +1,6 @@
 defaults:
   - algo: aux_sac
-  - model: aux_sac
+  - model: aux_gpt_sac
   - env: thread_in_hole
   - optimizer: basic
   - _self_

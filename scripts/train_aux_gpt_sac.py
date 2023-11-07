@@ -139,12 +139,12 @@ def build(config: DictConfig):
     finetune_encoder = FinetuneEncoder(
         transformer_encoder=transformer_encoder, pos_embedder=encoder_pos_embedder
     )
-    aux_gpt = AuxGPT(
+    aux_mae = AuxGPT(
         gpt_encoder=gpt_encoder,
         gpt_decoder=masked_decoder,
         prediction_head=mae_prediction_head,
     )
-    mlp_input_size = aux_gpt.dim
+    mlp_input_size = aux_mae.dim
 
     pi_model = instantiate(
         config.model.pi_mlp_head,
@@ -173,7 +173,7 @@ def build(config: DictConfig):
             "q2": q2_model,
             "tokenizer": tokenizer,
             "encoder": finetune_encoder,
-            "aux": aux_gpt,
+            "aux": aux_mae,
         }
     )
 
@@ -375,7 +375,7 @@ def build(config: DictConfig):
             cage.close()
 
 
-@hydra.main(version_base=None, config_path="../conf", config_name="train_aux_sac")
+@hydra.main(version_base=None, config_path="../conf", config_name="train_aux_gpt_sac")
 def main(config: DictConfig) -> None:
     if config.use_slurm:
         os.system("wandb enabled")
