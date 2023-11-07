@@ -22,7 +22,7 @@ phase_any_rewards:
   distance_cauter_target: -0.5
   delta_distance_cauter_target: -5.0
   target_visible: 0.0
-  gallbladder_is_grasped: 20.0
+  gallbladder_is_grasped: 0.0
   new_grasp_on_gallbladder: 10.0
   lost_grasp_on_gallbladder: -10.0
   active_grasping_springs: 0.0
