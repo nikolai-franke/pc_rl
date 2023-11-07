@@ -50,6 +50,10 @@ class PointMAE(pl.LightningModule):
             data.pos, data.batch, data.x
         )
         B, M, *_, C = prediction.shape
+
+        # when tokenizer.point_dim != prediction_head.point_dim
+        neighborhoods = neighborhoods[..., :C]
+
         padding_mask = padding_mask.reshape(B, -1)
         padding_mask = padding_mask[ae_mask].reshape(B, -1)
 
@@ -99,6 +103,8 @@ class PointMAE(pl.LightningModule):
         # save dimensions for point cloud logger
         self.B, self.M, self.G, self.C = self.prediction.shape
         B, M, G, C = self.B, self.M, self.G, self.C
+
+        self.neighborhoods = self.neighborhoods[..., :C]
 
         self.padding_mask = self.padding_mask.reshape(B, -1)
         self.padding_mask_without_masked_tokens = self.padding_mask[

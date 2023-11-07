@@ -53,6 +53,10 @@ class PointGpt(pl.LightningModule):
             data.pos, data.batch, data.x
         )
         B, M, *_, C = prediction.shape
+
+        # when tokenizer.point_dim != prediction_head.point_dim
+        neighborhoods = neighborhoods[..., :C]
+
         padding_mask = padding_mask.reshape(B, -1)
         ground_truth = neighborhoods.reshape(B, M, -1, C)
         prediction = prediction.reshape(B, M, -1, C)
@@ -101,6 +105,8 @@ class PointGpt(pl.LightningModule):
         # save dimensions for point cloud logger
         self.B, self.M, self.G, self.C = self.prediction.shape
         B, M, G, C = self.B, self.M, self.G, self.C
+
+        self.neighborhoods = self.neighborhoods[..., :C]
 
         self.padding_mask = self.padding_mask.reshape(B, -1)
 

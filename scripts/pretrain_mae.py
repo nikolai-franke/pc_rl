@@ -83,7 +83,7 @@ def main(config: DictConfig):
     transforms.append(RandomRotate(180, 2))
     transforms.append(NormalizeScale())
 
-    if config.dataset.name == "shapenet" and config.use_color:
+    if config.dataset.name == "shapenet" and config.model.tokenizer.point_dim == 6:
         transforms.append(ColorPointCloud())
 
     transform = Compose(transforms)
