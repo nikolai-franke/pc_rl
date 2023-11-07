@@ -9,8 +9,8 @@ from pytorch3d.ops.knn import knn_gather
 from pytorch_lightning.utilities.grads import grad_norm
 from torch import Tensor
 
-from pc_rl.models.modules.gpt_decoder import GptDecoder
-from pc_rl.models.modules.gpt_encoder import GptEncoder
+from pc_rl.models.modules.gpt_decoder import GPTDecoder
+from pc_rl.models.modules.gpt_encoder import GPTEncoder
 from pc_rl.models.modules.gpt_tokenizer import GptTokenizer
 from pc_rl.models.modules.prediction_head import PredictionHead
 from pc_rl.utils.chamfer import chamfer_distance
@@ -20,8 +20,8 @@ class PointGPT(pl.LightningModule):
     def __init__(
         self,
         tokenizer: GptTokenizer,
-        encoder: GptEncoder,
-        decoder: GptDecoder,
+        encoder: GPTEncoder,
+        decoder: GPTDecoder,
         prediction_head: PredictionHead,
         learning_rate: float,
         weight_decay: float,
