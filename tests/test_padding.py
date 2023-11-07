@@ -2,7 +2,7 @@ import torch
 from torch.nn import ModuleList, MultiheadAttention
 from torch_geometric.nn import MLP
 
-from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
+from pc_rl.models.modules.prediction_head import PredictionHead
 from pc_rl.models.modules.tokenizer import Tokenizer
 from pc_rl.models.modules.transformer import (MaskedDecoder, MaskedEncoder,
                                               TransformerBlock,
@@ -82,7 +82,7 @@ def test_padding_masked_encoder():
     blocks = ModuleList(blocks)
     transformer_decoder = TransformerDecoder(blocks)
     masked_decoder = MaskedDecoder(transformer_decoder, pos_embedder)
-    prediction_head = MaePredictionHead(embed_dim, group_size)
+    prediction_head = PredictionHead(embed_dim, group_size)
 
     token, neighborhoods, center_points = embedder.forward(pos, batch)
     x_vis1, ae_mask1 = masked_encoder(token, center_points)
@@ -121,7 +121,7 @@ def test_padding_masked_encoder():
     masked_decoder = MaskedDecoder(
         transformer_decoder, pos_embedder, padding_value=padding_value
     )
-    prediction_head = MaePredictionHead(embed_dim, group_size)
+    prediction_head = PredictionHead(embed_dim, group_size)
 
     token, neighborhoods, center_points = embedder.forward(pos, batch)
     x_vis2, ae_mask2 = masked_encoder2(token, center_points)

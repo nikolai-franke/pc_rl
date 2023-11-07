@@ -15,8 +15,8 @@ import pc_rl.builder  # for hydra's instantiate
 import wandb
 from pc_rl.callbacks.log_pointclouds import LogPointCloudCallback
 from pc_rl.datasets.in_memory import PcInMemoryDataset
-from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
+from pc_rl.models.modules.prediction_head import PredictionHead
 from pc_rl.models.point_mae import PointMAE
 from pc_rl.utils.color_point_cloud_transform import ColorPointCloud
 
@@ -53,7 +53,7 @@ def main(config: DictConfig):
         transformer_decoder=transformer_decoder, pos_embedder=pos_embedder
     )
 
-    mae_prediction_head = MaePredictionHead(
+    mae_prediction_head = PredictionHead(
         dim=config.model.tokenizer.embedding_size,
         group_size=config.model.tokenizer.group_size,
         n_out_channels=3 if not config.use_color else 6,

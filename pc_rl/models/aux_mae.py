@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import torch.nn as nn
 
-from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
+from pc_rl.models.modules.prediction_head import PredictionHead
 
 
 class RLMae(nn.Module):
@@ -12,7 +12,7 @@ class RLMae(nn.Module):
         self,
         masked_encoder: MaskedEncoder,
         masked_decoder: MaskedDecoder,
-        mae_prediction_head: MaePredictionHead,
+        mae_prediction_head: PredictionHead,
     ):
         super().__init__()
         self.masked_encoder = masked_encoder

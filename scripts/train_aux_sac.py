@@ -30,8 +30,8 @@ import wandb
 from pc_rl.agents.aux_sac import AuxPcSacAgent
 from pc_rl.models.aux_mae import RLMae
 from pc_rl.models.finetune_encoder import FinetuneEncoder
-from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
+from pc_rl.models.modules.prediction_head import PredictionHead
 from pc_rl.utils.mani_skill_traj_info import ManiTrajInfo
 from pc_rl.utils.sofa_traj_info import SofaTrajInfo
 
@@ -135,7 +135,7 @@ def build(config: DictConfig):
     else:
         raise ValueError(f"Invalid observation_type: {config.env.observation_type}")
 
-    mae_prediction_head = MaePredictionHead(
+    mae_prediction_head = PredictionHead(
         dim=config.model.tokenizer.embedding_size,
         group_size=config.model.tokenizer.group_size,
         n_out_channels=n_out_channels,

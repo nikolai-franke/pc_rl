@@ -9,9 +9,9 @@ from pytorch3d.ops.knn import knn_gather
 from pytorch_lightning.utilities.grads import grad_norm
 from torch import Tensor
 
-from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
+from pc_rl.models.modules.prediction_head import PredictionHead
 from pc_rl.models.modules.tokenizer import Tokenizer
 from pc_rl.utils.chamfer import chamfer_distance
 
@@ -22,7 +22,7 @@ class PointMAE(pl.LightningModule):
         tokenizer: Tokenizer,
         encoder: MaskedEncoder,
         decoder: MaskedDecoder,
-        mae_prediction_head: MaePredictionHead,
+        mae_prediction_head: PredictionHead,
         learning_rate: float,
         weight_decay: float,
         color_loss_coeff: float = 1.0,

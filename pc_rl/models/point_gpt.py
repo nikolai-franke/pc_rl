@@ -12,7 +12,7 @@ from torch import Tensor
 from pc_rl.models.modules.gpt_decoder import GptDecoder
 from pc_rl.models.modules.gpt_encoder import GptEncoder
 from pc_rl.models.modules.gpt_tokenizer import GptTokenizer
-from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
+from pc_rl.models.modules.prediction_head import PredictionHead
 from pc_rl.utils.chamfer import chamfer_distance
 
 
@@ -22,7 +22,7 @@ class PointGpt(pl.LightningModule):
         tokenizer: GptTokenizer,
         encoder: GptEncoder,
         decoder: GptDecoder,
-        prediction_head: MaePredictionHead,
+        prediction_head: PredictionHead,
         learning_rate: float,
         weight_decay: float,
         color_loss_coeff: float = 1.0,

@@ -5,7 +5,7 @@ from knn_cuda import KNN
 from pointnet2_ops import pointnet2_utils
 from torch_geometric.nn import MLP
 
-from pc_rl.models.modules.mae_prediction_head import MaePredictionHead
+from pc_rl.models.modules.prediction_head import PredictionHead
 from pc_rl.models.modules.tokenizer import Tokenizer
 # from pc_rl.models.modules.transformer import Attention as NewAttention
 from pc_rl.models.modules.transformer import MaskedDecoder as NewMaskedDecoder

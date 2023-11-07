@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch.nn as nn
 
 
-class MaePredictionHead(nn.Module):
+class PredictionHead(nn.Module):
     def __init__(self, dim: int, group_size: int, n_out_channels: int = 3):
         super().__init__()
         self.n_out_channels = n_out_channels
