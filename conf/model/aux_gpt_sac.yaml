@@ -13,7 +13,7 @@ gpt_encoder:
     _target_: pc_rl.builder.build_transformer_encoder
     depth: 3
 
-masked_decoder:
+gpt_decoder:
   transformer_decoder:
     _target_: pc_rl.builder.build_transformer_decoder
     depth: 3

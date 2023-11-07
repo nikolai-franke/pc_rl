@@ -111,7 +111,7 @@ def build(config: DictConfig):
     )
 
     transformer_decoder = instantiate(
-        config.model.transformer_decoder,
+        config.model.gpt_decoder.transformer_decoder,
         transformer_block_factory=transformer_block_factory,
     )
 
