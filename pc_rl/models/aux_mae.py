@@ -12,18 +12,18 @@ class AuxMAE(nn.Module):
         self,
         masked_encoder: MaskedEncoder,
         masked_decoder: MaskedDecoder,
-        mae_prediction_head: PredictionHead,
+        prediction_head: PredictionHead,
     ):
         super().__init__()
         self.masked_encoder = masked_encoder
         self.masked_decoder = masked_decoder
-        self.mae_prediction_head = mae_prediction_head
+        self.prediction_head = prediction_head
         self.dim = self.masked_encoder.dim
 
     def forward(self, x, neighborhoods, center_points):
         x_vis, ae_mask, padding_mask = self.masked_encoder(x, center_points)
         x_recovered = self.masked_decoder(x_vis, ae_mask, center_points)
-        prediction = self.mae_prediction_head(x_recovered)
+        prediction = self.prediction_head(x_recovered)
         B, M, *_ = x_recovered.shape
         *_, C = neighborhoods.shape
 
