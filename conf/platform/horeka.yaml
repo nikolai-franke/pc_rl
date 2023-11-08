@@ -20,5 +20,5 @@ hydra:
       cuda:
         gpus: [0, 1, 2, 3]
       rendering:
-      # stagger:
-      #   delay: 60
+      stagger:
+        delay: 30
