@@ -2,7 +2,6 @@
 
 defaults:
   - override /env: thread_in_hole
-  - override /model/tokenizer: default
   - _self_
 
 env:
