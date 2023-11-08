@@ -4,13 +4,15 @@ from typing import Literal
 
 import gymnasium as gym
 import numpy as np
+from gymnasium.wrappers.frame_stack import FrameStack
 from gymnasium.wrappers.time_limit import TimeLimit
 
 from pc_rl.envs.wrappers.add_obs_to_info_wrapper import \
     ManiSkillAddObsToInfoWrapper
 from pc_rl.envs.wrappers.continuous_task_wrapper import ContinuousTaskWrapper
-from pc_rl.envs.wrappers.mani_point_cloud_wrapper import \
-    ManiSkillPointCloudWrapper
+from pc_rl.envs.wrappers.mani_point_cloud_wrapper import (
+    FrameStackPointCloudWrapper, ManiFrameStack, ManiSkillImageWrapper,
+    ManiSkillPointCloudWrapper)
 
 
 def build(
@@ -21,7 +23,7 @@ def build(
     image_shape: list[int],
     control_mode: str,
     reward_mode: str,
-    is_grasped_reward: float = 1.0,
+    # is_grasped_reward: float = 1.0,
     always_target_dist_reward: bool = False,
     voxel_grid_size: float | None = None,
     render_mode: str | None = None,
@@ -42,7 +44,7 @@ def build(
     camera_cfgs = {
         "width": image_shape[0],
         "height": image_shape[1],
-        # "add_segmentation": True,
+        "add_segmentation": True,
     }
     if z_far is not None:
         camera_cfgs.update({"far": z_far})  # type: ignore
@@ -53,7 +55,7 @@ def build(
 
     env = gym.make(
         env_id,
-        obs_mode="pointcloud",
+        obs_mode="rgb_image",
         reward_mode=reward_mode,
         control_mode=control_mode,
         camera_cfgs=camera_cfgs,
@@ -61,8 +63,8 @@ def build(
         sim_freq=sim_freq,
         control_freq=control_freq,
         renderer_kwargs={"offscreen_only": True, "device": "cuda"},
-        is_grasped_reward=is_grasped_reward,
-        always_target_dist_reward=always_target_dist_reward,
+        # is_grasped_reward=is_grasped_reward,
+        # always_target_dist_reward=always_target_dist_reward,
     )
     # If we don't set a random seed manually, all parallel environments have the same seed
     env.unwrapped.set_main_rng(np.random.randint(1e9))
@@ -70,17 +72,8 @@ def build(
     if add_obs_to_info_dict:
         env = ManiSkillAddObsToInfoWrapper(env)
 
-    # env = ContinuousTaskWrapper(env)
-
-    env = ManiSkillPointCloudWrapper(
-        env,
-        n_goal_points=n_goal_points,
-        use_color=observation_type.startswith("color"),
-        filter_points_below_z=filter_points_below_z,
-        voxel_grid_size=voxel_grid_size,
-        obs_frame=obs_frame,
-        normalize=normalize,
-    )
+    env = ContinuousTaskWrapper(env)
+    env = ManiFrameStack(env)
 
     env = TimeLimit(env, max_episode_steps)
     return env
