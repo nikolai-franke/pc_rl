@@ -125,7 +125,6 @@ class ManiFrameStack(gym.ObservationWrapper):
         if self.normalize:
             out = normalize(out)
 
-        print(out.max(), out.min())
         return out.reshape(-1, out.shape[-1])
 
     def observation(self, observation):
