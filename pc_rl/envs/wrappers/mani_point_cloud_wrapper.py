@@ -9,10 +9,6 @@ from sapien.core import Pose
 from pc_rl.utils.point_cloud_post_processing_functions import (
     normalize, voxel_grid_sample)
 
-CAM_INTRINSIC = np.asarray(
-    [[110.85124, 0.0, 64.0], [0.0, 110.85124, 64.0], [0.0, 0.0, 1.0]]
-)
-
 
 def apply_pose_to_points(x, pose):
     return to_normal(to_generalized(x) @ pose.to_transformation_matrix().T)
