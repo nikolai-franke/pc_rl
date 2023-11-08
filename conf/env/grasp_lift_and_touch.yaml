@@ -40,8 +40,8 @@ phase_any_rewards:
   phase_change: 0.0
 
 phase_grasp_rewards:
-  distance_gripper_graspable_region: -1.0
-  delta_distance_gripper_graspable_region: -10.0
+  distance_gripper_graspable_region: -2.0
+  delta_distance_gripper_graspable_region: -20.0
 
 phase_touch_rewards:
   cauter_activation_in_target: 0.0
