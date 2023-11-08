@@ -11,8 +11,7 @@ from pc_rl.envs.wrappers.add_obs_to_info_wrapper import \
     ManiSkillAddObsToInfoWrapper
 from pc_rl.envs.wrappers.continuous_task_wrapper import ContinuousTaskWrapper
 from pc_rl.envs.wrappers.mani_point_cloud_wrapper import (
-    FrameStackPointCloudWrapper, ManiFrameStack, ManiSkillImageWrapper,
-    ManiSkillPointCloudWrapper)
+    ManiFrameStack, ManiSkillPointCloudWrapper)
 
 
 def build(
@@ -24,7 +23,7 @@ def build(
     control_mode: str,
     reward_mode: str,
     # is_grasped_reward: float = 1.0,
-    always_target_dist_reward: bool = False,
+    # always_target_dist_reward: bool = False,
     voxel_grid_size: float | None = None,
     render_mode: str | None = None,
     filter_points_below_z: float | None = None,
@@ -34,8 +33,9 @@ def build(
     sim_freq: int = 500,
     control_freq: int = 20,
     n_goal_points: int | None = None,
-    obs_frame: Literal["world", "ee"] = "ee",
+    convert_to_ee_frame: bool = True,
     normalize: bool = False,
+    num_frames: int = 4,
 ):
     import mani_skill2.envs
 
@@ -63,8 +63,6 @@ def build(
         sim_freq=sim_freq,
         control_freq=control_freq,
         renderer_kwargs={"offscreen_only": True, "device": "cuda"},
-        # is_grasped_reward=is_grasped_reward,
-        # always_target_dist_reward=always_target_dist_reward,
     )
     # If we don't set a random seed manually, all parallel environments have the same seed
     env.unwrapped.set_main_rng(np.random.randint(1e9))
@@ -73,7 +71,15 @@ def build(
         env = ManiSkillAddObsToInfoWrapper(env)
 
     env = ContinuousTaskWrapper(env)
-    env = ManiFrameStack(env)
+    env = ManiFrameStack(
+        env,
+        image_shape=image_shape,
+        filter_points_below_z=filter_points_below_z,
+        voxel_grid_size=voxel_grid_size,
+        normalize=normalize,
+        convert_to_ee_frame=convert_to_ee_frame,
+        num_frames=num_frames,
+    )
 
     env = TimeLimit(env, max_episode_steps)
     return env

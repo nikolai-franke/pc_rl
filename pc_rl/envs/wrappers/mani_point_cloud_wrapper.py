@@ -4,7 +4,6 @@ from collections import OrderedDict, defaultdict, deque
 
 import gymnasium as gym
 import numpy as np
-import open3d as o3d
 from sapien.core import Pose
 
 from pc_rl.utils.point_cloud_post_processing_functions import (
@@ -53,29 +52,36 @@ def merge_dicts(ds, asarray=False):
 
 
 class ManiFrameStack(gym.ObservationWrapper):
-    def __init__(self, env, num_frames=4, num_classes=75):
+    def __init__(
+        self,
+        env,
+        image_shape,
+        filter_points_below_z,
+        voxel_grid_size: float | None = None,
+        normalize: bool = True,
+        num_frames: int = 4,
+        num_classes: int = 75,
+        convert_to_ee_frame: bool = True,
+    ):
         super().__init__(env)
         self.num_frames = num_frames
         self.num_classes = num_classes
         self.frames = deque(maxlen=self.num_frames)
+        self.filter_points_below_z = filter_points_below_z
+        self.convert_to_ee_frame = convert_to_ee_frame
+        self.voxel_grid_size = voxel_grid_size
+        self.normalize = normalize
+
+        # shape is hardcoded for 3 cameras and two segmentation masks
         self.observation_space = gym.spaces.Box(
-            low=-float("inf"), high=float("inf"), shape=(64 * 64 * 4 * 3, 6)
+            low=-float("inf"),
+            high=float("inf"),
+            shape=(image_shape[0] * image_shape[1] * num_frames * 3, 6),
         )
 
     def _point_cloud(self, observation):
         image_obs = observation["image"]
         camera_params = observation["camera_param"]
-        tcp_poses = observation["extra"]["tcp_pose"]
-        assert tcp_poses.ndim <= 2
-        if tcp_poses.ndim == 2:
-            tcp_pose = tcp_poses[
-                0
-            ]  # use the first robot hand's tcp pose as the end-effector frame
-        else:
-            tcp_pose = tcp_poses  # only one robot hand
-        p, q = tcp_pose[:3], tcp_pose[3:]
-        to_origin = Pose(p=p, q=q).inv()
-
         pointcloud_obs = OrderedDict()
 
         for cam_uid, images in image_obs.items():
@@ -102,8 +108,28 @@ class ManiFrameStack(gym.ObservationWrapper):
                 np.asarray(pointcloud_obs["segmentation"]) / self.num_classes,
             ),
         )
-        out = out[out[..., 2] > 1e-4]
-        out[..., :3] = apply_pose_to_points(out[..., :3], to_origin)
+        out = out[out[..., 2] > self.filter_points_below_z]
+
+        if self.convert_to_ee_frame:
+            tcp_poses = observation["extra"]["tcp_pose"]
+            assert tcp_poses.ndim <= 2
+            if tcp_poses.ndim == 2:
+                tcp_pose = tcp_poses[
+                    0
+                ]  # use the first robot hand's tcp pose as the end-effector frame
+            else:
+                tcp_pose = tcp_poses  # only one robot hand
+            p, q = tcp_pose[:3], tcp_pose[3:]
+            to_origin = Pose(p=p, q=q).inv()
+            out[..., :3] = apply_pose_to_points(out[..., :3], to_origin)
+
+        if self.voxel_grid_size is not None:
+            out = voxel_grid_sample(out, self.voxel_grid_size)
+
+        if self.normalize:
+            out = normalize(out)
+
+        print(out.max(), out.min())
         return out.reshape(-1, out.shape[-1])
 
     def observation(self, observation):
@@ -122,76 +148,6 @@ class ManiFrameStack(gym.ObservationWrapper):
         obs, info = self.env.reset(**kwargs)
         [self.frames.append(self._point_cloud(obs)) for _ in range(self.num_frames)]
         return self.observation(None), info
-
-
-class FrameStackPointCloudWrapper(gym.ObservationWrapper):
-    def __init__(self, env):
-        super().__init__(env)
-        self.intrinsic = o3d.camera.PinholeCameraIntrinsic(128, 128, CAM_INTRINSIC)
-
-    def observation(self, observation):
-        observation = np.asarray(observation)
-        depth_frames = observation[..., 0]
-        seg_frames = observation[..., 1:]
-        point_clouds = []
-        intrinsic = o3d.camera.PinholeCameraIntrinsic(128, 128, CAM_INTRINSIC)
-        for i, (depth_frame, seg_frame) in enumerate(zip(depth_frames, seg_frames)):
-            for cam_depth, cam_seg in zip(depth_frame, seg_frame):
-                background_threshold = 0.99 * cam_depth.max()
-                cam_depth_no_background = np.where(
-                    cam_depth > background_threshold, 0, cam_depth
-                )
-                cam_seg[..., -1] = i * 50
-
-                depth_image = o3d.geometry.Image(cam_depth_no_background.copy())
-                color_image = o3d.geometry.Image(cam_seg.astype(np.uint8) * 2)
-                rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
-                    color_image,
-                    depth_image,
-                    convert_rgb_to_intensity=False,
-                    depth_scale=1.0,
-                    depth_trunc=1e9,
-                )
-                pcd = o3d.geometry.PointCloud.create_from_rgbd_image(
-                    rgbd_image, intrinsic
-                )
-                point_clouds.append(
-                    np.hstack((np.asarray(pcd.points), np.asarray(pcd.colors)))
-                )
-
-        out = np.asarray(point_clouds).reshape(-1, 6)
-        return out
-
-
-class ManiSkillImageWrapper(gym.ObservationWrapper):
-    def __init__(self, env, image_size=(128, 128), num_classes=100):
-        super().__init__(env)
-        self.num_classes = num_classes
-        self.image_size = image_size
-        self.observation_space = gym.spaces.Box(
-            low=-np.float32("inf"), high=np.float32("inf"), shape=image_size + (4,)
-        )
-
-    def observation(self, observation):
-        print(observation["camera_param"]["overhead_camera_0"]["intrinsic_cv"])
-        image = observation["image"]
-        cam_0 = image["overhead_camera_0"]
-        cam_1 = image["overhead_camera_1"]
-        cam_2 = image["overhead_camera_2"]
-
-        depth_0 = cam_0["depth"]
-        depth_1 = cam_1["depth"]
-        depth_2 = cam_2["depth"]
-
-        seg_0 = cam_0["Segmentation"][..., :3]
-        seg_1 = cam_1["Segmentation"][..., :3]
-        seg_2 = cam_2["Segmentation"][..., :3]
-
-        combined_depth = np.stack([depth_0, depth_1, depth_2])
-        combined_seg = np.stack([seg_0, seg_1, seg_2], dtype=np.uint8)
-
-        out = np.concatenate([combined_depth, combined_seg], axis=-1)
-        return out
 
 
 class ManiSkillPointCloudWrapper(gym.ObservationWrapper):
@@ -285,49 +241,3 @@ class ManiSkillPointCloudWrapper(gym.ObservationWrapper):
             point_cloud = normalize(point_cloud)
 
         return point_cloud
-
-
-# class ManiSkillPointCloudWrapper(gym.ObservationWrapper):
-#     def __init__(
-#         self,
-#         env,
-#         post_processing_functions: list[Callable] | None = None,
-#         n_goal_points: int = -1,
-#         use_color: bool = False,
-#     ):
-#         super().__init__(env)
-#         num_points = env.observation_space["pointcloud"]["xyzw"].shape[0]
-#         point_dim = 6 if use_color else 3
-#         self.observation_space = gym.spaces.Box(
-#             high=np.inf, low=-np.inf, shape=(num_points, point_dim)
-#         )
-#         self.post_processing_functions = post_processing_functions
-#         self.use_color = use_color
-#         self.n_goal_points = n_goal_points
-#         self.counter = 0
-#
-#     def observation(self, observation):
-#         point_cloud = observation["pointcloud"]["xyzw"]
-#         # only points where w == 1 are valid
-#         mask = point_cloud[..., -1] == 1
-#         # we only want xyz in our observation
-#         point_cloud = point_cloud[mask][..., :3]
-#
-#         if self.use_color:
-#             rgb = observation["pointcloud"]["rgb"].astype(float)
-#             rgb = rgb[mask]
-#             rgb *= 1 / 255.0
-#             point_cloud = np.hstack((point_cloud, rgb))
-#
-#         if self.post_processing_functions is not None:
-#             for function in self.post_processing_functions:
-#                 point_cloud = function(point_cloud)
-#
-#         # np.savetxt(
-#         #     f"obs{self.counter}.csv",
-#         #     point_cloud,
-#         #     delimiter=",",
-#         # )
-#         # self.counter += 1
-#
-#         return point_cloud
