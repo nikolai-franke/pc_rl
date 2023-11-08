@@ -11,7 +11,7 @@ from torch_geometric.nn import MLP
 
 from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.gpt_encoder import GPTEncoder
-from pc_rl.models.modules.gpt_tokenizer import GptTokenizer
+from pc_rl.models.modules.gpt_tokenizer import GPTTokenizer
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
 from pc_rl.models.modules.tokenizer import Tokenizer
 from pc_rl.models.modules.tokenizer_separate_color import \
@@ -34,13 +34,13 @@ def build_gpt_tokenizer(
     group_size: int,
     sampling_ratio: float,
     random_start: bool,
-) -> GptTokenizer:
+) -> GPTTokenizer:
     mlp_1_layers.insert(0, point_dim)
     mlp_1 = MLP(mlp_1_layers, act=mlp_act)
     mlp_2_layers.append(embedding_size)
     mlp_2 = MLP(mlp_2_layers, act=mlp_act)
 
-    return GptTokenizer(
+    return GPTTokenizer(
         mlp_1=mlp_1,
         mlp_2=mlp_2,
         group_size=group_size,

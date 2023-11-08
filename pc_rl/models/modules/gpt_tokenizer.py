@@ -11,7 +11,7 @@ from pc_rl.models.modules.tokenizer import Tokenizer
 from pc_rl.utils.morton_code import get_z_values
 
 
-class GptTokenizer(Tokenizer):
+class GPTTokenizer(Tokenizer):
     def __init__(
         self,
         mlp_1: MLP,

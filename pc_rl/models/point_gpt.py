@@ -11,7 +11,7 @@ from torch import Tensor
 
 from pc_rl.models.modules.gpt_decoder import GPTDecoder
 from pc_rl.models.modules.gpt_encoder import GPTEncoder
-from pc_rl.models.modules.gpt_tokenizer import GptTokenizer
+from pc_rl.models.modules.gpt_tokenizer import GPTTokenizer
 from pc_rl.models.modules.prediction_head import PredictionHead
 from pc_rl.utils.chamfer import chamfer_distance
 
@@ -19,7 +19,7 @@ from pc_rl.utils.chamfer import chamfer_distance
 class PointGPT(pl.LightningModule):
     def __init__(
         self,
-        tokenizer: GptTokenizer,
+        tokenizer: GPTTokenizer,
         encoder: GPTEncoder,
         decoder: GPTDecoder,
         prediction_head: PredictionHead,
