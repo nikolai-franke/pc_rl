@@ -5,7 +5,7 @@ defaults:
   - override /model/tokenizer: color
   - _self_
 
-batch_B: 10
+batch_B: 8
 batch_T: 320
 
 runner:
