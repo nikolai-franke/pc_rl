@@ -19,8 +19,8 @@ phase_any_rewards:
   collision_cauter_gallbladder: -0.1
   collision_cauter_liver: -0.1
   collision_gripper_liver: -0.01
-  distance_cauter_target: -0.5
-  delta_distance_cauter_target: -5.0
+  distance_cauter_target: -1.0
+  delta_distance_cauter_target: -10.0
   target_visible: 0.1
   gallbladder_is_grasped: 0.0
   new_grasp_on_gallbladder: 10.0
