@@ -1,0 +1,24 @@
+# @package _global_
+
+defaults:
+  - override /env: move_bucket
+  - override /model/tokenizer: color
+  - _self_
+
+batch_B: 8
+batch_T: 320
+
+runner:
+  n_steps: 2e6
+
+eval:
+  n_eval_envs: 1
+
+hydra:
+  sweeper:
+    params:
+      algo.ent_coeff_lr: 2e-5, 5e-5
+      algo.ent_coeff: 0.05, 0.025
+      # env.convert_to_ee_frame: True, False
+#
+tags: [move_bucket]
