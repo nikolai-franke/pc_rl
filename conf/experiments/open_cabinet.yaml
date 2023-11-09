@@ -21,4 +21,4 @@ hydra:
       algo.ent_coeff: 0.05, 0.025
       # env.convert_to_ee_frame: True, False
 
-tags: [open_cabinet, color]
+tags: [open_cabinet]

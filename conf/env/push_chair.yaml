@@ -2,15 +2,12 @@ _target_: pc_rl.envs.mani_skill.build
 
 env_id: PushChair-v1
 max_episode_steps: 200
-image_shape: [96, 96]
+image_shape: [64, 64]
 control_mode: base_pd_joint_vel_arm_pd_ee_delta_pose
 reward_mode: normalized_dense
 observation_type: point_cloud
-filter_points_below_z: 1e-4
-voxel_grid_size: 0.01
-# z_far: 3.0
-# z_near: 0.01
-# fov: 1.0
-# cam_pos: [0.5, 0.0, 3.0]
-# cam_look_at: [0.5, 0.0, 0.0]
-#
+filter_points_below_z: 1e-3
+voxel_grid_size: 0.02
+convert_to_ee_frae: True
+num_frames: 4
+normalize: True
