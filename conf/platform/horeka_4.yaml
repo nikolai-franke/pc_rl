@@ -19,7 +19,6 @@ hydra:
     resources_config:
       cpu:
       cuda:
-        gpus: [0, 1, 2, 3]
       rendering:
       stagger:
         delay: 30
