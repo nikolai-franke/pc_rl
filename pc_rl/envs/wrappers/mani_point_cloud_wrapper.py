@@ -122,9 +122,6 @@ class ManiFrameStack(gym.ObservationWrapper):
         if self.voxel_grid_size is not None:
             out = voxel_grid_sample(out, self.voxel_grid_size)
 
-        if self.normalize:
-            out = normalize(out)
-
         return out.reshape(-1, out.shape[-1])
 
     def observation(self, observation):
@@ -132,6 +129,10 @@ class ManiFrameStack(gym.ObservationWrapper):
             frame[..., -1] = i / self.num_frames
 
         out = np.concatenate(self.frames)
+
+        # normalize full point cloud
+        if self.normalize:
+            out = normalize(out)
         return out.reshape(-1, out.shape[-1])
 
     def step(self, action):
