@@ -79,6 +79,7 @@ def build(
         normalize=normalize,
         convert_to_ee_frame=convert_to_ee_frame,
         num_frames=num_frames,
+        n_goal_points=n_goal_points,
     )
 
     env = TimeLimit(env, max_episode_steps)
