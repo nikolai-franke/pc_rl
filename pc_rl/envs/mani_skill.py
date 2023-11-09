@@ -70,7 +70,7 @@ def build(
     if add_obs_to_info_dict:
         env = ManiSkillAddObsToInfoWrapper(env)
 
-    env = ContinuousTaskWrapper(env)
+    # env = ContinuousTaskWrapper(env)
     env = ManiFrameStack(
         env,
         image_shape=image_shape,
