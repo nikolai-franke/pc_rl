@@ -13,4 +13,4 @@ num_frames: 3
 normalize: True
 n_goal_points: 10
 fov: 1.5
-
+continuous_task: True

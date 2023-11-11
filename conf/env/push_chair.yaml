@@ -12,3 +12,4 @@ convert_to_ee_frame: False
 num_frames: 4
 normalize: True
 fov: 1.5
+continuous_task: True
