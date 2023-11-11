@@ -21,7 +21,7 @@ phase_any_rewards:
   collision_gripper_liver: -0.01
   distance_cauter_target: -1.0
   delta_distance_cauter_target: -10.0
-  target_visible: 0.0
+  target_visible: 0.1
   gallbladder_is_grasped: 0.0
   new_grasp_on_gallbladder: 10.0
   lost_grasp_on_gallbladder: -10.0
@@ -31,13 +31,13 @@ phase_any_rewards:
   overlap_gallbladder_liver: -0.1
   delta_overlap_gallbladder_liver: -0.01
   dynamic_force_on_gallbladder: -0.003
-  successful_task: 100.0
+  successful_task: 200.0
   failed_task: 0.0
   cauter_action_violated_state_limits: 0.0
   cauter_action_violated_cartesian_workspace: 0.0
   gripper_action_violated_state_limits: 0.0
   gripper_action_violated_cartesian_workspace: 0.0
-  phase_change: 10.0
+  phase_change: 0.0
 
 phase_grasp_rewards:
   distance_gripper_graspable_region: -2.0
