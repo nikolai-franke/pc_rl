@@ -40,6 +40,7 @@ def build(
     import mani_skill2.envs
 
     import pc_rl.envs.mani_skill_env.pick_cube
+    import pc_rl.envs.mani_skill_env.push_chair
 
     camera_cfgs = {
         "width": image_shape[0],
