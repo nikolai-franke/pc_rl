@@ -61,6 +61,9 @@ class PushChair(PushChairEnv):
                     # Legacy: Note that the static condition here is different from success metric
                     if chair_vel_norm <= 0.1 and chair_ang_vel_norm <= 0.2:
                         stage_reward += 2
+
+                    if info["success"]:
+                        stage_reward = 50
                 else:
                     # Try to increase velocity along direction to the target
                     # Compute directional velocity
