@@ -46,6 +46,8 @@ class PushChair(PushChairEnv):
         # -18 can guarantee the reward is negative
         dist_chair_to_target = info["dist_chair_to_target"]
 
+        reward -= dist_chair_to_target * 5
+
         if chair_tilt < 0.2 * np.pi:
             # Chair is standing
             if dist_ee_to_chair < 0.1:
