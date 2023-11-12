@@ -61,6 +61,7 @@ class ManiFrameStack(gym.ObservationWrapper):
         convert_to_base_frame: bool = False,
         n_goal_points: None | int = None,
         add_state: bool = False,
+        add_seg: bool = False,
     ):
         super().__init__(env)
         self.num_frames = num_frames
@@ -73,14 +74,16 @@ class ManiFrameStack(gym.ObservationWrapper):
         self.n_goal_points = n_goal_points
         self.add_state = add_state
         self.convert_to_base_frame = convert_to_base_frame
+        self.add_seg = add_seg
         assert not (convert_to_base_frame and convert_to_ee_frame)
 
         # shape is hardcoded for 3 cameras and two segmentation masks
         #
+        point_dim = 6 if add_seg else 4
         point_cloud_space = gym.spaces.Box(
             low=-float("inf"),
             high=float("inf"),
-            shape=(image_shape[0] * image_shape[1] * num_frames * 3, 6),
+            shape=(image_shape[0] * image_shape[1] * num_frames * 3, point_dim),
         )
         if not self.add_state:
             self.observation_space = point_cloud_space
@@ -118,14 +121,19 @@ class ManiFrameStack(gym.ObservationWrapper):
             xyzw = position.reshape(-1, 4) @ cam2world.T
             cam_pcd["xyzw"] = xyzw
 
-            seg = images["Segmentation"].reshape(-1, 4)[..., :3]
-            cam_pcd["segmentation"] = seg
+            if self.add_seg:
+                seg = images["Segmentation"].reshape(-1, 4)[..., :3]
+                cam_pcd["segmentation"] = seg
+            else:
+                seg = None
 
             pointcloud_obs[cam_uid] = cam_pcd
 
         pointcloud_obs = merge_dicts(pointcloud_obs.values())
 
-        seg = np.asarray(pointcloud_obs["segmentation"])[..., :3]
+        if self.add_seg:
+            seg = np.asarray(pointcloud_obs["segmentation"])[..., :3]
+
         point_cloud = np.asarray(pointcloud_obs["xyzw"])[..., :3]
 
         if self.n_goal_points is not None:
@@ -136,18 +144,23 @@ class ManiFrameStack(gym.ObservationWrapper):
             ).astype(np.float32)
             goal_pts_xyz = goal_pts_xyz + goal_pos[None, :]
 
-            goal_pts_seg = np.zeros_like(goal_pts_xyz)
-            goal_pts_seg[..., 1:] = self.num_classes
+            if self.add_seg:
+                goal_pts_seg = np.zeros_like(goal_pts_xyz)
+                goal_pts_seg[..., 1:] = self.num_classes
 
-            seg = np.concatenate([seg, goal_pts_seg], axis=-2)
+                seg = np.concatenate([seg, goal_pts_seg], axis=-2)
             point_cloud = np.concatenate([point_cloud, goal_pts_xyz], axis=-2)
 
-        out = np.dstack(
-            (
-                point_cloud,
-                seg / self.num_classes,
-            ),
-        )
+        if self.add_seg:
+            out = np.dstack(
+                (
+                    point_cloud,
+                    seg / self.num_classes,
+                ),
+            )
+        else:
+            out = point_cloud
+
         out = out[out[..., 2] > self.filter_points_below_z]
 
         if self.convert_to_ee_frame:
@@ -171,6 +184,10 @@ class ManiFrameStack(gym.ObservationWrapper):
 
         if self.voxel_grid_size is not None:
             out = voxel_grid_sample(out, self.voxel_grid_size)
+
+        if not self.add_seg:
+            frames = np.zeros(out.shape[:-1] + (1,), dtype=out.dtype)
+            out = np.hstack([out, frames])
 
         return out.reshape(-1, out.shape[-1])
 

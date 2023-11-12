@@ -15,13 +15,23 @@ eval:
   n_eval_envs: 1
 
 optimizer:
-  lr: 5e-5
+  lr: 1e-4
+
+algo:
+  discount: 0.95
+
+model:
+  tokenizer:
+    point_dim: 4
+
+env:
+  add_seg: False
 
 hydra:
   sweeper:
     params:
       algo.ent_coeff_lr: 2e-5, 1e-5
-      algo.ent_coeff: 0.1, 0.2
+      algo.ent_coeff: 0.1, 0.05
       # env.convert_to_ee_frame: True, False
 #
-tags: [push_chair]
+tags: [push_chair, no_seg]

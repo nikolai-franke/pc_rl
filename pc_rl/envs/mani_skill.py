@@ -39,6 +39,7 @@ def build(
     num_frames: int = 4,
     continuous_task: bool = False,
     add_state: bool = False,
+    add_seg: bool = True,
 ):
     import mani_skill2.envs
 
@@ -48,8 +49,10 @@ def build(
     camera_cfgs = {
         "width": image_shape[0],
         "height": image_shape[1],
-        "add_segmentation": True,
+        # "add_segmentation": True,
     }
+    if add_seg:
+        camera_cfgs.update({"add_segmentation": True})
     if z_far is not None:
         camera_cfgs.update({"far": z_far})  # type: ignore
     if z_near is not None:
@@ -88,6 +91,7 @@ def build(
         n_goal_points=n_goal_points,
         add_state=add_state,
         convert_to_base_frame=convert_to_base_frame,
+        add_seg=add_seg,
     )
 
     env = TimeLimit(env, max_episode_steps)
