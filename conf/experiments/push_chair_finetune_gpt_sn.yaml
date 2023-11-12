@@ -14,6 +14,9 @@ runner:
 eval:
   n_eval_envs: 1
 
+optimizer:
+  lr: 5e-5
+
 model_url: kirurc/MAE/model-j861jgdx:v0
 
 freeze_encoder: False
