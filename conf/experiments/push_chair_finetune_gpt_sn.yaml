@@ -15,7 +15,7 @@ eval:
   n_eval_envs: 1
 
 optimizer:
-  lr: 1e-3
+  lr: 1e-4
 
 algo:
   discount: 0.95
