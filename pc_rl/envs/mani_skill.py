@@ -6,6 +6,7 @@ import gymnasium as gym
 import numpy as np
 from gymnasium.wrappers.frame_stack import FrameStack
 from gymnasium.wrappers.time_limit import TimeLimit
+from mani_skill2 import os
 
 from pc_rl.envs.wrappers.add_obs_to_info_wrapper import \
     ManiSkillAddObsToInfoWrapper
@@ -43,6 +44,8 @@ def build(
     import pc_rl.envs.mani_skill_env.pick_cube
     import pc_rl.envs.mani_skill_env.push_chair
 
+    gpu_pci_addr = os.environ.get("GPU_PCI_ADDR")
+
     camera_cfgs = {
         "width": image_shape[0],
         "height": image_shape[1],
@@ -64,7 +67,7 @@ def build(
         render_mode=render_mode,
         sim_freq=sim_freq,
         control_freq=control_freq,
-        renderer_kwargs={"offscreen_only": True, "device": "cuda"},
+        renderer_kwargs={"offscreen_only": True, "device": f"pci:{gpu_pci_addr}"},
     )
     # If we don't set a random seed manually, all parallel environments have the same seed
     env.unwrapped.set_main_rng(np.random.randint(1e9))
