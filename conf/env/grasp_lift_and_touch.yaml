@@ -31,7 +31,7 @@ phase_any_rewards:
   overlap_gallbladder_liver: -0.1
   delta_overlap_gallbladder_liver: -0.01
   dynamic_force_on_gallbladder: -0.003
-  successful_task: 20.0
+  successful_task: 50.0
   failed_task: 0.0
   cauter_action_violated_state_limits: 0.0
   cauter_action_violated_cartesian_workspace: 0.0
