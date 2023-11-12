@@ -33,10 +33,12 @@ def build(
     sim_freq: int = 500,
     control_freq: int = 20,
     n_goal_points: int | None = None,
-    convert_to_ee_frame: bool = True,
+    convert_to_ee_frame: bool = False,
+    convert_to_base_frame: bool = False,
     normalize: bool = False,
     num_frames: int = 4,
     continuous_task: bool = False,
+    add_state: bool = False,
 ):
     import mani_skill2.envs
 
@@ -84,6 +86,8 @@ def build(
         convert_to_ee_frame=convert_to_ee_frame,
         num_frames=num_frames,
         n_goal_points=n_goal_points,
+        add_state=add_state,
+        convert_to_base_frame=convert_to_base_frame,
     )
 
     env = TimeLimit(env, max_episode_steps)

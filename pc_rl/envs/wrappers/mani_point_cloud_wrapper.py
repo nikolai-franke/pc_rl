@@ -58,7 +58,9 @@ class ManiFrameStack(gym.ObservationWrapper):
         num_frames: int = 4,
         num_classes: int = 75,
         convert_to_ee_frame: bool = True,
+        convert_to_base_frame: bool = False,
         n_goal_points: None | int = None,
+        add_state: bool = False,
     ):
         super().__init__(env)
         self.num_frames = num_frames
@@ -69,13 +71,36 @@ class ManiFrameStack(gym.ObservationWrapper):
         self.voxel_grid_size = voxel_grid_size
         self.normalize = normalize
         self.n_goal_points = n_goal_points
+        self.add_state = add_state
+        self.convert_to_base_frame = convert_to_base_frame
+        assert not (convert_to_base_frame and convert_to_ee_frame)
 
         # shape is hardcoded for 3 cameras and two segmentation masks
-        self.observation_space = gym.spaces.Box(
+        #
+        point_cloud_space = gym.spaces.Box(
             low=-float("inf"),
             high=float("inf"),
             shape=(image_shape[0] * image_shape[1] * num_frames * 3, 6),
         )
+        if not self.add_state:
+            self.observation_space = point_cloud_space
+        else:
+            agent_space = self.env.observation_space["agent"]
+            state_size = (
+                agent_space["qpos"].shape[0]
+                + agent_space["qvel"].shape[0]
+                + agent_space["base_pose"].shape[0]
+                + agent_space["base_vel"].shape[0]
+                + agent_space["base_ang_vel"].shape[0]
+            )
+            self.observation_space = gym.spaces.Dict(
+                {
+                    "point_cloud": point_cloud_space,
+                    "state": gym.spaces.Box(
+                        low=-float("inf"), high=float("inf"), shape=(state_size,)
+                    ),
+                }
+            )
 
     def _point_cloud(self, observation):
         image_obs = observation["image"]
@@ -138,6 +163,12 @@ class ManiFrameStack(gym.ObservationWrapper):
             to_origin = Pose(p=p, q=q).inv()
             out[..., :3] = apply_pose_to_points(out[..., :3], to_origin)
 
+        if self.convert_to_base_frame:
+            base_pose = observation["agent"]["base_pose"]
+            p, q = base_pose[:3], base_pose[3:]
+            to_origin = Pose(p=p, q=q).inv()
+            out[..., :3] = apply_pose_to_points(out[..., :3], to_origin)
+
         if self.voxel_grid_size is not None:
             out = voxel_grid_sample(out, self.voxel_grid_size)
 
@@ -152,17 +183,30 @@ class ManiFrameStack(gym.ObservationWrapper):
         # normalize full point cloud
         if self.normalize:
             out = normalize(out)
-        return out.reshape(-1, out.shape[-1])
+
+        if self.add_state:
+            agent_obs = observation["agent"]
+            qpos = agent_obs["qpos"]
+            qvel = agent_obs["qvel"]
+            base_pose = agent_obs["base_pose"]
+            base_vel = agent_obs["base_vel"]
+            base_ang_vel = agent_obs["base_ang_vel"].reshape(
+                -1,
+            )
+            state = np.concatenate([qpos, qvel, base_pose, base_vel, base_ang_vel])
+            out = {"point_cloud": out, "state": state}
+
+        return out
 
     def step(self, action):
         observation, reward, terminated, truncated, info = self.env.step(action)
         self.frames.append(self._point_cloud(observation))
-        return self.observation(None), reward, terminated, truncated, info
+        return self.observation(observation), reward, terminated, truncated, info
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
         [self.frames.append(self._point_cloud(obs)) for _ in range(self.num_frames)]
-        return self.observation(None), info
+        return self.observation(obs), info
 
 
 class ManiSkillPointCloudWrapper(gym.ObservationWrapper):
