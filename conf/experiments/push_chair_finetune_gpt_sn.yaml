@@ -17,8 +17,11 @@ eval:
 optimizer:
   lr: 1e-4
 
+env:
+  continuous_task: False
+
 algo:
-  discount: 0.95
+  discount: 0.99
 
 model_url: kirurc/MAE/model-j861jgdx:v0
 
@@ -30,7 +33,7 @@ scheduler:
 hydra:
   sweeper:
     params:
-      algo.ent_coeff_lr: 2e-5, 5e-5
+      algo.ent_coeff_lr: 2e-5, 1e-5
       algo.ent_coeff: 0.1, 0.05
       # env.convert_to_ee_frame: True, False
 #
