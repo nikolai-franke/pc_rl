@@ -1,0 +1,12 @@
+# @package _global_
+
+defaults:
+  - override /dataset: shapenet
+  - override /model/tokenizer: point_gpt
+  - _self_
+
+model:
+  tokenizer:
+    point_dim: 5
+
+tags: [shapenet, GPT, 5_dim]

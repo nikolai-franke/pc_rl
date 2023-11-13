@@ -2,6 +2,7 @@
 
 defaults:
   - override /dataset: shapenet
+= override /model/tokenizer: point_gpt
   - _self_
 
 
