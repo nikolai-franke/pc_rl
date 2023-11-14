@@ -23,7 +23,7 @@ env:
 algo:
   discount: 0.99
 
-model_url: kirurc/MAE/model-j861jgdx:v0
+model_url: kirurc/MAE/model-8po7ta1b:v0
 
 freeze_encoder: False
 scheduler:
