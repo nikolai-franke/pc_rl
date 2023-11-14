@@ -6,12 +6,6 @@ from scipy.spatial import distance as sdist
 
 @register_env("PushChair-v2", max_episode_steps=200)
 class PushChair(PushChairEnv):
-    goal_thresh = 0.05
-    min_goal_dist = 0.1
-
-    def _load_actors(self):
-        return super()._load_actors()
-
     def _get_obs_extra(self):
         obs = super()._get_obs_extra()
         obs["target_link_pos"] = self.target_p[:3]
@@ -70,8 +64,8 @@ class PushChair(PushChairEnv):
                     if chair_vel_norm <= 0.1 and chair_ang_vel_norm <= 0.2:
                         stage_reward += 2
 
-                    # if info["success"]:
-                    #     stage_reward = 50
+                    if info["success"]:
+                        stage_reward = 50
                 else:
                     # Try to increase velocity along direction to the target
                     # Compute directional velocity

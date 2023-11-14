@@ -17,7 +17,7 @@ optimizer:
   lr: 1e-4
 
 env:
-  continuous_task: True
+  continuous_task: False
   control_mode: base_pd_joint_vel_arm_pd_joint_delta_pos
 
 algo:
@@ -37,8 +37,8 @@ scheduler:
 hydra:
   sweeper:
     params:
-      algo.ent_coeff_lr: 5e-5, 1e-4
-      algo.ent_coeff: 0.1, 0.05
+      algo.ent_coeff_lr: 5e-5, 2e-5
+      algo.ent_coeff: 0.02, 0.01
       # env.convert_to_ee_frame: True, False
 #
 tags: [push_chair, finetune, sn, GPT]
