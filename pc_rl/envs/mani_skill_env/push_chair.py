@@ -12,6 +12,11 @@ class PushChair(PushChairEnv):
     def _load_actors(self):
         return super()._load_actors()
 
+    def _get_obs_extra(self):
+        obs = super()._get_obs_extra()
+        obs["target_link_pos"] = self.target_p[:3]
+        return obs
+
     def compute_dense_reward(self, action: np.ndarray, info: dict, **kwargs):
         reward = 0
 
