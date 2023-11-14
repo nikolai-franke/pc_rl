@@ -6,4 +6,4 @@ defaults:
   - override /model/prediction_head: default
   - _self_
 
-tags: [shapenet, color, GPT]
+tags: [shapenet, color, GPT, 6_dim]

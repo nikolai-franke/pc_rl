@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - override /dataset: shapenet
+  - _self_
+
+model:
+  tokenizer:
+    point_dim: 7
+
+tags: [shapenet, 7_dim]
