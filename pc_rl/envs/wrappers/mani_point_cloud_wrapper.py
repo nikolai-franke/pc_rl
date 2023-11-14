@@ -140,15 +140,15 @@ class ManiFrameStack(gym.ObservationWrapper):
             goal_pos = observation["extra"]["target_link_pos"]
             goal_pts_xyz = (
                 np.random.uniform(low=-1.0, high=1.0, size=(3, self.n_goal_points, 3))
-                * 0.01
+                * 0.1
             ).astype(np.float32)
             goal_pts_xyz = goal_pts_xyz + goal_pos[None, :]
 
             if self.add_seg:
                 goal_pts_seg = np.zeros_like(goal_pts_xyz)
                 goal_pts_seg[..., 1:] = self.num_classes
-
                 seg = np.concatenate([seg, goal_pts_seg], axis=-2)
+
             point_cloud = np.concatenate([point_cloud, goal_pts_xyz], axis=-2)
 
         if self.add_seg:

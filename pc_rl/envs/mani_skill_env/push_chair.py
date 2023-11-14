@@ -9,6 +9,9 @@ class PushChair(PushChairEnv):
     goal_thresh = 0.05
     min_goal_dist = 0.1
 
+    def _load_actors(self):
+        return super()._load_actors()
+
     def compute_dense_reward(self, action: np.ndarray, info: dict, **kwargs):
         reward = 0
 

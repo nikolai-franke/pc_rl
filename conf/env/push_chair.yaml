@@ -13,4 +13,6 @@ convert_to_base_frame: True
 num_frames: 3
 normalize: True
 fov: 1.5
-continuous_task: True
+continuous_task: False
+n_goal_points: 20
+add_seg: False
