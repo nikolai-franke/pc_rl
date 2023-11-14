@@ -2,7 +2,6 @@
 
 defaults:
   - override /env: push_chair
-  - override /model/tokenizer: color
   - _self_
 
 batch_B: 8
@@ -23,6 +22,10 @@ env:
 
 algo:
   discount: 0.99
+
+model:
+  tokenizer:
+    point_dim: 4
 
 model_url: kirurc/MAE/model-8po7ta1b:v0
 
