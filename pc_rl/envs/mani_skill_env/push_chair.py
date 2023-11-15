@@ -56,10 +56,10 @@ class PushChair(PushChairEnv):
         chair_tilt = info["chair_tilt"]
         reward += -chair_tilt * 0.2
 
-        # Penalize action
-        # Assume action is relative and normalized.
-        action_norm = np.linalg.norm(action)
-        reward -= action_norm * 1e-6
+        # # Penalize action
+        # # Assume action is relative and normalized.
+        # action_norm = np.linalg.norm(action)
+        # reward -= action_norm * 1e-6
 
         # Chair velocity
         # Legacy version uses full velocity instead of xy-plane velocity
