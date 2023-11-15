@@ -2,7 +2,6 @@
 
 defaults:
   - override /env: open_cabinet_drawer
-  - override /model/tokenizer: color
   - _self_
 
 batch_B: 8
@@ -14,8 +13,8 @@ runner:
 eval:
   n_eval_envs: 1
 
-
 freeze_encoder: False
+
 scheduler:
   zero_till_step: 5
   increase_over_steps: 10
@@ -23,9 +22,9 @@ scheduler:
 algo:
   ent_coeff_lr: 2e-5
 
-model:
-  tokenizer:
-    point_dim: 4
+# model:
+#   tokenizer:
+#     point_dim: 4
 
 model_url: kirurc/MAE/model-8po7ta1b:v0
 
