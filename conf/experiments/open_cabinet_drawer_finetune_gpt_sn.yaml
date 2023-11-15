@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - override /env: open_cabinet
+  - override /env: open_cabinet_drawer
   - override /model/tokenizer: color
   - _self_
 
