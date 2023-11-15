@@ -314,10 +314,13 @@ def build(config: DictConfig, model_path):
 
     # TODO: maybe chain schedulers (or remove gamma scheduler)
     #
-    # if gamma := config.get("lr_scheduler_gamma") is not None:
-    #     pi_scheduler = torch.optim.lr_scheduler.ExponentialLR(pi_optimizer, gamma=gamma)
-    #     q_scheduler = torch.optim.lr_scheduler.ExponentialLR(q_optimizer, gamma=gamma)
-    #     lr_schedulers = [pi_scheduler, q_scheduler]
+    if gamma := config.get("lr_scheduler_gamma") is not None:
+        pi_scheduler = torch.optim.lr_scheduler.ExponentialLR(pi_optimizer, gamma=gamma)
+        q_scheduler = torch.optim.lr_scheduler.ExponentialLR(q_optimizer, gamma=gamma)
+        if lr_schedulers is None:
+            lr_schedulers = [pi_scheduler, q_scheduler]
+        else:
+            lr_schedulers = lr_schedulers + [pi_scheduler, q_scheduler]
     # else:
     #     lr_schedulers = None
 

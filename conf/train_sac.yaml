@@ -22,3 +22,4 @@ tags: null
 
 use_slurm: False
 video_path: videos
+lr_scheduler_gamma: null
