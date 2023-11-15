@@ -141,7 +141,7 @@ class FrameStackWrapper(gym.ObservationWrapper):
         self.observation_space = gym.spaces.Box(
             low=-np.float32("inf"),
             high=np.float32("inf"),
-            shape=(point_cloud_shape[0] * 3, point_cloud_shape[1]),  # type: ignore
+            shape=(point_cloud_shape[0] * 3, point_cloud_shape[1] + 1),  # type: ignore
         )
 
     def observation(self, observation):
