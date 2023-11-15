@@ -58,7 +58,7 @@ class PushChair(PushChairEnv):
 
         # # Penalize action
         # # Assume action is relative and normalized.
-        # action_norm = np.linalg.norm(action)
+        action_norm = np.linalg.norm(action)
         # reward -= action_norm * 1e-6
 
         # Chair velocity
