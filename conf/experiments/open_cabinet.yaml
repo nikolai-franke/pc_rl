@@ -1,8 +1,7 @@
 # @package _global_
 
 defaults:
-  - override /env: open_cabinet
-  - override /model/tokenizer: color
+  - override /env: open_cabinet_drawer
   - _self_
 
 batch_B: 8
@@ -11,14 +10,20 @@ batch_T: 320
 runner:
   n_steps: 2e6
 
+model:
+  tokenizer:
+    point_dim: 4
+
 eval:
   n_eval_envs: 1
+
+algo:
+  ent_coeff_lr: 2e-5
 
 hydra:
   sweeper:
     params:
-      algo.ent_coeff_lr: 1e-5, 5e-6
-      algo.ent_coeff: 0.03, 0.015
+      algo.ent_coeff: 0.02, 0.04, 0.06, 0.08
       # env.convert_to_ee_frame: True, False
 
-tags: [open_cabinet]
+tags: [open_cabinet_drawer]

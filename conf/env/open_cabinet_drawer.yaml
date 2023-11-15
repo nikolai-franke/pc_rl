@@ -1,16 +1,16 @@
 _target_: pc_rl.envs.mani_skill.build
 
-env_id: OpenCabinetDoor-v1
+env_id: OpenCabinetDrawer-v1
 max_episode_steps: 200
 image_shape: [64, 64]
 control_mode: base_pd_joint_vel_arm_pd_ee_delta_pose
 reward_mode: dense
 observation_type: point_cloud
 filter_points_below_z: 1e-3
-voxel_grid_size: 0.03
-convert_to_ee_frame: True
+voxel_grid_size: 0.05
+obs_frame: base
 num_frames: 3
 normalize: True
-n_goal_points: 10
+n_goal_points: 20
 fov: 1.5
-continuous_task: True
+continuous_task: False
