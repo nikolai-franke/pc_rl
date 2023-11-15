@@ -20,4 +20,4 @@ algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
 
-tags: [grasp_lift_and_touch, color]
+tags: [grasp_lift_and_touch, color, AUX, MAE]

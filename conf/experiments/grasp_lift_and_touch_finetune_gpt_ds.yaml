@@ -23,14 +23,9 @@ algo:
 model_url: kirurc/MAE/model-mbja3p6m:v0
 
 freeze_encoder: False
+
 scheduler:
   zero_till_step: 5
   increase_over_steps: 10
 
 tags: [grasp_lift_and_touch, color, finetune, dom_spec, GPT]
-
-# hydra:
-#   sweeper:
-#     params:
-#       algo.ent_coeff_lr: 1e-5, 5e-6
-#       algo.ent_coeff: 0.05, 0.1
