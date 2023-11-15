@@ -39,6 +39,6 @@ scheduler:
 hydra:
   sweeper:
     params:
-      num_frames: 1, 2, 3, 4
+      env.num_frames: 1, 2, 3, 4
 #
 tags: [push_chair, finetune, sn, GPT]
