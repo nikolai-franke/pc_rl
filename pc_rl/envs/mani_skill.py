@@ -10,8 +10,8 @@ from gymnasium.wrappers.time_limit import TimeLimit
 from pc_rl.envs.wrappers.add_obs_to_info_wrapper import \
     ManiSkillAddObsToInfoWrapper
 from pc_rl.envs.wrappers.continuous_task_wrapper import ContinuousTaskWrapper
-from pc_rl.envs.wrappers.mani_point_cloud_wrapper import (
-    ManiFrameStack, ManiSkillPointCloudWrapper)
+from pc_rl.envs.wrappers.mani_point_cloud_wrapper import (FrameStackWrapper,
+                                                          PointCloudWrapper)
 
 
 def build(
@@ -22,8 +22,6 @@ def build(
     image_shape: list[int],
     control_mode: str,
     reward_mode: str,
-    # is_grasped_reward: float = 1.0,
-    # always_target_dist_reward: bool = False,
     voxel_grid_size: float | None = None,
     render_mode: str | None = None,
     filter_points_below_z: float | None = None,
@@ -32,14 +30,13 @@ def build(
     fov: float | None = None,
     sim_freq: int = 500,
     control_freq: int = 20,
-    n_goal_points: int | None = None,
-    convert_to_ee_frame: bool = False,
-    convert_to_base_frame: bool = False,
+    n_goal_points: int = 0,
+    obs_frame: Literal["world", "base", "ee"] = "base",
+    use_color: bool = False,
     normalize: bool = False,
-    num_frames: int = 4,
+    num_frames: int = 1,
     continuous_task: bool = False,
     add_state: bool = False,
-    add_seg: bool = True,
 ):
     import mani_skill2.envs
 
@@ -51,8 +48,7 @@ def build(
         "height": image_shape[1],
         # "add_segmentation": True,
     }
-    if add_seg:
-        camera_cfgs.update({"add_segmentation": True})
+
     if z_far is not None:
         camera_cfgs.update({"far": z_far})  # type: ignore
     if z_near is not None:
@@ -62,7 +58,7 @@ def build(
 
     env = gym.make(
         env_id,
-        obs_mode="rgb_image",
+        obs_mode="pointcloud",
         reward_mode=reward_mode,
         control_mode=control_mode,
         camera_cfgs=camera_cfgs,
@@ -80,19 +76,18 @@ def build(
     if continuous_task:
         env = ContinuousTaskWrapper(env)
 
-    env = ManiFrameStack(
+    env = PointCloudWrapper(
         env,
-        image_shape=image_shape,
+        obs_frame=obs_frame,
+        center_and_normalize=normalize,
+        use_color=use_color,
         filter_points_below_z=filter_points_below_z,
-        voxel_grid_size=voxel_grid_size,
-        normalize=normalize,
-        convert_to_ee_frame=convert_to_ee_frame,
-        num_frames=num_frames,
         n_goal_points=n_goal_points,
-        add_state=add_state,
-        convert_to_base_frame=convert_to_base_frame,
-        add_seg=add_seg,
+        voxel_grid_size=voxel_grid_size,
     )
+
+    if num_frames > 1:
+        env = FrameStackWrapper(env, num_frames=num_frames)
 
     env = TimeLimit(env, max_episode_steps)
     return env
