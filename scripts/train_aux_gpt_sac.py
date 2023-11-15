@@ -1,8 +1,10 @@
 import multiprocessing as mp
+import sys
 import os
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+import traceback
 
 import hydra
 import parllel.logger as logger
@@ -359,55 +361,58 @@ def build(config: DictConfig):
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train_aux_gpt_sac")
 def main(config: DictConfig) -> None:
-    if config.use_slurm:
-        os.system("wandb enabled")
-        tmp = Path(os.environ.get("TMPDIR"))  # type: ignore
-        os.environ["WANDB_DIR"] = os.environ["TMPDIR"] + "/wandb"
-        os.makedirs(os.environ["WANDB_DIR"], exist_ok=True)
+    try:
+        if config.use_slurm:
+            os.system("wandb enabled")
+            tmp = Path(os.environ.get("TMPDIR"))  # type: ignore
+            os.environ["WANDB_DIR"] = os.environ["TMPDIR"] + "/wandb"
+            os.makedirs(os.environ["WANDB_DIR"], exist_ok=True)
 
-    run = wandb.init(
-        project="pc_rl",
-        tags=config.tags,
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
-        sync_tensorboard=True,  # auto-upload any values logged to tensorboard
-        save_code=True,  # save script used to start training, git commit, and patch
-        reinit=True,
-    )
-
-    if config.use_slurm:
-        video_path = (
-            tmp
-            / config.video_path
-            / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"  # type: ignore
+        run = wandb.init(
+            project="pc_rl",
+            tags=config.tags,
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
+            sync_tensorboard=True,  # auto-upload any values logged to tensorboard
+            save_code=True,  # save script used to start training, git commit, and patch
+            reinit=True,
         )
-    else:
-        video_path = (
-            Path(config.video_path)
-            / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"  # type: ignore
+
+        if config.use_slurm:
+            video_path = (
+                tmp
+                / config.video_path
+                / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"  # type: ignore
+            )
+        else:
+            video_path = (
+                Path(config.video_path)
+                / f"{datetime.now().strftime('%Y-%m-%d')}/{run.id}"  # type: ignore
+            )
+        config.update({"video_path": video_path})
+
+        logger.init(
+            wandb_run=run,
+            # this log_dir is used if wandb is disabled (using `wandb disabled`)
+            log_dir=Path(
+                f"log_data/pc_rl/sac/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+            ),
+            tensorboard=True,
+            output_files={
+                "txt": "log.txt",
+                # "csv": "progress.csv",
+            },  # type: ignore
+            config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
+            model_save_path=Path("model.pt"),
+            # verbosity=Verbosity.DEBUG,
         )
-    config.update({"video_path": video_path})
 
-    logger.init(
-        wandb_run=run,
-        # this log_dir is used if wandb is disabled (using `wandb disabled`)
-        log_dir=Path(
-            f"log_data/pc_rl/sac/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
-        ),
-        tensorboard=True,
-        output_files={
-            "txt": "log.txt",
-            # "csv": "progress.csv",
-        },  # type: ignore
-        config=OmegaConf.to_container(config, resolve=True, throw_on_missing=True),  # type: ignore
-        model_save_path=Path("model.pt"),
-        # verbosity=Verbosity.DEBUG,
-    )
+        with build(config) as runner:
+            runner.run()
 
-    with build(config) as runner:
-        runner.run()
-
-    logger.close()
-    run.finish()  # type: ignore
+        logger.close()
+        run.finish()  # type: ignore
+    except Exception:
+        traceback.print_exc(file=sys.stderr)
 
 
 if __name__ == "__main__":
