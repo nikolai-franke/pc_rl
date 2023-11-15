@@ -1,0 +1,31 @@
+# @package _global_
+
+defaults:
+  - override /env: grasp_lift_and_touch
+  - override /model/tokenizer: color
+  - _self_
+
+env:
+  observation_type: color_point_cloud
+  start_in_phase: grasp
+
+
+runner:
+  n_steps: 2e6
+
+optimizer:
+  lr: 5e-5
+
+algo:
+  ent_coeff_lr: 1e-5
+  ent_coeff: 0.1
+
+model_url: kirurc/MAE/model-cgr9k9iu:v0
+
+freeze_encoder: False
+
+scheduler:
+  zero_till_step: 5
+  increase_over_steps: 10
+
+tags: [grasp_lift_and_touch, color, finetune, dom_spec, MAE]
