@@ -11,6 +11,27 @@ class PushChair(PushChairEnv):
         obs["target_link_pos"] = self.target_p[:3]
         return obs
 
+    def _initialize_robot(self):
+        xy = self.chair.pose.p[:2]
+        r = self._episode_rng.uniform(0.6, 1.5)
+        theta = self._episode_rng.uniform(-np.pi, np.pi)
+        # theta = (self.chair_init_ori + np.pi) + theta
+        xy[0] += np.cos(theta) * r
+        xy[1] += np.sin(theta) * r
+
+        # Base orientation
+        noise_ori = self._episode_rng.uniform(-0.2 * np.pi, 0.2 * np.pi)
+        ori = (theta - np.pi) + noise_ori
+
+        # Torso height
+        h = 0.9
+
+        # Arm
+        arm_qpos = [0, 0, 0, -1.5, 0, 3, 0.78, 0.02, 0.02]
+
+        qpos = np.hstack([xy, ori, h, arm_qpos, arm_qpos])
+        self.agent.reset(qpos)
+
     def compute_dense_reward(self, action: np.ndarray, info: dict, **kwargs):
         reward = 0
 
