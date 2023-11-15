@@ -27,7 +27,7 @@ algo:
 #     point_dim: 4
 
 # model_url: kirurc/MAE/model-8po7ta1b:v0
-model_url: kirurc/MAE/model-04dl7enx:v0
+model_url: kirurc/MAE/model-8fx4sgly:v0
 
 hydra:
   sweeper:
