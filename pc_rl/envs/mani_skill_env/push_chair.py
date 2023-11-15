@@ -11,26 +11,32 @@ class PushChair(PushChairEnv):
         obs["target_link_pos"] = self.target_p[:3]
         return obs
 
-    def _initialize_robot(self):
-        xy = self.chair.pose.p[:2]
-        r = self._episode_rng.uniform(0.6, 1.5)
-        theta = self._episode_rng.uniform(-np.pi, np.pi)
-        # theta = (self.chair_init_ori + np.pi) + theta
-        xy[0] += np.cos(theta) * r
-        xy[1] += np.sin(theta) * r
+    def evaluate(self, **kwargs):
+        disp_chair_to_target = self.chair.pose.p[:2] - self.target_xy
+        dist_chair_to_target = np.linalg.norm(disp_chair_to_target)
 
-        # Base orientation
-        noise_ori = self._episode_rng.uniform(-0.2 * np.pi, 0.2 * np.pi)
-        ori = (theta - np.pi) + noise_ori
+        # z-axis of chair should be upward
+        z_axis_chair = self.root_link.pose.to_transformation_matrix()[:3, 2]
+        chair_tilt = np.arccos(z_axis_chair[2])
 
-        # Torso height
-        h = 0.9
+        vel_norm = np.linalg.norm(self.root_link.velocity)
+        ang_vel_norm = np.linalg.norm(self.root_link.angular_velocity)
 
-        # Arm
-        arm_qpos = [0, 0, 0, -1.5, 0, 3, 0.78, 0.02, 0.02]
-
-        qpos = np.hstack([xy, ori, h, arm_qpos, arm_qpos])
-        self.agent.reset(qpos)
+        flags = dict(
+            chair_close_to_target=dist_chair_to_target < 0.2,
+            chair_standing=chair_tilt < 0.05 * np.pi,
+            chair_static=self.check_actor_static(
+                self.root_link, max_v=0.1, max_ang_v=0.2
+            ),
+        )
+        return dict(
+            success=all(flags.values()),
+            **flags,
+            dist_chair_to_target=dist_chair_to_target,
+            chair_tilt=chair_tilt,
+            chair_vel_norm=vel_norm,
+            chair_ang_vel_norm=ang_vel_norm,
+        )
 
     def compute_dense_reward(self, action: np.ndarray, info: dict, **kwargs):
         reward = 0
@@ -76,7 +82,7 @@ class PushChair(PushChairEnv):
             if dist_ee_to_chair < 0.1:
                 # EE is close to chair
                 stage_reward += 2
-                if dist_chair_to_target <= 0.15:
+                if dist_chair_to_target <= 0.2:
                     # Chair is close to target
                     stage_reward += 2
                     # Try to keep chair static
