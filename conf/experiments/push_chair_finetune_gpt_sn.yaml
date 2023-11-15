@@ -14,7 +14,7 @@ eval:
   n_eval_envs: 1
 
 optimizer:
-  lr: 1e-4
+  lr: 5e-5
 
 env:
   continuous_task: False
