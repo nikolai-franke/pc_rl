@@ -79,7 +79,7 @@ class PointCloudWrapper(gym.ObservationWrapper):
 
     def observation(self, observation):
         point_cloud = observation["pointcloud"]["xyzw"]
-        point_cloud_rgb = observation["pointcloud"]["rgb"]
+        point_cloud_rgb = observation["pointcloud"]["rgb"].astype(np.float32) / 255.0
 
         # filter out points beyond z_far of camera
         mask = point_cloud[..., -1] == 1
@@ -146,7 +146,7 @@ class FrameStackWrapper(gym.ObservationWrapper):
 
     def observation(self, observation):
         for i, frame in enumerate(self.frames):
-            frame[..., -1] = i / self.num_frames
+            frame[..., -1] = (i + 1) / self.num_frames
 
         return np.concatenate(self.frames)
 
