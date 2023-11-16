@@ -10,6 +10,8 @@ batch_T: 320
 runner:
   n_steps: 2e6
 
+env:
+  add_state: True
 
 eval:
   n_eval_envs: 1
