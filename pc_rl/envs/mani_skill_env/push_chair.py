@@ -25,9 +25,10 @@ class PushChair(PushChairEnv):
         flags = dict(
             chair_close_to_target=dist_chair_to_target < 0.2,
             chair_standing=chair_tilt < 0.05 * np.pi,
-            chair_static=self.check_actor_static(
-                self.root_link, max_v=0.1, max_ang_v=0.2
-            ),
+            chair_static=(vel_norm < 0.1 and ang_vel_norm < 0.2),
+            # chair_static=self.check_actor_static(
+            #     self.root_link, max_v=0.1, max_ang_v=0.2
+            # ),
         )
         return dict(
             success=all(flags.values()),
@@ -59,7 +60,7 @@ class PushChair(PushChairEnv):
         # # Penalize action
         # # Assume action is relative and normalized.
         action_norm = np.linalg.norm(action)
-        # reward -= action_norm * 1e-6
+        reward -= action_norm * 1e-6
 
         # Chair velocity
         # Legacy version uses full velocity instead of xy-plane velocity
