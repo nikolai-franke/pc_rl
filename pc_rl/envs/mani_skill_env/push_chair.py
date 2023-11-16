@@ -85,7 +85,7 @@ class PushChair(PushChairEnv):
             else 0.0
         )
         self.prev_chair_dist = dist_chair_to_target
-        reward -= dist_chair_to_target - delta_dist_chair_to_target * 10
+        reward += -dist_chair_to_target - delta_dist_chair_to_target * 10
 
         if chair_tilt < 0.2 * np.pi:
             # Chair is standing
