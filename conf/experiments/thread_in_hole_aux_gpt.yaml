@@ -20,6 +20,6 @@ algo:
 hydra:
   sweeper:
     params:
-    algo.aux_updates_per_agent_update: 2, 5, 10, 20
+      algo.aux_updates_per_agent_update: 2, 5, 10, 20
 
 tags: [thread_in_hole, aux, GPT]
