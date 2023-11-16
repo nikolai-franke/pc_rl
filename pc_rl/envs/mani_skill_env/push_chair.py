@@ -23,9 +23,9 @@ class PushChair(PushChairEnv):
         ang_vel_norm = np.linalg.norm(self.root_link.angular_velocity)
 
         flags = dict(
-            chair_close_to_target=dist_chair_to_target < 0.2,
-            chair_standing=chair_tilt < 0.05 * np.pi,
-            chair_static=(vel_norm < 0.1 and ang_vel_norm < 0.2),
+            chair_close_to_target=dist_chair_to_target <= 0.2,
+            chair_standing=chair_tilt <= 0.05 * np.pi,
+            chair_static=(vel_norm <= 0.1 and ang_vel_norm <= 0.2),
             # chair_static=self.check_actor_static(
             #     self.root_link, max_v=0.1, max_ang_v=0.2
             # ),
@@ -98,7 +98,9 @@ class PushChair(PushChairEnv):
                     # Try to increase velocity along direction to the target
                     # Compute directional velocity
                     x = (1 - cos_chair_vel_to_target) * chair_vel_norm
-                    reward += max(-1, 1 - np.exp(x)) * 2 - dist_chair_to_target * 2
+                    reward += min(
+                        2, max(-1, 1 - np.exp(x)) * 2 - dist_chair_to_target * 2
+                    )
 
         reward = reward + stage_reward
 
