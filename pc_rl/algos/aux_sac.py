@@ -6,7 +6,7 @@ from typing import Sequence
 import parllel.logger as logger
 import torch
 import torch.nn.functional as F
-from parllel import ArrayDict
+from parllel import Array, ArrayDict
 from parllel.replays.replay import ReplayBuffer
 from parllel.torch.algos.sac import SAC
 from parllel.torch.utils import valid_mean
@@ -16,22 +16,21 @@ from torch import Tensor
 from torch.nn.utils.clip_grad import clip_grad_norm_
 from torch.optim.lr_scheduler import LRScheduler
 
-from pc_rl.agents.sac import PcSacAgent
+from pc_rl.agents.aux_sac import AuxPcSacAgent
 from pc_rl.utils.chamfer import chamfer_distance
 
 
 class AuxPcSAC(SAC):
-    agent: PcSacAgent
-
     def __init__(
         self,
         batch_spec: BatchSpec,
-        agent: PcSacAgent,
+        agent: AuxPcSacAgent,
         replay_buffer: ReplayBuffer[ArrayDict[Tensor]],
         q_optimizer: torch.optim.Optimizer,
         pi_optimizer: torch.optim.Optimizer,
         discount: float,
         learning_starts: int,
+        aux_updates_per_agent_update: int,
         replay_ratio: int,  # data_consumption / data_generation
         target_update_tau: float,  # tau=1 for hard update.
         target_update_interval: int,  # 1000 for hard update, 1 for soft.
@@ -64,6 +63,90 @@ class AuxPcSAC(SAC):
         self.aux_loss_coeff = aux_loss_coeff
         self.color_loss_coeff = color_loss_coeff
         self.detach_encoder = detach_encoder
+        self.aux_updates_per_agent_update = aux_updates_per_agent_update
+        # Normalize updtes per optimize
+        self.updates_per_optimize = (
+            self.updates_per_optimize * self.aux_updates_per_agent_update
+        )
+
+    def optimize_agent(
+        self,
+        elapsed_steps: int,
+        samples: ArrayDict[Array],
+    ) -> dict[str, int | list[float]]:
+        """
+        Extracts the needed fields from input samples and stores them in the
+        replay buffer.  Then samples from the replay buffer to train the agent
+        by gradient updates (with the number of updates determined by replay
+        ratio, sampler batch size, and training batch size).
+        """
+        self.replay_buffer.next_iteration()
+
+        if elapsed_steps < self.learning_starts:
+            logger.debug(
+                f"Skipping optimization at {elapsed_steps} steps, waiting until {self.learning_starts} steps."
+            )
+            return {}
+
+        self.agent.train_mode(elapsed_steps)
+        self.algo_log_info.clear()
+
+        for i in range(self.updates_per_optimize):
+            # get a random batch of samples from the replay buffer and move them
+            # to the GPU
+            replay_samples = self.replay_buffer.sample_batch()
+
+            self.train_aux_once(replay_samples)
+
+            if i % self.aux_updates_per_agent_update == 0:
+                self.train_once(replay_samples)
+                self.update_counter += 1
+                if self.update_counter % self.target_update_interval == 0:
+                    self.agent.update_target(self.target_update_tau)
+
+        if self.lr_schedulers is not None:
+            for lr_scheduler in self.lr_schedulers:
+                lr_scheduler.step()
+            # fmt: off
+            self.algo_log_info["pi_learning_rate"] = self.pi_optimizer.param_groups[0]["lr"]
+            self.algo_log_info["q_learning_rate"] = self.q_optimizer.param_groups[0]["lr"]
+            # fmt: on
+
+        self.algo_log_info["n_updates"] = self.update_counter
+
+        return self.algo_log_info
+
+    def train_aux_once(self, samples: ArrayDict[Tensor]) -> None:
+        prediction, ground_truth = self.agent.auto_encoder(samples["observation"])
+        B, M, *_, C = prediction.shape
+        prediction = prediction.reshape(B * M, -1, C)
+        ground_truth = ground_truth.reshape(B * M, -1, C)
+
+        mae_loss, _, x_idx = self.aux_loss_fn(  # type: ignore
+            prediction[..., :3], ground_truth[..., :3]
+        )
+        self.algo_log_info["mae_loss"].append(mae_loss.item())
+        mae_loss *= self.aux_loss_coeff
+
+        # if color
+        if C > 3:
+            assert x_idx is not None
+            prediction_nearest_neighbor = knn_gather(ground_truth, x_idx).reshape(
+                B, M, -1, C
+            )
+            color_loss = (
+                F.mse_loss(
+                    prediction[..., 3:].reshape(B, M, -1, C - 3),
+                    prediction_nearest_neighbor[..., 3:].reshape(B, M, -1, C - 3),
+                )
+                * self.color_loss_coeff
+            )
+            self.algo_log_info["color_loss"].append(color_loss.item())
+            mae_loss += color_loss
+
+        self.q_optimizer.zero_grad()
+        mae_loss.backward()
+        self.q_optimizer.step()
 
     def train_once(self, samples: ArrayDict[Tensor]) -> None:
         """
@@ -111,41 +194,40 @@ class AuxPcSAC(SAC):
         else:
             q1, q2 = self.agent.q(observation.detach(), samples["action"])
 
-        prediction, ground_truth = self.agent.auto_encoder(samples["observation"])
-        B, M, *_, C = prediction.shape
-        prediction = prediction.reshape(B * M, -1, C)
-        ground_truth = ground_truth.reshape(B * M, -1, C)
+        # prediction, ground_truth = self.agent.auto_encoder(samples["observation"])
+        # B, M, *_, C = prediction.shape
+        # prediction = prediction.reshape(B * M, -1, C)
+        # ground_truth = ground_truth.reshape(B * M, -1, C)
 
-        mae_loss, _, x_idx = self.aux_loss_fn(  # type: ignore
-            prediction[..., :3], ground_truth[..., :3]
-        )
-        self.algo_log_info["chamfer_loss"].append(mae_loss.item())
-        mae_loss *= self.aux_loss_coeff
-
-        # if color
-        if C > 3:
-            assert x_idx is not None
-            prediction_nearest_neighbor = knn_gather(ground_truth, x_idx).reshape(
-                B, M, -1, C
-            )
-            color_loss = (
-                F.mse_loss(
-                    prediction[..., 3:].reshape(B, M, -1, C - 3),
-                    prediction_nearest_neighbor[..., 3:].reshape(B, M, -1, C - 3),
-                )
-                * self.color_loss_coeff
-            )
-            self.algo_log_info["color_loss"].append(color_loss.item())
-            mae_loss += color_loss
+        # mae_loss, _, x_idx = self.aux_loss_fn(  # type: ignore
+        #     prediction[..., :3], ground_truth[..., :3]
+        # )
+        # self.algo_log_info["chamfer_loss"].append(mae_loss.item())
+        # mae_loss *= self.aux_loss_coeff
+        #
+        # # if color
+        # if C > 3:
+        #     assert x_idx is not None
+        #     prediction_nearest_neighbor = knn_gather(ground_truth, x_idx).reshape(
+        #         B, M, -1, C
+        #     )
+        #     color_loss = (
+        #         F.mse_loss(
+        #             prediction[..., 3:].reshape(B, M, -1, C - 3),
+        #             prediction_nearest_neighbor[..., 3:].reshape(B, M, -1, C - 3),
+        #         )
+        #         * self.color_loss_coeff
+        #     )
+        #     self.algo_log_info["color_loss"].append(color_loss.item())
+        #     mae_loss += color_loss
 
         q_loss = 0.5 * valid_mean((y - q1) ** 2 + (y - q2) ** 2)
 
         self.algo_log_info["critic_loss"].append(q_loss.item())
         self.algo_log_info["mean_ent_bonus"].append(entropy_bonus.mean().item())
         self.algo_log_info["ent_coeff"].append(entropy_coeff.item())
-        self.algo_log_info["mae_loss"].append(mae_loss.item())
 
-        q_loss += mae_loss
+        # q_loss += mae_loss
         # update Q model parameters according to Q loss
         self.q_optimizer.zero_grad()
         q_loss.backward()
