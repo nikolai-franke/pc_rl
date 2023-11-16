@@ -92,6 +92,7 @@ class PushChair(PushChairEnv):
         ) / (
             np.linalg.norm(delta_chair_pos)
             * np.linalg.norm(vec_prev_chair_pos_to_target)
+            + 1e-8
         )
 
         delta_reward = (
