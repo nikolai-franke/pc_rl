@@ -7,8 +7,12 @@ from scipy.spatial import distance as sdist
 @register_env("PushChair-v2", max_episode_steps=200)
 class PushChair(PushChairEnv):
     def reset(self, seed=None, options=None):
-        self.prev_chair_dist = -1.0
-        return super().reset(seed, options)
+        obs, info = super().reset(seed, options)
+        self.prev_chair_pos = self.chair.pose.p[:2].astype(np.float32)
+        self.prev_dist_chair_to_target = np.linalg.norm(
+            self.prev_chair_pos - self.target_xy
+        )
+        return obs, info
 
     def _get_obs_extra(self):
         obs = super()._get_obs_extra()
@@ -72,20 +76,34 @@ class PushChair(PushChairEnv):
         chair_vel_norm = np.linalg.norm(chair_vel)
         disp_chair_to_target = self.root_link.get_pose().p[:2] - self.target_xy
         cos_chair_vel_to_target = sdist.cosine(disp_chair_to_target, chair_vel)
-        chair_ang_vel_norm = info["chair_ang_vel_norm"]
 
         # Stage reward
         # NOTE(jigu): stage reward can also be used to debug which stage it is
         stage_reward = -10
         # -18 can guarantee the reward is negative
+
+        chair_pos = self.chair.pose.p[:2].astype(np.float32)
+        delta_chair_pos = chair_pos - self.prev_chair_pos
+        vec_prev_chair_pos_to_target = self.target_xy - self.prev_chair_pos
         dist_chair_to_target = info["dist_chair_to_target"]
-        delta_dist_chair_to_target = (
-            dist_chair_to_target - self.prev_chair_dist
-            if self.prev_chair_dist != -1.0
-            else 0.0
+
+        abs_cos_similarity = np.abs(
+            np.dot(delta_chair_pos, vec_prev_chair_pos_to_target)
+        ) / (
+            np.linalg.norm(delta_chair_pos)
+            * np.linalg.norm(vec_prev_chair_pos_to_target)
         )
-        self.prev_chair_dist = dist_chair_to_target
-        reward += -dist_chair_to_target - delta_dist_chair_to_target * 10
+
+        delta_reward = (
+            (self.prev_dist_chair_to_target - dist_chair_to_target)
+            * abs_cos_similarity
+            * 100.0
+        )
+
+        reward += delta_reward
+
+        self.prev_chair_pos = chair_pos
+        self.prev_dist_chair_to_target = dist_chair_to_target
 
         if chair_tilt < 0.2 * np.pi:
             # Chair is standing
@@ -97,9 +115,9 @@ class PushChair(PushChairEnv):
                     stage_reward += 2
                     # Try to keep chair static
                     reward += np.exp(-chair_vel_norm * 10) * 2
-                    # Legacy: Note that the static condition here is different from success metric
-                    if chair_vel_norm <= 0.1 and chair_ang_vel_norm <= 0.2:
-                        stage_reward += 2
+                    # # Legacy: Note that the static condition here is different from success metric
+                    # if chair_vel_norm <= 0.1 and chair_ang_vel_norm <= 0.2:
+                    #     stage_reward += 2
 
         reward = reward + stage_reward
 
