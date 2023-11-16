@@ -6,6 +6,10 @@ from scipy.spatial import distance as sdist
 
 @register_env("PushChair-v2", max_episode_steps=200)
 class PushChair(PushChairEnv):
+    def reset(self, seed=None, options=None):
+        self.prev_chair_dist = -1.0
+        return super().reset(seed, options)
+
     def _get_obs_extra(self):
         obs = super()._get_obs_extra()
         obs["target_link_pos"] = self.target_p[:3]
@@ -25,10 +29,10 @@ class PushChair(PushChairEnv):
         flags = dict(
             chair_close_to_target=dist_chair_to_target <= 0.2,
             chair_standing=chair_tilt <= 0.05 * np.pi,
-            chair_static=(vel_norm <= 0.1 and ang_vel_norm <= 0.2),
-            # chair_static=self.check_actor_static(
-            #     self.root_link, max_v=0.1, max_ang_v=0.2
-            # ),
+            # chair_static=(vel_norm <= 0.1 and ang_vel_norm <= 0.2),
+            chair_static=self.check_actor_static(
+                self.root_link, max_v=0.1, max_ang_v=0.2
+            ),
         )
         return dict(
             success=all(flags.values()),
@@ -75,8 +79,13 @@ class PushChair(PushChairEnv):
         stage_reward = -10
         # -18 can guarantee the reward is negative
         dist_chair_to_target = info["dist_chair_to_target"]
-
-        # reward -= dist_chair_to_target * 5
+        delta_dist_chair_to_target = (
+            dist_chair_to_target - self.prev_chair_dist
+            if self.prev_chair_dist != -1.0
+            else 0.0
+        )
+        self.prev_chair_dist = dist_chair_to_target
+        reward -= dist_chair_to_target - delta_dist_chair_to_target * 10
 
         if chair_tilt < 0.2 * np.pi:
             # Chair is standing
@@ -91,16 +100,6 @@ class PushChair(PushChairEnv):
                     # Legacy: Note that the static condition here is different from success metric
                     if chair_vel_norm <= 0.1 and chair_ang_vel_norm <= 0.2:
                         stage_reward += 2
-
-                    # if info["success"]:
-                    #     stage_reward = 50
-                else:
-                    # Try to increase velocity along direction to the target
-                    # Compute directional velocity
-                    x = (1 - cos_chair_vel_to_target) * chair_vel_norm
-                    reward += min(
-                        2, max(-1, 1 - np.exp(x)) * 2 - dist_chair_to_target * 2
-                    )
 
         reward = reward + stage_reward
 
