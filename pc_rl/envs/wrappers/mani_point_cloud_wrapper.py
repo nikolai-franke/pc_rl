@@ -60,6 +60,7 @@ class PointCloudWrapper(gym.ObservationWrapper):
         filter_points_below_z: float | None = None,
         n_goal_points: int = 0,
         voxel_grid_size: float | None = None,
+        add_state: bool = False,
     ):
         super().__init__(env)
         self.obs_frame = obs_frame
@@ -68,14 +69,39 @@ class PointCloudWrapper(gym.ObservationWrapper):
         self.filter_points_below_z = filter_points_below_z
         self.n_goal_points = n_goal_points
         self.voxel_grid_size = voxel_grid_size
+        self.add_state = add_state
 
         point_dim = 6 if use_color else 3
         max_num_points = self.env.observation_space["pointcloud"]["xyzw"].shape[0]
-        self.observation_space = gym.spaces.Box(
+
+        point_cloud_space = gym.spaces.Box(
             low=-np.float32("inf"),
             high=np.float32("inf"),
             shape=(max_num_points, point_dim),
         )
+
+        if self.add_state:
+            agent_space = self.env.observation_space["agent"]
+            # TODO: don't hardcode this
+            state_size = (
+                agent_space["qpos"].shape[0]
+                + agent_space["qvel"].shape[0]
+                + agent_space["base_pose"].shape[0]
+                + agent_space["base_vel"].shape[0]
+                + agent_space["base_ang_vel"].shape[0]
+            )
+            self.observation_space = gym.spaces.Dict(
+                {
+                    "point_cloud": point_cloud_space,
+                    "state": gym.spaces.Box(
+                        low=-np.float32("inf"),
+                        high=np.float32("inf"),
+                        shape=(state_size,),
+                    ),
+                }
+            )
+        else:
+            self.observation_space = point_cloud_space
 
     def observation(self, observation):
         point_cloud = observation["pointcloud"]["xyzw"]
@@ -127,6 +153,19 @@ class PointCloudWrapper(gym.ObservationWrapper):
         if self.center_and_normalize:
             point_cloud = normalize(point_cloud)
 
+        if self.add_state:
+            agent_obs = observation["agent"]
+            state = np.concatenate(
+                [
+                    agent_obs["qpos"],
+                    agent_obs["qvel"],
+                    agent_obs["base_pose"],
+                    agent_obs["base_vel"],
+                    agent_obs["base_ang_vel"].reshape(-1),
+                ]
+            )
+            return {"point_cloud": point_cloud, "state": state}
+
         return point_cloud
 
 
@@ -136,13 +175,25 @@ class FrameStackWrapper(gym.ObservationWrapper):
         self.num_frames = num_frames
         self.frames = deque(maxlen=self.num_frames)
 
-        # TODO: this only works when self.env has a Box observation space
-        point_cloud_shape = self.env.observation_space.shape
-        self.observation_space = gym.spaces.Box(
-            low=-np.float32("inf"),
-            high=np.float32("inf"),
-            shape=(point_cloud_shape[0] * 3, point_cloud_shape[1] + 1),  # type: ignore
-        )
+        # TODO: we currently hardcode 3 cameras
+        if isinstance(self.env.observation_space, gym.spaces.Box):
+            point_cloud_shape = self.env.observation_space.shape
+            self.observation_space = gym.spaces.Box(
+                low=-np.float32("inf"),
+                high=np.float32("inf"),
+                shape=(point_cloud_shape[0] * 3, point_cloud_shape[1] + 1),  # type: ignore
+            )
+        elif isinstance(self.env.observation_space, gym.spaces.Dict):
+            point_cloud_shape = self.env.observation_space["point_cloud"].shape
+            point_cloud_space = gym.spaces.Box(
+                low=-np.float32("inf"),
+                high=np.float32("inf"),
+                shape=(point_cloud_shape[0] * 3, point_cloud_shape[1] + 1),
+            )
+            state_space = self.env.observation_space["state"]
+            self.observation_space = gym.spaces.Dict(
+                {"point_cloud": point_cloud_space, "state": state_space}
+            )
 
     def observation(self, observation):
         for i, frame in enumerate(self.frames):
@@ -152,12 +203,31 @@ class FrameStackWrapper(gym.ObservationWrapper):
 
     def step(self, action):
         observation, reward, terminated, truncated, info = self.env.step(action)
+
+        if isinstance(observation, dict):
+            point_cloud = observation["point_cloud"]
+            point_cloud = self._add_column(point_cloud)
+            self.frames_append(point_cloud)
+            return {
+                "point_cloud": self.observation(observation),
+                "state": observation["state"],
+            }
+
         observation = self._add_column(observation)
         self.frames.append(observation)
         return self.observation(observation), reward, terminated, truncated, info
 
     def reset(self, **kwargs):
         observation, info = self.env.reset(**kwargs)
+        if isinstance(observation, dict):
+            point_cloud = observation["point_cloud"]
+            point_cloud = self._add_column(point_cloud)
+            self.frames_append(point_cloud)
+            return {
+                "point_cloud": self.observation(observation),
+                "state": observation["state"],
+            }, info
+
         observation = self._add_column(observation)
         for _ in range(self.num_frames):
             self.frames.append(observation)

@@ -84,6 +84,7 @@ def build(
         filter_points_below_z=filter_points_below_z,
         n_goal_points=n_goal_points,
         voxel_grid_size=voxel_grid_size,
+        add_state=add_state,
     )
 
     if num_frames > 1:
