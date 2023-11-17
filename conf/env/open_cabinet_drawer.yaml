@@ -8,9 +8,10 @@ reward_mode: normalized_dense
 observation_type: point_cloud
 filter_points_below_z: 1e-3
 voxel_grid_size: 0.02
-obs_frame: base
+obs_frame: ee
 num_frames: 1
 normalize: True
-n_goal_points: 20
-fov: 1.5
+n_goal_points: 0
+fov: 1.0
 continuous_task: False
+add_state: True

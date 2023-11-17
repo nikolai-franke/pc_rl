@@ -82,6 +82,7 @@ class PointCloudWrapper(gym.ObservationWrapper):
 
         if self.add_state:
             agent_space = self.env.observation_space["agent"]
+            extra_space = self.env.observation_space["extra"]
             # TODO: don't hardcode this
             state_size = (
                 agent_space["qpos"].shape[0]
@@ -89,6 +90,9 @@ class PointCloudWrapper(gym.ObservationWrapper):
                 + agent_space["base_pose"].shape[0]
                 + agent_space["base_vel"].shape[0]
                 + agent_space["base_ang_vel"].shape[0]
+                + extra_space["target_angle_diff"].shape[0]
+                + extra_space["target_joint_axis"].shape[0]
+                + extra_space["target_link_pos"].shape[0]
             )
             self.observation_space = gym.spaces.Dict(
                 {
@@ -144,8 +148,11 @@ class PointCloudWrapper(gym.ObservationWrapper):
             to_origin = Pose(p=p, q=q).inv()
             point_cloud[..., :3] = apply_pose_to_points(point_cloud[..., :3], to_origin)
         elif self.obs_frame == "ee":
-            # TODO: what to do with multiple EEs?
-            raise NotImplementedError
+            tcp_poses = observation["extra"]["tcp_pose"]
+            tcp_pose = tcp_poses if tcp_poses.ndim == 1 else tcp_poses[0]
+            p, q = tcp_pose[:3], tcp_pose[3:]
+            to_origin = Pose(p=p, q=q).inv()
+            point_cloud[..., :3] = apply_pose_to_points(point_cloud[..., :3], to_origin)
 
         if self.voxel_grid_size is not None:
             point_cloud = voxel_grid_sample(point_cloud, self.voxel_grid_size)
@@ -155,6 +162,7 @@ class PointCloudWrapper(gym.ObservationWrapper):
 
         if self.add_state:
             agent_obs = observation["agent"]
+            extra_obs = observation["extra"]
             state = np.concatenate(
                 [
                     agent_obs["qpos"],
@@ -162,8 +170,12 @@ class PointCloudWrapper(gym.ObservationWrapper):
                     agent_obs["base_pose"],
                     agent_obs["base_vel"],
                     agent_obs["base_ang_vel"].reshape(-1),
+                    extra_obs["target_angle_diff"].reshape(-1),
+                    extra_obs["target_joint_axis"],
+                    extra_obs["target_link_pos"],
                 ]
             )
+            print(state)
             return {"point_cloud": point_cloud, "state": state}
 
         return point_cloud
