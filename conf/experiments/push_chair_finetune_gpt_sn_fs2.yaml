@@ -19,7 +19,7 @@ optimizer:
 env:
   continuous_task: False
   control_mode: base_pd_joint_vel_arm_pd_joint_delta_pos
-  num_frames: 1
+  num_frames: 2
 
 algo:
   discount: 0.99
@@ -30,7 +30,7 @@ model:
   tokenizer:
     point_dim: 4
 
-model_url: kirurc/MAE/model-rfdwhtbk:v0
+model_url: kirurc/MAE/model-8po7ta1b:v0
 
 freeze_encoder: False
 scheduler:
