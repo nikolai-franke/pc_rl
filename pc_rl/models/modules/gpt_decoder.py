@@ -27,11 +27,23 @@ class GPTDecoder(nn.Module):
         # mask token is Parameter so it gets automatically put on the correct device
         self.padding_value = padding_value
         self.norm = nn.LayerNorm(self.dim)
+        self.apply(self._init_weights)
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.trunc_normal_(m.weight, std=0.02)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
 
     def forward(self, x, center_points, padding_mask=None, attn_mask=None):
         relative_pos = center_points[:, 1:, :] - center_points[:, :-1, :]
         relative_pos_norm = torch.linalg.vector_norm(relative_pos, dim=-1, keepdim=True)
-        relative_direction = relative_pos / relative_pos_norm
+        # add small value to avoid division by 0 for padding center points
+        relative_direction = relative_pos / (relative_pos_norm + 1e-9)
+        assert not torch.any(torch.isnan(relative_direction))
         # prepend absolute position of first center point
         relative_direction = torch.cat(
             [center_points[:, 0, :].unsqueeze(1), relative_direction], dim=1

@@ -50,10 +50,6 @@ class GPTEncoder(nn.Module):
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
-        elif isinstance(m, nn.Conv1d):
-            nn.init.trunc_normal_(m.weight, std=0.02)
-            if m.bias is not None:
-                nn.init.constant_(m.bias, 0)
 
     def _mask_center_rand(self, center, padding_mask):
         B, G, _ = center.shape

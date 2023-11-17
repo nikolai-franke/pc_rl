@@ -28,6 +28,15 @@ class MaskedDecoder(nn.Module):
         self.padding_value = padding_value
         nn.init.trunc_normal_(self.mask_token, std=0.02)
 
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.trunc_normal_(m.weight, std=0.02)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
+
     def forward(self, x_vis, mask, center_points):
         B, _, C = x_vis.shape
         center_points_visible = center_points[~mask].reshape(B, -1, 3)

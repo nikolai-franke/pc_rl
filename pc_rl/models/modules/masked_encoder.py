@@ -45,33 +45,6 @@ class MaskedEncoder(nn.Module):
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
-        elif isinstance(m, nn.Conv1d):
-            nn.init.trunc_normal_(m.weight, std=0.02)
-            if m.bias is not None:
-                nn.init.constant_(m.bias, 0)
-
-    def _mask_center_block(self, center, noaug=False):
-        # TODO: maybe we don't need this
-        raise NotImplementedError
-        # if noaug or self.mask_ratio == 0:
-        #     return torch.ones(center.shape[:2].bool())
-        # mask_idx = []
-        # for points in center:
-        #     points = points.unsqueeze(0)
-        #     index = torch.randint(points.shape[1] - 1, (1,))
-        #     distance_matrix = torch.norm(
-        #         points[:, index].reshape(1, 1, 3) - points, p=2, dim=-1
-        #     )
-
-        #     idx = torch.argsort(distance_matrix, dim=-1, descending=False)[0]
-        #     mask_num = int(self.mask_ratio * len(idx))
-        #     mask = torch.zeros(len(idx))
-        #     mask[idx[:mask_num]] = 1
-        #     mask_idx.append(mask.bool())
-
-        # overall_mask = torch.stack(mask_idx).to(center.device)
-
-        # return overall_mask
 
     def _mask_center_rand(self, center, padding_mask, noaug=False):
         B, G, _ = center.shape
@@ -113,7 +86,6 @@ class MaskedEncoder(nn.Module):
             ae_mask = self._mask_center_rand(center_points, padding_mask, noaug=noaug)
         else:
             raise NotImplementedError
-            # ae_mask = self._mask_center_block(center_points, noaug=noaug)
 
         batch_size, _, C = x.shape
 
