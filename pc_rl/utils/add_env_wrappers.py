@@ -21,6 +21,7 @@ def add_env_wrappers(
         "point_cloud", "color_point_cloud", "rgb_image", "rgbd_image"
     ],
     voxel_grid_size: float | None = None,
+    max_depth: float | None = None,
 ):
     if add_obs_to_info_dict:
         env = AddObsToInfoWrapper(env)
@@ -37,11 +38,15 @@ def add_env_wrappers(
         post_processing_functions.append(normalize)
         if observation_type == "point_cloud":
             env = PointCloudFromDepthImageObservationWrapper(
-                env, post_processing_functions=post_processing_functions
+                env,
+                post_processing_functions=post_processing_functions,
+                depth_array_max_distance=max_depth,
             )
         elif observation_type == "color_point_cloud":
             env = ColorPointCloudWrapper(
-                env, post_processing_functions=post_processing_functions
+                env,
+                post_processing_functions=post_processing_functions,
+                depth_array_max_distance=max_depth,
             )
     env = TimeLimit(env, max_episode_steps)
     return env

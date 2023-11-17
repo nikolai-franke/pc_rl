@@ -74,6 +74,7 @@ def build(
         add_obs_to_info_dict=add_obs_to_info_dict,
         observation_type=observation_type,
         voxel_grid_size=voxel_grid_size,
+        max_depth=280.0,
     )
 
     return env
