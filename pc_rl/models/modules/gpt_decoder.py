@@ -30,11 +30,13 @@ class GPTDecoder(nn.Module):
 
     def forward(self, x, center_points, padding_mask=None, attn_mask=None):
         relative_pos = center_points[:, 1:, :] - center_points[:, :-1, :]
+        relative_pos_norm = torch.linalg.vector_norm(relative_pos, dim=-1, keepdim=True)
+        relative_direction = relative_pos / relative_pos_norm
         # prepend absolute position of first center point
-        relative_pos = torch.cat(
-            [center_points[:, 0, :].unsqueeze(1), relative_pos], dim=1
+        relative_direction = torch.cat(
+            [center_points[:, 0, :].unsqueeze(1), relative_direction], dim=1
         )
-        relative_pos = self.pos_embedder(relative_pos)
+        relative_pos = self.pos_embedder(relative_direction)
         x = self.transformer_decoder(
             x, relative_pos, padding_mask=padding_mask, attn_mask=attn_mask
         )
