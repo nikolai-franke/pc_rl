@@ -18,7 +18,7 @@ from pc_rl.datasets.in_memory import PcInMemoryDataset
 from pc_rl.models.modules.masked_decoder import MaskedDecoder
 from pc_rl.models.modules.prediction_head import PredictionHead
 from pc_rl.models.point_mae import PointMAE
-from pc_rl.utils.color_point_cloud_transform import ColorPointCloud
+from pc_rl.utils.color_point_cloud_transform import AddChannels
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="pretrain_mae")
@@ -84,7 +84,7 @@ def main(config: DictConfig):
     transforms.append(NormalizeScale())
 
     if config.dataset.name == "shapenet" and config.model.tokenizer.point_dim > 3:
-        transforms.append(ColorPointCloud(config.model.tokenizer.point_dim - 3))
+        transforms.append(AddChannels(config.model.tokenizer.point_dim - 3))
 
     transform = Compose(transforms)
 

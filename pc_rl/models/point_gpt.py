@@ -35,7 +35,15 @@ class PointGPT(pl.LightningModule):
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.color_loss_coeff = color_loss_coeff
-        self.loss_fn = functools.partial(chamfer_distance, return_x_nn=True)
+
+    def loss_fn(self, prediction, ground_truth):
+        l1_loss, *_, x_idx = chamfer_distance(
+            prediction[..., :3], ground_truth[..., :3], norm=1, return_x_nn=True
+        )
+        l2_loss, *_ = chamfer_distance(
+            prediction[..., :3], ground_truth[..., :3], norm=2, return_x_nn=False
+        )
+        return l1_loss + l2_loss, x_idx
 
     def forward(self, pos: Tensor, batch: Tensor, color: Tensor | None = None):
         x, neighborhoods, center_points = self.tokenizer(pos, batch, color)
@@ -66,7 +74,7 @@ class PointGPT(pl.LightningModule):
         prediction = prediction.reshape(B * M, -1, C)
         ground_truth = ground_truth.reshape(B * M, -1, C)
 
-        loss, *_, x_idx = self.loss_fn(prediction[..., :3], ground_truth[..., :3])
+        loss, *_, x_idx = self.loss_fn(prediction, ground_truth)
         self.log("train/chamfer_loss", loss.item(), batch_size=B)
         # if color
         if C > 3:
@@ -113,9 +121,7 @@ class PointGPT(pl.LightningModule):
         self.prediction = self.prediction.reshape(B * M, -1, C)
         self.ground_truth = self.ground_truth.reshape(B * M, -1, C)
 
-        loss, *_, x_idx = self.loss_fn(
-            self.prediction[..., :3], self.ground_truth[..., :3]
-        )
+        loss, *_, x_idx = self.loss_fn(self.prediction, self.ground_truth)
         self.log("val/chamfer_loss", loss.item(), batch_size=B)
         if C > 3:
             prediction_nearest_neighbor = knn_gather(self.ground_truth, x_idx)
