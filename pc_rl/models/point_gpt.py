@@ -72,8 +72,11 @@ class PointGPT(pl.LightningModule):
         prediction[padding_mask] = 0.0
         ground_truth[padding_mask] = 0.0
 
-        prediction = prediction.reshape(B * M, -1, C)
-        ground_truth = ground_truth.reshape(B * M, -1, C)
+        prediction = prediction[:, 1:, ...]
+        ground_truth = ground_truth[:, 1:, ...]
+
+        prediction = prediction.reshape(B * (M - 1), -1, C)
+        ground_truth = ground_truth.reshape(B * (M - 1), -1, C)
 
         loss, *_, x_idx = self.loss_fn(prediction, ground_truth)
         self.log("train/chamfer_loss", loss.item(), batch_size=B)
@@ -119,6 +122,8 @@ class PointGPT(pl.LightningModule):
         self.prediction = self.prediction.reshape(B, M, -1, C)
         self.prediction[self.padding_mask] = 0.0
         self.ground_truth[self.padding_mask] = 0.0
+        # self.prediction = self.prediction[:, 1:, ...]
+        # self.ground_truth = self.ground_truth[:, 1:, ...]
         self.prediction = self.prediction.reshape(B * M, -1, C)
         self.ground_truth = self.ground_truth.reshape(B * M, -1, C)
 
