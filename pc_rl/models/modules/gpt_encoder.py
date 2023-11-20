@@ -3,8 +3,6 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
-from pc_rl.models.modules.sin_pos_embedder import SinusoidalPosEmbedder
-
 from .transformer import TransformerEncoder
 
 
@@ -14,7 +12,7 @@ class GPTEncoder(nn.Module):
         mask_ratio: float,
         keep_first_tokens_ratio: float,
         transformer_encoder: TransformerEncoder,
-        pos_embedder: SinusoidalPosEmbedder,
+        pos_embedder: nn.Module,
         padding_value: float = -1.0,
         start_token_value: float = 1.0,
     ) -> None:
@@ -30,19 +28,7 @@ class GPTEncoder(nn.Module):
         self.num_attention_heads = self.transformer_encoder.blocks[
             0
         ].attention.num_heads  # TODO: maybe just give the number of attention heads as parameter
-        self._check_pos_embedder()
         self.apply(self._init_weights)
-
-    def _check_pos_embedder(self):
-        with torch.no_grad():
-            input = torch.randn((3,))
-            try:
-                out = self.pos_embedder(input)
-                out = self.norm(out)
-            except RuntimeError as e:
-                raise ValueError(
-                    f"The first and the last layer of the pos_embedder must have the same size as the embedding_dim: {self.dim}"
-                ) from e
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):

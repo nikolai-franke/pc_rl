@@ -23,19 +23,7 @@ class MaskedEncoder(nn.Module):
         self.dim = self.transformer_encoder.dim
         self.padding_value = padding_value
         self.norm = nn.LayerNorm(self.dim)
-        self._check_pos_embedder()
         self.apply(self._init_weights)
-
-    def _check_pos_embedder(self):
-        with torch.no_grad():
-            input = torch.randn((3,))
-            try:
-                out = self.pos_embedder(input)
-                out = self.norm(out)
-            except RuntimeError as e:
-                raise ValueError(
-                    f"The first and the last layer of the pos_embedder must have the same size as the embedding_dim: {self.dim}"
-                ) from e
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):

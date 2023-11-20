@@ -150,7 +150,7 @@ def build_masked_encoder(
     mask_ratio: float,
     mask_type: str,
     transformer_encoder: TransformerEncoder,
-    pos_embedder: MLP,
+    pos_embedder: nn.Module,
 ):
     return MaskedEncoder(
         mask_ratio=mask_ratio,
@@ -164,7 +164,7 @@ def build_gpt_encoder(
     mask_ratio: float,
     keep_first_tokens_ratio: float,
     transformer_encoder: TransformerEncoder,
-    pos_embedder: SinusoidalPosEmbedder,
+    pos_embedder: nn.Module,
 ):
     return GPTEncoder(
         mask_ratio=mask_ratio,

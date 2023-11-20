@@ -37,11 +37,12 @@ class PointGPT(pl.LightningModule):
         self.color_loss_coeff = color_loss_coeff
 
     def loss_fn(self, prediction, ground_truth):
-        l1_loss, *_, x_idx = chamfer_distance(
-            prediction[..., :3], ground_truth[..., :3], norm=1, return_x_nn=True
-        )
-        l2_loss, *_ = chamfer_distance(
-            prediction[..., :3], ground_truth[..., :3], norm=2, return_x_nn=False
+        # l1_loss, *_, x_idx = chamfer_distance(
+        #     prediction[..., :3], ground_truth[..., :3], norm=1, return_x_nn=True
+        # )
+        l1_loss = 0.0
+        l2_loss, *_, x_idx = chamfer_distance(
+            prediction[..., :3], ground_truth[..., :3], norm=2, return_x_nn=True
         )
         return l1_loss + l2_loss, x_idx
 
