@@ -1,0 +1,5 @@
+_target_: pc_rl.models.modules.sin_pos_embedder.SinusoidalPosEmbedder
+n_dim: 3
+token_dim: 384
+temperature: 1.0
+scale: 1.0

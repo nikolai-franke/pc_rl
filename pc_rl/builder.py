@@ -13,6 +13,7 @@ from pc_rl.models.finetune_encoder import FinetuneEncoder
 from pc_rl.models.modules.gpt_encoder import GPTEncoder
 from pc_rl.models.modules.gpt_tokenizer import GPTTokenizer
 from pc_rl.models.modules.masked_encoder import MaskedEncoder
+from pc_rl.models.modules.sin_pos_embedder import SinusoidalPosEmbedder
 from pc_rl.models.modules.tokenizer import Tokenizer
 from pc_rl.models.modules.tokenizer_separate_color import \
     TokenizerSeparateColor
@@ -163,7 +164,7 @@ def build_gpt_encoder(
     mask_ratio: float,
     keep_first_tokens_ratio: float,
     transformer_encoder: TransformerEncoder,
-    pos_embedder: MLP,
+    pos_embedder: SinusoidalPosEmbedder,
 ):
     return GPTEncoder(
         mask_ratio=mask_ratio,

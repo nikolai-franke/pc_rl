@@ -3,6 +3,8 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
+from pc_rl.models.modules.sin_pos_embedder import SinusoidalPosEmbedder
+
 from .transformer import TransformerDecoder
 
 
@@ -10,7 +12,7 @@ class GPTDecoder(nn.Module):
     def __init__(
         self,
         transformer_decoder: TransformerDecoder,
-        pos_embedder: nn.Module,
+        pos_embedder: SinusoidalPosEmbedder,
         padding_value: float = -1.0,
     ):
         super().__init__()
@@ -20,11 +22,6 @@ class GPTDecoder(nn.Module):
         ), f"Decoder {self.transformer_decoder} does not have a 'dim' attribute"
         self.dim = self.transformer_decoder.dim
         self.pos_embedder = pos_embedder
-        assert (
-            pos_dim := self.pos_embedder.channel_list[-1]
-        ) == self.dim, f"pos_embedder and decoder don't have matching dimensions: {pos_dim} != {self.dim}"
-
-        # mask token is Parameter so it gets automatically put on the correct device
         self.padding_value = padding_value
         self.norm = nn.LayerNorm(self.dim)
         self.apply(self._init_weights)

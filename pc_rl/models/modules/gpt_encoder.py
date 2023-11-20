@@ -3,6 +3,8 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
+from pc_rl.models.modules.sin_pos_embedder import SinusoidalPosEmbedder
+
 from .transformer import TransformerEncoder
 
 
@@ -12,7 +14,7 @@ class GPTEncoder(nn.Module):
         mask_ratio: float,
         keep_first_tokens_ratio: float,
         transformer_encoder: TransformerEncoder,
-        pos_embedder: nn.Module,
+        pos_embedder: SinusoidalPosEmbedder,
         padding_value: float = -1.0,
         start_token_value: float = 1.0,
     ) -> None:
