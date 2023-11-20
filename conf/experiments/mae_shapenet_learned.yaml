@@ -2,6 +2,7 @@
 
 defaults:
   - override /dataset: shapenet
+  - override /model/pos_embedder: learned
   - _self_
 
 

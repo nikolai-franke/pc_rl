@@ -1,5 +1,5 @@
 defaults:
-  - pos_embedder: default
+  - pos_embedder: learned
   - tokenizer: default
   - transformer_block: default
   - _self_

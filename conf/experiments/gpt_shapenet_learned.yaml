@@ -1,0 +1,10 @@
+# @package _global_
+
+defaults:
+  - override /dataset: shapenet
+  - override /model/tokenizer: point_gpt
+  - override /model/pos_embedder: learned
+  - _self_
+
+
+tags: [shapenet, GPT, learned_PE]

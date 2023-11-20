@@ -2,8 +2,8 @@
 
 defaults:
   - override /dataset: shapenet
-= override /model/tokenizer: point_gpt
+  - override /model/pos_embedder: sinusoidal
   - _self_
 
 
-tags: [shapenet, GPT]
+tags: [shapenet, MAE, sin_PE]
