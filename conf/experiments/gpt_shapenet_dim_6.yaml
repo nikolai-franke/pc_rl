@@ -2,8 +2,11 @@
 
 defaults:
   - override /dataset: shapenet
-  - override /model/tokenizer: point_gpt_color
-  - override /model/prediction_head: default
+  - override /model/tokenizer: point_gpt
   - _self_
 
-tags: [shapenet, color, GPT, 6_dim]
+model:
+  tokenizer:
+    point_dim: 6
+
+tags: [shapenet, GPT, 6_dim]
