@@ -35,16 +35,7 @@ class PointGPT(pl.LightningModule):
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.color_loss_coeff = color_loss_coeff
-
-    def loss_fn(self, prediction, ground_truth):
-        # l1_loss, *_, x_idx = chamfer_distance(
-        #     prediction[..., :3], ground_truth[..., :3], norm=1, return_x_nn=True
-        # )
-        l1_loss = 0.0
-        l2_loss, *_, x_idx = chamfer_distance(
-            prediction[..., :3], ground_truth[..., :3], norm=2, return_x_nn=True
-        )
-        return l1_loss + l2_loss, x_idx
+        self.loss_fn = functools.partial(chamfer_distance, return_x_nn=True)
 
     def forward(self, pos: Tensor, batch: Tensor, color: Tensor | None = None):
         x, neighborhoods, center_points = self.tokenizer(pos, batch, color)
@@ -72,11 +63,8 @@ class PointGPT(pl.LightningModule):
         prediction[padding_mask] = 0.0
         ground_truth[padding_mask] = 0.0
 
-        prediction = prediction[:, 1:, ...]
-        ground_truth = ground_truth[:, 1:, ...]
-
-        prediction = prediction.reshape(B * (M - 1), -1, C)
-        ground_truth = ground_truth.reshape(B * (M - 1), -1, C)
+        prediction = prediction.reshape(B * M, -1, C)
+        ground_truth = ground_truth.reshape(B * M, -1, C)
 
         loss, *_, x_idx = self.loss_fn(prediction, ground_truth)
         self.log("train/chamfer_loss", loss.item(), batch_size=B)
@@ -122,8 +110,6 @@ class PointGPT(pl.LightningModule):
         self.prediction = self.prediction.reshape(B, M, -1, C)
         self.prediction[self.padding_mask] = 0.0
         self.ground_truth[self.padding_mask] = 0.0
-        # self.prediction = self.prediction[:, 1:, ...]
-        # self.ground_truth = self.ground_truth[:, 1:, ...]
         self.prediction = self.prediction.reshape(B * M, -1, C)
         self.ground_truth = self.ground_truth.reshape(B * M, -1, C)
 
