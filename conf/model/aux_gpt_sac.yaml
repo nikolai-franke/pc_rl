@@ -1,5 +1,5 @@
 defaults:
-  - pos_embedder: learned
+  - pos_embedder: sinusoidal
   - tokenizer: point_gpt
   - transformer_block: default
   - prediction_head: default
