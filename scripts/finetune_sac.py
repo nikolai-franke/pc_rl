@@ -24,6 +24,7 @@ from parllel.torch.algos.sac import SAC, build_replay_buffer_tree
 from parllel.torch.distributions.squashed_gaussian import SquashedGaussian
 from parllel.transforms.vectorized_video import RecordVectorizedVideo
 from parllel.types import BatchSpec
+from torch_geometric.nn import MLP
 
 import pc_rl.builder  # for hydra's instantiate
 import pc_rl.models.sac.q_and_pi_heads
@@ -121,11 +122,12 @@ def build(config: DictConfig, model_path):
     else:
         raise ValueError("Missing encoder.transformer_encoder weights")
 
-    for key in model_weights:
-        if key.startswith("encoder.pos_embedder."):
-            break
-    else:
-        raise ValueError("Missing encoder.pos_embedder weights")
+    if isinstance(pos_embedder, MLP):
+        for key in model_weights:
+            if key.startswith("encoder.pos_embedder."):
+                break
+        else:
+            raise ValueError("Missing encoder.pos_embedder weights")
 
     for key in model_weights:
         if key.startswith("tokenizer."):
