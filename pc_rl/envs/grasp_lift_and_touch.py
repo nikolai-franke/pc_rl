@@ -30,6 +30,7 @@ def build(
     phase_touch_rewards: dict,
     voxel_grid_size: float | None,
     create_scene_kwargs: dict | None = None,
+    max_depth: float | None = None,
 ):
     assert len(image_shape) == 2
     image_shape = tuple(image_shape)  # type: ignore
@@ -74,7 +75,7 @@ def build(
         add_obs_to_info_dict=add_obs_to_info_dict,
         observation_type=observation_type,
         voxel_grid_size=voxel_grid_size,
-        max_depth=280.0,
+        max_depth=max_depth,
     )
 
     return env
