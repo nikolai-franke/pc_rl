@@ -2,7 +2,7 @@ _target_: pc_rl.envs.grasp_lift_and_touch.build
 
 action_type: continuous
 render_mode: headless
-observation_type: point_cloud
+observation_type: color_point_cloud
 settle_steps: 10
 max_episode_steps: 500
 frame_skip: 2
