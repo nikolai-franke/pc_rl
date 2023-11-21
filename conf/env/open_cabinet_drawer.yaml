@@ -12,6 +12,6 @@ obs_frame: ee
 num_frames: 1
 normalize: True
 n_goal_points: 50
-fov: 1.0
+fov: 1.5
 continuous_task: False
 add_state: False
