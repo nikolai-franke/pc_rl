@@ -15,6 +15,7 @@ eval:
 
 algo:
   ent_coeff_lr: 5e-6
+  replay_length: 500_000
 
 hydra:
   sweeper:
