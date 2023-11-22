@@ -317,8 +317,7 @@ def build(config: DictConfig, model_path):
     else:
         lr_schedulers = None
 
-    # TODO: maybe chain schedulers (or remove gamma scheduler)
-    #
+    # TODO: I don't use any LR scheduler escept for the one above. This can be removed
     if gamma := config.get("lr_scheduler_gamma") is not None:
         pi_scheduler = torch.optim.lr_scheduler.ExponentialLR(pi_optimizer, gamma=gamma)
         q_scheduler = torch.optim.lr_scheduler.ExponentialLR(q_optimizer, gamma=gamma)
@@ -326,8 +325,6 @@ def build(config: DictConfig, model_path):
             lr_schedulers = [pi_scheduler, q_scheduler]
         else:
             lr_schedulers = lr_schedulers + [pi_scheduler, q_scheduler]
-    # else:
-    #     lr_schedulers = None
 
     # create algorithm
     algorithm = SAC(
