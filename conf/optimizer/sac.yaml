@@ -1,5 +1,0 @@
-lr: 1e-4
-per_module:
-  aux:
-    lr: 1e-5
-
