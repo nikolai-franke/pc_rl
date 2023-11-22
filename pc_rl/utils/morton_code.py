@@ -23,6 +23,7 @@ def round_to_int_32(data):
         data + min_data
     )  # TODO: we rescale to 512, that means we only have 512 different values. This is fine for this application.
     # however, if we increase this number by a lot, we need to make sure we are using an int64 in the split_by_3 function
+
     # now convert to int
     data = torch.round(2**21 - data).to(dtype=torch.int32)
 
