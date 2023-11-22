@@ -9,7 +9,7 @@ use_slurm: True
 hydra:
   mode: MULTIRUN
   launcher:
-    timeout_min: 1440
+    timeout_min: 2880
     parallel_runs_per_node: 4
     total_runs_per_node: 4
     wait_for_completion: False
