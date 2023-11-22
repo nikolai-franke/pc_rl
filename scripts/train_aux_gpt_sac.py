@@ -141,12 +141,12 @@ def build(config: DictConfig):
     finetune_encoder = FinetuneEncoder(
         transformer_encoder=transformer_encoder, pos_embedder=encoder_pos_embedder
     )
-    aux_mae = AuxGPT(
+    aux_gpt = AuxGPT(
         gpt_encoder=gpt_encoder,
         gpt_decoder=gpt_decoder,
         prediction_head=prediction_head,
     )
-    mlp_input_size = aux_mae.dim
+    mlp_input_size = aux_gpt.dim
 
     pi_model = instantiate(
         config.model.pi_mlp_head,
@@ -175,7 +175,7 @@ def build(config: DictConfig):
             "q2": q2_model,
             "tokenizer": tokenizer,
             "encoder": finetune_encoder,
-            "aux": aux_mae,
+            "aux": aux_gpt,
         }
     )
 
