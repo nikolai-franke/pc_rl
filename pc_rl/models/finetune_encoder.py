@@ -29,6 +29,11 @@ class FinetuneEncoder(nn.Module):
         """
         return itertools.chain(self.norm.parameters(), self.attention_pool.parameters())
 
+    def get_core_parameters(self):
+        return itertools.chain(
+            self.transformer_encoder.parameters(), self.pos_embedder.parameters()
+        )
+
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
             nn.init.trunc_normal_(m.weight, std=0.02)

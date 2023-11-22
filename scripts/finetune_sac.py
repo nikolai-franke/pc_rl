@@ -263,7 +263,11 @@ def build(config: DictConfig, model_path):
         q_optimizer_param_groups.extend(
             [
                 {
-                    "params": agent.model["encoder"].parameters(),
+                    "params": agent.model["encoder"].get_additional_parameters(),
+                    **per_module_conf.get("encoder", {}),
+                },
+                {
+                    "params": agent.model["encoder"].get_core_parameters(),
                     **per_module_conf.get("encoder", {}),
                 },
                 {
