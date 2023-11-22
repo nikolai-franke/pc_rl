@@ -6,6 +6,7 @@ import gymnasium as gym
 import numpy as np
 import open3d as o3d
 from gymnasium import spaces
+from PIL import Image
 from sofa_env.base import RenderMode, SofaEnv
 from sofa_env.utils.camera import (determine_look_at, get_focal_length,
                                    vertical_to_horizontal_fov)
@@ -67,21 +68,21 @@ class ColorPointCloudWrapper(gym.ObservationWrapper):
         # Read camera parameters from SOFA camera
         self.width = int(self.camera_object.widthViewport.array())
         self.height = int(self.camera_object.heightViewport.array())
+        self.intrinsic = o3d.camera.PinholeCameraIntrinsic()
+        fx, fy = get_focal_length(self.camera_object, self.width, self.height)
+        self.intrinsic.set_intrinsics(
+            self.width, self.height, fx, fy, self.width / 2, self.height / 2
+        )
 
         return self.observation(observation), reset_info
 
     def create_point_cloud(self, observation) -> np.ndarray:
         """Returns a point cloud calculated from the depth image of the sofa scene"""
 
-        # Set the intrinsic camera parameters
-        intrinsic = o3d.camera.PinholeCameraIntrinsic()
-        fx, fy = get_focal_length(self.camera_object, self.width, self.height)
-        intrinsic.set_intrinsics(
-            self.width, self.height, fx, fy, self.width / 2, self.height / 2
-        )
-
         # Get the depth image from the SOFA scene and remove the background
         depth_array = self.get_depth_from_open_gl()
+
+        self.depth_array = depth_array
         # logger.debug(f"max depth_array_length: {np.max(depth_array)}")
         if self.depth_array_max_distance is not None:
             background_threshold = self.depth_array_max_distance
@@ -93,8 +94,10 @@ class ColorPointCloudWrapper(gym.ObservationWrapper):
 
         # Calculate point cloud
         depth_image = o3d.geometry.Image(depth_array_no_background)
+        # self.depth_image = depth_image
         # we need to copy the observation since Open3D uses the buffer directly
         color_image = o3d.geometry.Image(observation[:, :, :3].copy())
+        # self.color_image = color_image
         rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
             color_image,
             depth_image,
@@ -103,7 +106,7 @@ class ColorPointCloudWrapper(gym.ObservationWrapper):
             depth_trunc=1e9,
         )
 
-        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, intrinsic)
+        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.intrinsic)
 
         if self.transform_to_world_coordinates:
             # Get the model view matrix of the camera
@@ -133,9 +136,14 @@ class ColorPointCloudWrapper(gym.ObservationWrapper):
         """Replaces the observation of a step in a sofa_env scene with a point cloud."""
 
         point_cloud = self.create_point_cloud(observation)
-        assert len(point_cloud) > 0
-        if len(point_cloud) <= 32:
-            print(f"WARNING, points cloud has length: {len(point_cloud)}")
+        # if len(point_cloud) <= 32:
+        #     print(f"WARNING, points cloud has length: {len(point_cloud)}")
+        #     print(self.depth_array)
+        #     print(self.depth_image)
+        #     color_image = Image.fromarray(np.asarray(self.color_image))
+        #     color_image.save("color_image.jpeg")
+        #     depth_image = Image.fromarray(np.asarray(self.depth_image))
+        #     depth_image.save("depth_image.jpeg")
 
         # Apply optional post processing functions to point cloud
         if self.post_processing_functions is not None:
@@ -210,18 +218,16 @@ class PointCloudFromDepthImageObservationWrapper(gym.ObservationWrapper):
         # Read camera parameters from SOFA camera
         self.width = int(self.camera_object.widthViewport.array())
         self.height = int(self.camera_object.heightViewport.array())
+        self.intrinsic = o3d.camera.PinholeCameraIntrinsic()
+        fx, fy = get_focal_length(self.camera_object, self.width, self.height)
+        self.intrinsic.set_intrinsics(
+            self.width, self.height, fx, fy, self.width / 2, self.height / 2
+        )
 
         return self.observation(observation), reset_info
 
     def create_point_cloud(self) -> np.ndarray:
         """Returns a point cloud calculated from the depth image of the sofa scene"""
-
-        # Set the intrinsic camera parameters
-        intrinsic = o3d.camera.PinholeCameraIntrinsic()
-        fx, fy = get_focal_length(self.camera_object, self.width, self.height)
-        intrinsic.set_intrinsics(
-            self.width, self.height, fx, fy, self.width / 2, self.height / 2
-        )
 
         # Get the depth image from the SOFA scene and remove the background
         depth_array = self.get_depth_from_open_gl()
@@ -236,7 +242,9 @@ class PointCloudFromDepthImageObservationWrapper(gym.ObservationWrapper):
 
         # Calculate point cloud
         depth_image = o3d.geometry.Image(depth_array_no_background)
-        pcd = o3d.geometry.PointCloud.create_from_depth_image(depth_image, intrinsic)
+        pcd = o3d.geometry.PointCloud.create_from_depth_image(
+            depth_image, self.intrinsic
+        )
 
         if self.transform_to_world_coordinates:
             # Get the model view matrix of the camera
