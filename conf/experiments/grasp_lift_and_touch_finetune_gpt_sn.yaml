@@ -12,14 +12,11 @@ env:
 runner:
   n_steps: 2e6
 
-optimizer:
-  lr: 5e-5
-
 algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
 
-model_url: kirurc/MAE/model-rfdwhtbk:v0
+model_url: kirurc/MAE/model-fhfg088q:v0
 
 freeze_encoder: False
 
