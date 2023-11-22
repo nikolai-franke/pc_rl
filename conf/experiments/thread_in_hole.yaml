@@ -13,8 +13,10 @@ runner:
 optimizer:
   lr: 1e-4
 
+
 algo:
   ent_coeff: 0.4
   ent_coeff_lr: 2e-5
+  replay_length: 100_000
 
 tags: [thread_in_hole]
