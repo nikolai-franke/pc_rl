@@ -1,5 +1,5 @@
 discount: 0.99
-replay_length: 1_000_000
+replay_length: 100_000
 learning_starts: 10_000
 replay_ratio: 8
 batch_size: 128
