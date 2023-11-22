@@ -263,6 +263,9 @@ def build(config: DictConfig, model_path):
         q_optimizer_param_groups.extend(
             [
                 {
+                    # we split up the encoder parameters into two groups because only the transformer parameters should remain
+                    # frozen for the first few epochs, while the sequence pooling and layer norm layers get updated (since they aren't pretrained)
+                    # see the comments for the scheduler below
                     "params": agent.model["encoder"].get_additional_parameters(),
                     **per_module_conf.get("encoder", {}),
                 },
