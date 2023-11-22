@@ -16,8 +16,6 @@ algo:
 
 model_url: kirurc/MAE/model-rcoja9hx:v0 # Domain-specific
 
-freeze_encoder: False
-
 scheduler:
   zero_till_step: 5
   increase_over_steps: 10

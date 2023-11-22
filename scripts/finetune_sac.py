@@ -293,7 +293,9 @@ def build(config: DictConfig, model_path):
         **optimizer_conf,
     )
 
-    if not config.freeze_encoder:
+    # TODO: freezing encoder does not work. This can be removed
+    freeze_encoder = config.get("freeze_encoder", False)
+    if not freeze_encoder:
         lr_lambda = functools.partial(
             delayed_linear_lambda,
             zero_till_step=config.scheduler.zero_till_step,

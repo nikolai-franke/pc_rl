@@ -16,8 +16,6 @@ algo:
 
 model_url: kirurc/MAE/model-04dl7enx:v0 # Shapenet
 
-freeze_encoder: False
-
 scheduler:
   zero_till_step: 5
   increase_over_steps: 10

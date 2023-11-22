@@ -11,9 +11,6 @@ env:
 runner:
   n_steps: 1e6
 
-optimizer:
-  lr: 1e-4
-
 model_path: ???
 freee_encoder: True
 
