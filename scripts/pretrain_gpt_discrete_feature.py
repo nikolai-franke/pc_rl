@@ -22,7 +22,11 @@ from pc_rl.models.point_gpt_discrete_feature import PointGPTDiscreteFeature
 from pc_rl.utils.color_point_cloud_transform import AddChannels
 
 
-@hydra.main(version_base=None, config_path="../conf", config_name="pretrain_gpt")
+@hydra.main(
+    version_base=None,
+    config_path="../conf",
+    config_name="pretrain_gpt_discrete_feature",
+)
 def main(config: DictConfig):
     tokenizer = instantiate(config.model.tokenizer, _convert_="partial")
 
@@ -67,6 +71,7 @@ def main(config: DictConfig):
         prediction_head=mae_prediction_head,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
+        feature_loss_coeff=config.feature_loss_coeff,
     )
 
     transforms = []

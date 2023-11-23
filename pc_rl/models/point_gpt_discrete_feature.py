@@ -25,7 +25,7 @@ class PointGPTDiscreteFeature(pl.LightningModule):
         prediction_head: PredictionHead,
         learning_rate: float,
         weight_decay: float,
-        color_loss_coeff: float = 1.0,
+        feature_loss_coeff: float = 1.0,
     ):
         super().__init__()
         self.tokenizer = tokenizer
@@ -34,7 +34,7 @@ class PointGPTDiscreteFeature(pl.LightningModule):
         self.prediction_head = prediction_head
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
-        self.color_loss_coeff = color_loss_coeff
+        self.feature_loss_coeff = feature_loss_coeff
         self.loss_fn = functools.partial(chamfer_distance, return_x_nn=True)
         self.ground_truth_point_dim = 4  # TODO: hardcoded
 
@@ -80,7 +80,7 @@ class PointGPTDiscreteFeature(pl.LightningModule):
                 input=prediction[..., 3:].reshape(-1, C - 3),
                 target=prediction_nearest_neighbor[..., -1].reshape(-1).to(torch.long),
             )
-            loss += classification_loss
+            loss += classification_loss * self.feature_loss_coeff
             self.log(
                 "train/classification_loss",
                 classification_loss.item(),
@@ -127,7 +127,7 @@ class PointGPTDiscreteFeature(pl.LightningModule):
                 input=self.prediction[..., 3:].reshape(-1, C - 3),
                 target=prediction_nearest_neighbor[..., -1].reshape(-1).to(torch.long),
             )
-            loss += classification_loss
+            loss += classification_loss * self.feature_loss_coeff
             self.log(
                 "train/classification_loss",
                 classification_loss.item(),
