@@ -8,10 +8,11 @@ max_episode_steps: 500
 frame_skip: 2
 time_step: 0.05
 image_shape: [128, 128]
-voxel_grid_size: 5.0
+voxel_grid_size: 6.0
+max_depth: 300
 
 goal_tolerance: 5.0
-start_in_phase: lift
+start_in_phase: grasp
 end_in_phase: done
 collision_punish_mode: constant
 phase_any_rewards:
