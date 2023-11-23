@@ -9,7 +9,6 @@ env:
   observation_type: color_point_cloud
   start_in_phase: grasp
 
-
 runner:
   n_steps: 2e6
 
@@ -17,9 +16,7 @@ algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
 
-model_url: kirurc/MAE/model-d3bz02h5:v0
-
-freeze_encoder: False
+model_url: kirurc/MAE/model-stn9vm54:v0 # hearty-bush-580
 
 scheduler:
   zero_till_step: 5

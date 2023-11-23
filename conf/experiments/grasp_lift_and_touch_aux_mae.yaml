@@ -9,7 +9,6 @@ env:
   observation_type: color_point_cloud
   start_in_phase: grasp
 
-
 runner:
   n_steps: 2e6
 
