@@ -122,11 +122,11 @@ class AuxPcSAC(SAC):
         prediction = prediction.reshape(B * M, -1, C)
         ground_truth = ground_truth.reshape(B * M, -1, C)
 
-        mae_loss, _, x_idx = self.aux_loss_fn(  # type: ignore
+        chamfer_loss, _, x_idx = self.aux_loss_fn(  # type: ignore
             prediction[..., :3], ground_truth[..., :3]
         )
-        self.algo_log_info["mae_loss"].append(mae_loss.item())
-        mae_loss *= self.aux_loss_coeff
+        self.algo_log_info["chamfer_loss"].append(chamfer_loss.item())
+        chamfer_loss *= self.aux_loss_coeff
 
         # if color
         if C > 3:
@@ -142,10 +142,10 @@ class AuxPcSAC(SAC):
                 * self.color_loss_coeff
             )
             self.algo_log_info["color_loss"].append(color_loss.item())
-            mae_loss += color_loss
+            chamfer_loss += color_loss
 
         self.q_optimizer.zero_grad()
-        mae_loss.backward()
+        chamfer_loss.backward()
         self.q_optimizer.step()
 
     def train_once(self, samples: ArrayDict[Tensor]) -> None:
