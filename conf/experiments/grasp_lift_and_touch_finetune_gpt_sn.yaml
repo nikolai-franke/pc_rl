@@ -2,10 +2,11 @@
 
 defaults:
   - override /env: grasp_lift_and_touch
+  - override /model/tokenizer: color
   - _self_
 
 env:
-  observation_type: point_cloud
+  observation_type: color_point_cloud
   start_in_phase: grasp
 
 
@@ -24,4 +25,4 @@ scheduler:
   zero_till_step: 5
   increase_over_steps: 10
 
-tags: [grasp_lift_and_touch, no_color, finetune, shapenet, GPT]
+tags: [grasp_lift_and_touch, color, finetune, shapenet, GPT]
