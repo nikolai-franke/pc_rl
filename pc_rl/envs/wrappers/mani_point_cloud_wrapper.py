@@ -209,7 +209,7 @@ class FrameStackWrapper(gym.ObservationWrapper):
 
     def observation(self, observation):
         for i, frame in enumerate(self.frames):
-            frame[..., -1] = (i + 1) / self.num_frames
+            frame[..., -1] = i
 
         return np.concatenate(self.frames)
 
