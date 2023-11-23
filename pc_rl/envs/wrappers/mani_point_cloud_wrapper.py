@@ -82,7 +82,7 @@ class PointCloudWrapper(gym.ObservationWrapper):
 
         if self.add_state:
             agent_space = self.env.observation_space["agent"]
-            extra_space = self.env.observation_space["extra"]
+            # extra_space = self.env.observation_space["extra"]
             # TODO: don't hardcode this
             state_size = (
                 agent_space["qpos"].shape[0]
@@ -90,9 +90,9 @@ class PointCloudWrapper(gym.ObservationWrapper):
                 + agent_space["base_pose"].shape[0]
                 + agent_space["base_vel"].shape[0]
                 + agent_space["base_ang_vel"].shape[0]
-                + extra_space["target_angle_diff"].shape[0]
-                + extra_space["target_joint_axis"].shape[0]
-                + extra_space["target_link_pos"].shape[0]
+                # + extra_space["target_angle_diff"].shape[0]
+                # + extra_space["target_joint_axis"].shape[0]
+                # + extra_space["target_link_pos"].shape[0]
             )
             self.observation_space = gym.spaces.Dict(
                 {
@@ -162,7 +162,7 @@ class PointCloudWrapper(gym.ObservationWrapper):
 
         if self.add_state:
             agent_obs = observation["agent"]
-            extra_obs = observation["extra"]
+            # extra_obs = observation["extra"]
             state = np.concatenate(
                 [
                     agent_obs["qpos"],
@@ -170,9 +170,9 @@ class PointCloudWrapper(gym.ObservationWrapper):
                     agent_obs["base_pose"],
                     agent_obs["base_vel"],
                     agent_obs["base_ang_vel"].reshape(-1),
-                    extra_obs["target_angle_diff"].reshape(-1),
-                    extra_obs["target_joint_axis"],
-                    extra_obs["target_link_pos"],
+                    # extra_obs["target_angle_diff"].reshape(-1),
+                    # extra_obs["target_joint_axis"],
+                    # extra_obs["target_link_pos"],
                 ]
             )
             print(state)

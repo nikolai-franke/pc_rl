@@ -31,7 +31,7 @@ class PushChair(PushChairEnv):
         ang_vel_norm = np.linalg.norm(self.root_link.angular_velocity)
 
         flags = dict(
-            chair_close_to_target=dist_chair_to_target <= 0.2,
+            chair_close_to_target=dist_chair_to_target <= 0.15,
             chair_standing=chair_tilt <= 0.05 * np.pi,
             # chair_static=(vel_norm <= 0.1 and ang_vel_norm <= 0.2),
             chair_static=self.check_actor_static(
@@ -111,7 +111,7 @@ class PushChair(PushChairEnv):
             if dist_ee_to_chair < 0.1:
                 # EE is close to chair
                 stage_reward += 2
-                if dist_chair_to_target <= 0.2:
+                if dist_chair_to_target <= 0.15:
                     # Chair is close to target
                     stage_reward += 2
                     # Try to keep chair static
