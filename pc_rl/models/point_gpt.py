@@ -26,6 +26,7 @@ class PointGPT(pl.LightningModule):
         learning_rate: float,
         weight_decay: float,
         color_loss_coeff: float = 1.0,
+        discrete_feature: bool = False,
     ):
         super().__init__()
         self.tokenizer = tokenizer
@@ -35,6 +36,7 @@ class PointGPT(pl.LightningModule):
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.color_loss_coeff = color_loss_coeff
+        self.discrete_feature = discrete_feature
         self.loss_fn = functools.partial(chamfer_distance, return_x_nn=True)
 
     def forward(self, pos: Tensor, batch: Tensor, color: Tensor | None = None):
@@ -66,22 +68,37 @@ class PointGPT(pl.LightningModule):
         prediction = prediction.reshape(B * M, -1, C)
         ground_truth = ground_truth.reshape(B * M, -1, C)
 
-        loss, *_, x_idx = self.loss_fn(prediction, ground_truth)
+        loss, *_, x_idx = self.loss_fn(prediction[..., :3], ground_truth[..., :3])
         self.log("train/chamfer_loss", loss.item(), batch_size=B)
-        # if color
+
+        # if additional feature channels
         if C > 3:
             prediction_nearest_neighbor = knn_gather(ground_truth, x_idx).reshape(
                 B, M, -1, C
             )
-            color_loss = (
-                F.mse_loss(
-                    prediction[..., 3:].reshape(B, -1, C - 3),
-                    prediction_nearest_neighbor[..., 3:].reshape(B, -1, C - 3),
+            if not self.discrete_feature:
+                color_loss = (
+                    F.mse_loss(
+                        prediction[..., 3:].reshape(B, -1, C - 3),
+                        prediction_nearest_neighbor[..., 3:].reshape(B, -1, C - 3),
+                    )
+                    * self.color_loss_coeff
                 )
-                * self.color_loss_coeff
-            )
-            loss += color_loss
-            self.log("train/color_loss", color_loss.item(), batch_size=B)
+                loss += color_loss
+                self.log("train/color_loss", color_loss.item(), batch_size=B)
+            else:
+                classification_loss = F.cross_entropy(
+                    input=prediction[..., 3:].reshape(B, -1, C - 3),
+                    target=prediction_nearest_neighbor[..., 0]
+                    .reshape(B, -1, C)
+                    .to(torch.int32),
+                )
+                loss += classification_loss
+                self.log(
+                    "train/classification_loss",
+                    classification_loss.item(),
+                    batch_size=B,
+                )
 
         self.log("train/loss", loss.item(), batch_size=B)
         return loss
@@ -106,26 +123,42 @@ class PointGPT(pl.LightningModule):
 
         self.padding_mask = self.padding_mask.reshape(B, -1)
 
-        self.ground_truth = self.neighborhoods.reshape(B, -1, G, C)
+        self.ground_truth = self.neighborhoods.reshape(B, M, G, -1)
         self.prediction = self.prediction.reshape(B, M, -1, C)
         self.prediction[self.padding_mask] = 0.0
         self.ground_truth[self.padding_mask] = 0.0
         self.prediction = self.prediction.reshape(B * M, -1, C)
-        self.ground_truth = self.ground_truth.reshape(B * M, -1, C)
+        self.ground_truth = self.ground_truth.reshape(B * M, G, -1)
 
-        loss, *_, x_idx = self.loss_fn(self.prediction, self.ground_truth)
+        loss, *_, x_idx = self.loss_fn(
+            self.prediction[..., :3], self.ground_truth[..., :3]
+        )
         self.log("val/chamfer_loss", loss.item(), batch_size=B)
         if C > 3:
             prediction_nearest_neighbor = knn_gather(self.ground_truth, x_idx)
-            color_loss = (
-                F.mse_loss(
-                    self.prediction[..., 3:].reshape(B, -1, C - 3),
-                    prediction_nearest_neighbor[..., 3:].reshape(B, -1, C - 3),
+            if not self.discrete_feature:
+                color_loss = (
+                    F.mse_loss(
+                        self.prediction[..., 3:].reshape(B, -1, C - 3),
+                        prediction_nearest_neighbor[..., 3:].reshape(B, -1, C - 3),
+                    )
+                    * self.color_loss_coeff
                 )
-                * self.color_loss_coeff
-            )
-            self.log("val/color_loss", color_loss.item(), batch_size=B)
-            loss += color_loss
+                self.log("val/color_loss", color_loss.item(), batch_size=B)
+                loss += color_loss
+            else:
+                classification_loss = F.cross_entropy(
+                    input=self.prediction[..., 3:].reshape(B, -1, C - 3),
+                    target=prediction_nearest_neighbor[..., 0]
+                    .reshape(B, -1, C)
+                    .to(torch.int32),
+                )
+                loss += classification_loss
+                self.log(
+                    "train/classification_loss",
+                    classification_loss.item(),
+                    batch_size=B,
+                )
 
         self.log("val/loss", loss.item(), batch_size=B)
         return loss
