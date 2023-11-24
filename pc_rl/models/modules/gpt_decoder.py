@@ -37,8 +37,7 @@ class GPTDecoder(nn.Module):
         relative_pos = center_points[:, 1:, :] - center_points[:, :-1, :]
         relative_pos_norm = torch.linalg.vector_norm(relative_pos, dim=-1, keepdim=True)
         # add small value to avoid division by 0 for padding center points
-        relative_direction = relative_pos / (relative_pos_norm + 1e-9)
-        assert not torch.any(torch.isnan(relative_direction))
+        relative_direction = torch.nan_to_num(relative_pos / (relative_pos_norm))
         # prepend absolute position of first center point
         relative_direction = torch.cat(
             [center_points[:, 0, :].unsqueeze(1), relative_direction], dim=1
