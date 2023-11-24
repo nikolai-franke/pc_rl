@@ -13,20 +13,12 @@ def round_to_int_32(data):
     :param data: multidimensional numpy array
     :return: same as data but in 32-bit int format
     """
-    # first we rescale points to 0-512
-    min_data = torch.abs(
-        torch.min(data) - 0.5
-    )  # TODO: subtracting 0.5 here makes no sense, but it does not change the order
-
-    # data = 512 * (data + 1.0) #TODO: if we always use the range [-1.0, 1.0], we can just hardcode the 1.0
     data = 512 * (
-        data + min_data
-    )  # TODO: we rescale to 512, that means we only have 512 different values. This is fine for this application.
-    # however, if we increase this number by a lot, we need to make sure we are using an int64 in the split_by_3 function
+        data + 1.0
+    )  # TODO: if we always use the range [-1.0, 1.0], we can just hardcode the 1.0
 
     # now convert to int
     data = torch.round(2**21 - data).to(dtype=torch.int32)
-
     return data
 
 
@@ -43,7 +35,9 @@ def split_by_3(x):
     # a 64-bit code eventually (3 x 21 bits = 63 bits, which # TODO: they actually just use 32bits
     # is the maximum we can fit in a 64-bit code)
     #
-    # x = x.to(torch.int64) # TODO: if we want higher accuracy (a lot more than 512 values), we need to convert to 64 bit number
+    # x = x.to(
+    #     torch.int64
+    # )  # TODO: if we want higher accuracy (a lot more than 512 values), we need to convert to 64 bit number
 
     x &= 0x1FFFFF  # only take first 21 bits
     # shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111
