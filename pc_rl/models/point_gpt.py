@@ -52,6 +52,7 @@ class PointGPT(pl.LightningModule):
             data.pos, data.batch, data.x
         )
         B, M, *_, C = prediction.shape
+        assert not torch.any(torch.isnan(prediction))
 
         # when tokenizer.point_dim != prediction_head.point_dim
         neighborhoods = neighborhoods[..., :C]
@@ -67,6 +68,7 @@ class PointGPT(pl.LightningModule):
         ground_truth = ground_truth.reshape(B * M, -1, C)
 
         loss, *_, x_idx = self.loss_fn(prediction[..., :3], ground_truth[..., :3])
+        assert not torch.any(torch.isnan(loss))
         self.log("train/chamfer_loss", loss.item(), batch_size=B)
         # if color
         if C > 3:
