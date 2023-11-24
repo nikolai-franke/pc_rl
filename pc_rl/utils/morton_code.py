@@ -35,9 +35,7 @@ def split_by_3(x):
     # a 64-bit code eventually (3 x 21 bits = 63 bits, which # TODO: they actually just use 32bits
     # is the maximum we can fit in a 64-bit code)
     #
-    # x = x.to(
-    #     torch.int64
-    # )  # TODO: if we want higher accuracy (a lot more than 512 values), we need to convert to 64 bit number
+    x = x.to(torch.int64)
 
     x &= 0x1FFFFF  # only take first 21 bits
     # shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111

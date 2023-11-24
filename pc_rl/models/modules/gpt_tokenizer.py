@@ -73,7 +73,8 @@ class GPTTokenizer(Tokenizer):
 
         # calculate morton codes
         morton_codes = get_z_values(center_points)
-        idxs = torch.argsort(morton_codes, dim=1)
+        print(morton_codes[0])
+        idxs = torch.argsort(morton_codes, dim=1, descending=True)
         assert not torch.any(torch.isnan(morton_codes))
 
         # reorder center points according to morton codes
@@ -84,6 +85,7 @@ class GPTTokenizer(Tokenizer):
                 center_points.shape
             ),
         )
+        print(center_points[0])
         assert not torch.any(torch.isnan(center_points))
 
         # reorder x
