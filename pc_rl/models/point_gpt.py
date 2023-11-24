@@ -43,10 +43,15 @@ class PointGPT(pl.LightningModule):
         assert not torch.any(torch.isnan(neighborhoods))
         assert not torch.any(torch.isnan(center_points))
         x, padding_mask, attn_mask = self.encoder(x, center_points)
+        assert not torch.any(torch.isnan(x))
+        assert not torch.any(torch.isnan(padding_mask))
+        assert not torch.any(torch.isnan(attn_mask))
         x_recovered = self.decoder(
             x, center_points, padding_mask=padding_mask, attn_mask=attn_mask
         )
+        assert not torch.any(torch.isnan(x_recovered))
         pos_recovered = self.prediction_head(x_recovered)
+        assert not torch.any(torch.isnan(pos_recovered))
 
         return pos_recovered, neighborhoods, padding_mask, center_points
 
