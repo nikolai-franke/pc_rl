@@ -175,7 +175,6 @@ class PointCloudWrapper(gym.ObservationWrapper):
                     # extra_obs["target_link_pos"],
                 ]
             )
-            print(state)
             return {"point_cloud": point_cloud, "state": state}
 
         return point_cloud
