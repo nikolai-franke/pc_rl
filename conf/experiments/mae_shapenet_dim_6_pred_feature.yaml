@@ -4,6 +4,9 @@ defaults:
   - override /dataset: shapenet
   - _self_
 
+dataset:
+  randomize_color: True
+
 model:
   tokenizer:
     point_dim: 6
