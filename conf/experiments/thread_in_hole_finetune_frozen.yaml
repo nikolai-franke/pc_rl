@@ -12,6 +12,6 @@ runner:
   n_steps: 1e6
 
 model_path: ???
-freee_encoder: True
+freeze_encoder: True
 
 tags: [thread_in_hole, color]

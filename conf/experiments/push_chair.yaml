@@ -24,9 +24,6 @@ model:
   tokenizer:
     point_dim: 4
 
-env:
-  add_seg: False
-
 hydra:
   sweeper:
     params:
