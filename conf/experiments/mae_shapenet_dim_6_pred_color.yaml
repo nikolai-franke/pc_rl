@@ -1,0 +1,14 @@
+# @package _global_
+
+defaults:
+  - override /dataset: shapenet
+  - _self_
+
+model:
+  tokenizer:
+    point_dim: 6
+  prediction_head:
+    point_dim: 6
+  color_loss_coeff: 0.1
+
+tags: [shapenet, color, MAE, 6_dim, pred_color]

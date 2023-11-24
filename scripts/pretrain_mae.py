@@ -53,7 +53,7 @@ def main(config: DictConfig):
         transformer_decoder=transformer_decoder, pos_embedder=pos_embedder
     )
 
-    mae_prediction_head = PredictionHead(
+    prediction_head = PredictionHead(
         dim=config.model.tokenizer.embedding_size,
         group_size=config.model.tokenizer.group_size,
         point_dim=config.model.prediction_head.point_dim,
@@ -63,9 +63,10 @@ def main(config: DictConfig):
         tokenizer=tokenizer,
         encoder=masked_encoder,
         decoder=masked_decoder,
-        mae_prediction_head=mae_prediction_head,
+        prediction_head=prediction_head,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
+        color_loss_coeff=config.model.get("color_loss_coff", 1.0),
     )
 
     transforms = []
@@ -84,7 +85,12 @@ def main(config: DictConfig):
     transforms.append(NormalizeScale())
 
     if config.dataset.name == "shapenet" and config.model.tokenizer.point_dim > 3:
-        transforms.append(AddChannels(config.model.tokenizer.point_dim - 3))
+        transforms.append(
+            AddChannels(
+                config.model.tokenizer.point_dim - 3,
+                randomize=config.dataset.randomize_color,
+            )
+        )
 
     transform = Compose(transforms)
 

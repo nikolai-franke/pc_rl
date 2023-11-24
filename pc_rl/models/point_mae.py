@@ -22,7 +22,7 @@ class PointMAE(pl.LightningModule):
         tokenizer: Tokenizer,
         encoder: MaskedEncoder,
         decoder: MaskedDecoder,
-        mae_prediction_head: PredictionHead,
+        prediction_head: PredictionHead,
         learning_rate: float,
         weight_decay: float,
         color_loss_coeff: float = 1.0,
@@ -31,7 +31,7 @@ class PointMAE(pl.LightningModule):
         self.tokenizer = tokenizer
         self.encoder = encoder
         self.decoder = decoder
-        self.prediction_head = mae_prediction_head
+        self.prediction_head = prediction_head
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.color_loss_coeff = color_loss_coeff

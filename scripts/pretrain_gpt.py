@@ -66,6 +66,7 @@ def main(config: DictConfig):
         prediction_head=mae_prediction_head,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
+        color_loss_coeff=config.model.get("color_loss_coeff", 1.0),
     )
 
     transforms = []
@@ -84,7 +85,12 @@ def main(config: DictConfig):
     transforms.append(NormalizeScale())
 
     if config.dataset.name == "shapenet" and config.model.tokenizer.point_dim > 3:
-        transforms.append(AddChannels(config.model.tokenizer.point_dim - 3))
+        transforms.append(
+            AddChannels(
+                config.model.tokenizer.point_dim - 3,
+                randomize=config.dataset.randomize_color,
+            )
+        )
 
     transform = Compose(transforms)
 
