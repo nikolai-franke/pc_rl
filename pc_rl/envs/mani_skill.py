@@ -32,7 +32,6 @@ def build(
     control_freq: int = 20,
     n_goal_points: int = 0,
     obs_frame: Literal["world", "base", "ee"] = "base",
-    use_color: bool = False,
     normalize: bool = False,
     num_frames: int = 1,
     continuous_task: bool = False,
@@ -48,6 +47,7 @@ def build(
         "height": image_shape[1],
         # "add_segmentation": True,
     }
+    use_color = observation_type.startswith("color")
 
     if z_far is not None:
         camera_cfgs.update({"far": z_far})  # type: ignore
