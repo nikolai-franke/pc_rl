@@ -2,6 +2,7 @@
 
 defaults:
   - override /env: open_cabinet_drawer
+  - override /model/tokenizer: color
   - _self_
 
 batch_B: 8
