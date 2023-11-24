@@ -107,6 +107,7 @@ class GPTEncoder(nn.Module):
             device=x.device,
         )
         pos = torch.cat([start_token_pos, pos], dim=1)
+        assert not torch.any(torch.isnan(pos))
 
         # the standard transformer attention mask which only allows attending preceding tokens
         vanilla_mask = torch.triu(
@@ -122,6 +123,7 @@ class GPTEncoder(nn.Module):
         # the attention module expects one mask for every attention head when attn_mask is 3D
         attn_mask = attn_mask.repeat_interleave(self.num_attention_heads, dim=0)  # type: ignore
         assert not torch.any(torch.isnan(attn_mask))
+        assert not torch.any(torch.isnan(padding_mask))
 
         x = self.transformer_encoder(
             x, pos, padding_mask=padding_mask, attn_mask=attn_mask
