@@ -1,0 +1,10 @@
+# @package _global_
+
+defaults:
+  - override /dataset: deflect_spheres
+  - override /model/tokenizer: point_gpt_color
+  - override /model/prediction_head: color
+  - override /model/pos_embedder: learned
+  - _self_
+
+tags: [deflect_spheres, color, GPT, learned_PE]
