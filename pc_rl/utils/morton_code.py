@@ -27,7 +27,7 @@ def split_by_3(x):
     :return: x with bits separated
     """
     # we only look at 21 bits, since we want to generate
-    # a 64-bit code eventually (3 x 21 bits = 63 bits, which # TODO: they actually just use 32bits
+    # a 64-bit code eventually (3 x 21 bits = 63 bits, which
     # is the maximum we can fit in a 64-bit code)
     #
     x = x.to(torch.int64)
