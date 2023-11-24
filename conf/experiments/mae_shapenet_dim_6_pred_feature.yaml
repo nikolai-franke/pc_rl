@@ -12,13 +12,10 @@ model:
     point_dim: 6
   prediction_head:
     point_dim: 6
-  color_loss_coeff: 0.1
-
 
 hydra:
   sweeper:
     params:
-      model.color_loss_coeff: 1.0, 0.1
       learning_rate: 1e-3, 5e-4
 
 tags: [shapenet, MAE, 6_dim, pred_feature]
