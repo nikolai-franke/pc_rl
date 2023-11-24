@@ -11,4 +11,4 @@ model:
     point_dim: 6
   color_loss_coeff: 0.1
 
-tags: [shapenet, color, MAE, 6_dim, pred_color]
+tags: [shapenet, color, MAE, 6_dim, pred_feature]

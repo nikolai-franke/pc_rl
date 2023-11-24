@@ -16,4 +16,4 @@ model:
   color_loss_coeff: 0.1
 
 
-tags: [shapenet, GPT, 6_dim, pred_color]
+tags: [shapenet, GPT, 6_dim, pred_feature]
