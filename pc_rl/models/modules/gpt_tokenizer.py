@@ -38,7 +38,7 @@ class GPTTokenizer(Tokenizer):
             group_size=group_size,
             sampling_ratio=sampling_ratio,
             random_start=random_start,
-            padding_valu=padding_value,
+            padding_value=padding_value,
             **kwargs,
         )
         if padding_value != -1.0:
