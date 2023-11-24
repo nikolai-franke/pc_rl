@@ -12,7 +12,7 @@ algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
 
-model_url: kirurc/MAE/model-97u4rzz9:v0 # skilled-moon-626
+model_url: kirurc/MAE/model-2kw44nug:v0 # soft-bush-775
 
 scheduler:
   zero_till_step: 5
