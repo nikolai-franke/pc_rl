@@ -39,19 +39,11 @@ class PointGPT(pl.LightningModule):
 
     def forward(self, pos: Tensor, batch: Tensor, color: Tensor | None = None):
         x, neighborhoods, center_points = self.tokenizer(pos, batch, color)
-        assert not torch.any(torch.isnan(x))
-        assert not torch.any(torch.isnan(neighborhoods))
-        assert not torch.any(torch.isnan(center_points))
         x, padding_mask, attn_mask = self.encoder(x, center_points)
-        assert not torch.any(torch.isnan(x))
-        assert not torch.any(torch.isnan(padding_mask))
-        assert not torch.any(torch.isnan(attn_mask))
         x_recovered = self.decoder(
             x, center_points, padding_mask=padding_mask, attn_mask=attn_mask
         )
-        assert not torch.any(torch.isnan(x_recovered))
         pos_recovered = self.prediction_head(x_recovered)
-        assert not torch.any(torch.isnan(pos_recovered))
 
         return pos_recovered, neighborhoods, padding_mask, center_points
 
@@ -60,9 +52,6 @@ class PointGPT(pl.LightningModule):
             data.pos, data.batch, data.x
         )
         B, M, *_, C = prediction.shape
-        assert not torch.any(torch.isnan(prediction))
-        assert not torch.any(torch.isnan(neighborhoods))
-        assert not torch.any(torch.isnan(padding_mask))
 
         # when tokenizer.point_dim != prediction_head.point_dim
         neighborhoods = neighborhoods[..., :C]
@@ -95,7 +84,6 @@ class PointGPT(pl.LightningModule):
             self.log("train/color_loss", color_loss.item(), batch_size=B)
 
         self.log("train/loss", loss.item(), batch_size=B)
-        assert not torch.any(torch.isnan(loss))
         return loss
 
     def on_before_optimizer_step(self, optimizer) -> None:

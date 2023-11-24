@@ -90,7 +90,6 @@ class GPTEncoder(nn.Module):
 
     def forward(self, x, center_points):
         padding_mask = torch.all(center_points == self.padding_value, dim=-1)
-        assert not torch.any(torch.isnan(padding_mask))
 
         batch_size, max_num_groups, *_ = x.shape
         start_token = torch.full(
@@ -99,7 +98,6 @@ class GPTEncoder(nn.Module):
         # since the last token is never used during pretraining, we can discard it and the corresponding center_point
         x = torch.cat([start_token, x[:, :-1, :]], dim=1)
         pos = self.pos_embedder(center_points[:, :-1:, :])
-        assert not torch.any(torch.isnan(pos))
 
         start_token_pos = torch.full(
             (batch_size, 1, self.dim),
@@ -107,7 +105,6 @@ class GPTEncoder(nn.Module):
             device=x.device,
         )
         pos = torch.cat([start_token_pos, pos], dim=1)
-        assert not torch.any(torch.isnan(pos))
 
         # the standard transformer attention mask which only allows attending preceding tokens
         vanilla_mask = torch.triu(
@@ -122,14 +119,10 @@ class GPTEncoder(nn.Module):
         attn_mask = vanilla_mask | random_mask.unsqueeze(1) & ~eye_mask
         # the attention module expects one mask for every attention head when attn_mask is 3D
         attn_mask = attn_mask.repeat_interleave(self.num_attention_heads, dim=0)  # type: ignore
-        assert not torch.any(torch.isnan(attn_mask))
-        assert not torch.any(torch.isnan(padding_mask))
 
         x = self.transformer_encoder(
             x, pos, padding_mask=padding_mask, attn_mask=attn_mask
         )
-        assert not (torch.any(torch.isnan(x)))
         x = self.norm(x)
-        assert not (torch.any(torch.isnan(x)))
 
         return x, padding_mask, attn_mask

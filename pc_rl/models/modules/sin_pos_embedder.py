@@ -22,7 +22,6 @@ class SinusoidalPosEmbedder(nn.Module):
         self.token_dim = token_dim
 
     def forward(self, xyz: torch.Tensor) -> torch.Tensor:
-        assert xyz.shape[-1] == self.n_dim
         B, G, _ = xyz.shape
         dim_t = torch.pow(
             self.temperature,
@@ -42,6 +41,4 @@ class SinusoidalPosEmbedder(nn.Module):
         pos_emb[..., 1::2] = pos_cos.reshape(B, G, -1)
 
         pos_emb = F.pad(pos_emb, (0, self.padding))
-        assert not torch.any(torch.isnan(pos_emb))
-        assert not torch.any(torch.isinf(pos_emb))
         return pos_emb
