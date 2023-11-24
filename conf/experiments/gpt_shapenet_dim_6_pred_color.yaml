@@ -1,0 +1,17 @@
+# @package _global_
+
+defaults:
+  - override /dataset: shapenet
+  - override /model/tokenizer: point_gpt
+  - _self_
+
+dataset:
+  randomize_color: True
+
+model:
+  tokenizer:
+    point_dim: 6
+  prediction_head:
+    point_dim: 6
+
+tags: [shapenet, GPT, 6_dim]
