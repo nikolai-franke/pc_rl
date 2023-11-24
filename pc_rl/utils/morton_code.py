@@ -13,12 +13,7 @@ def round_to_int_32(data):
     :param data: multidimensional numpy array
     :return: same as data but in 32-bit int format
     """
-    data = 512 * (
-        data + 1.0
-    )  # TODO: if we always use the range [-1.0, 1.0], we can just hardcode the 1.0
-
-    # now convert to int
-    data = torch.round(2**21 - data).to(dtype=torch.int32)
+    data = torch.round(2**20 * (data + 1.0)).to(dtype=torch.int32)
     return data
 
 
