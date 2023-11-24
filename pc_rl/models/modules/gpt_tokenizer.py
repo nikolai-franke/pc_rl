@@ -67,10 +67,14 @@ class GPTTokenizer(Tokenizer):
             - center_points - [B, G, 3] Tensor containing the center points of each neighborhood
         """
         x, neighborhoods, center_points = super().forward(pos, batch, color)
+        assert not torch.any(torch.isnan(x))
+        assert not torch.any(torch.isnan(neighborhoods))
+        assert not torch.any(torch.isnan(center_points))
 
         # calculate morton codes
         morton_codes = get_z_values(center_points)
         idxs = torch.argsort(morton_codes, dim=1)
+        assert not torch.any(torch.isnan(morton_codes))
 
         # reorder center points according to morton codes
         center_points = torch.gather(
@@ -80,6 +84,7 @@ class GPTTokenizer(Tokenizer):
                 center_points.shape
             ),
         )
+        assert not torch.any(torch.isnan(center_points))
 
         # reorder x
         x = torch.gather(
@@ -87,6 +92,7 @@ class GPTTokenizer(Tokenizer):
             dim=1,
             index=idxs.repeat_interleave(x.shape[-1]).reshape(x.shape),
         )
+        assert not torch.any(torch.isnan(x))
 
         # reorder neighborhoods
         neighborhoods = torch.gather(
@@ -96,5 +102,6 @@ class GPTTokenizer(Tokenizer):
                 neighborhoods.shape[-2] * neighborhoods.shape[-1]
             ).reshape(neighborhoods.shape),
         )
+        assert not torch.any(torch.isnan(neighborhoods))
 
         return x, neighborhoods, center_points
