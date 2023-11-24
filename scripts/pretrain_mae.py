@@ -66,7 +66,7 @@ def main(config: DictConfig):
         prediction_head=prediction_head,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
-        color_loss_coeff=config.model.get("color_loss_coff", 1.0),
+        color_loss_coeff=config.model.get("color_loss_coeff", 1.0),
     )
 
     transforms = []

@@ -53,7 +53,7 @@ def main(config: DictConfig):
         transformer_decoder=transformer_decoder, pos_embedder=pos_embedder
     )
 
-    mae_prediction_head = PredictionHead(
+    prediction_head = PredictionHead(
         dim=config.model.tokenizer.embedding_size,
         group_size=config.model.tokenizer.group_size,
         point_dim=config.model.prediction_head.point_dim,
@@ -63,7 +63,7 @@ def main(config: DictConfig):
         tokenizer=tokenizer,
         encoder=gpt_encoder,
         decoder=gpt_decoder,
-        prediction_head=mae_prediction_head,
+        prediction_head=prediction_head,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
         color_loss_coeff=config.model.get("color_loss_coeff", 1.0),
