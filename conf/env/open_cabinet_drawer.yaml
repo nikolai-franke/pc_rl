@@ -3,9 +3,9 @@ _target_: pc_rl.envs.mani_skill.build
 env_id: OpenCabinetDrawer-v1
 max_episode_steps: 200
 image_shape: [128, 128]
-control_mode: base_pd_joint_vel_arm_pd_ee_delta_pose
+control_mode: base_pd_joint_vel_arm_pd_joint_delta_pos
 reward_mode: normalized_dense
-observation_type: point_cloud
+observation_type: color_point_cloud
 filter_points_below_z: 1e-3
 voxel_grid_size: 0.02
 obs_frame: base
@@ -14,4 +14,4 @@ normalize: True
 n_goal_points: 50
 fov: 1.5
 continuous_task: False
-add_state: False
+add_state: True
