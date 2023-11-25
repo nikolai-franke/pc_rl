@@ -23,7 +23,7 @@ class GPTDecoder(nn.Module):
         self.pos_embedder = pos_embedder
         self.padding_value = padding_value
         self.norm = nn.LayerNorm(self.dim)
-        self.abolute_pos = absolute_pos
+        self.absolute_pos = absolute_pos
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
