@@ -12,6 +12,7 @@ class GPTDecoder(nn.Module):
         transformer_decoder: TransformerDecoder,
         pos_embedder: nn.Module,
         padding_value: float = -1.0,
+        absolute_pos: bool = False,
     ):
         super().__init__()
         self.transformer_decoder = transformer_decoder
@@ -22,6 +23,7 @@ class GPTDecoder(nn.Module):
         self.pos_embedder = pos_embedder
         self.padding_value = padding_value
         self.norm = nn.LayerNorm(self.dim)
+        self.abolute_pos = absolute_pos
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
@@ -35,13 +37,20 @@ class GPTDecoder(nn.Module):
 
     def forward(self, x, center_points, padding_mask=None, attn_mask=None):
         relative_pos = center_points[:, 1:, :] - center_points[:, :-1, :]
-        relative_pos_norm = torch.linalg.vector_norm(relative_pos, dim=-1, keepdim=True)
-        # add small value to avoid division by 0 for padding center points
-        relative_direction = torch.nan_to_num(relative_pos / (relative_pos_norm))
-        # prepend absolute position of first center point
-        relative_direction = torch.cat(
-            [center_points[:, 0, :].unsqueeze(1), relative_direction], dim=1
-        )
+        if self.absolute_pos:
+            relative_direction = torch.cat(
+                [center_points[:, 0, :].unsqueeze(1), relative_pos], dim=1
+            )
+
+        else:
+            relative_pos_norm = torch.linalg.vector_norm(
+                relative_pos, dim=-1, keepdim=True
+            )
+            relative_direction = torch.nan_to_num(relative_pos / (relative_pos_norm))
+            # prepend absolute position of first center point
+            relative_direction = torch.cat(
+                [center_points[:, 0, :].unsqueeze(1), relative_direction], dim=1
+            )
         relative_pos = self.pos_embedder(relative_direction)
         x = self.transformer_decoder(
             x, relative_pos, padding_mask=padding_mask, attn_mask=attn_mask
