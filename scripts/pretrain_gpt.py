@@ -50,7 +50,9 @@ def main(config: DictConfig):
     )
     pos_embedder = instantiate(config.model.pos_embedder, _convert_="partial")
     gpt_decoder = GPTDecoder(
-        transformer_decoder=transformer_decoder, pos_embedder=pos_embedder
+        transformer_decoder=transformer_decoder,
+        pos_embedder=pos_embedder,
+        absolute_pos=config.get("absolute_pos", False),
     )
 
     prediction_head = PredictionHead(
