@@ -12,5 +12,6 @@ algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
   aux_updates_per_agent_update: 1
+  aux_until_step: 250_000
 
 tags: [grasp_lift_and_touch, color, AUX, GPT]

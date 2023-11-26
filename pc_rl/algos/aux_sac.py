@@ -31,6 +31,7 @@ class AuxPcSAC(SAC):
         discount: float,
         learning_starts: int,
         aux_updates_per_agent_update: int,
+        aux_until_step: int,
         replay_ratio: int,  # data_consumption / data_generation
         target_update_tau: float,  # tau=1 for hard update.
         target_update_interval: int,  # 1000 for hard update, 1 for soft.
@@ -61,6 +62,7 @@ class AuxPcSAC(SAC):
         )
         self.aux_loss_fn = functools.partial(chamfer_distance, return_x_nn=True)
         self.aux_loss_coeff = aux_loss_coeff
+        self.aux_until_step = aux_until_step
         self.color_loss_coeff = color_loss_coeff
         self.detach_encoder = detach_encoder
         self.aux_updates_per_agent_update = aux_updates_per_agent_update
@@ -96,9 +98,13 @@ class AuxPcSAC(SAC):
             # to the GPU
             replay_samples = self.replay_buffer.sample_batch()
 
-            self.train_aux_once(replay_samples)
+            if elapsed_steps < self.aux_until_step:
+                self.train_aux_once(replay_samples)
 
-            if i % self.aux_updates_per_agent_update == 0:
+            if (
+                i % self.aux_updates_per_agent_update == 0
+                or elapsed_steps > self.aux_until_step
+            ):
                 self.train_once(replay_samples)
                 self.update_counter += 1
                 if self.update_counter % self.target_update_interval == 0:
