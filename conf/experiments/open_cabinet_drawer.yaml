@@ -15,7 +15,7 @@ eval:
 
 model:
   tokenizer:
-    point_dim: 3
+    point_dim: 6
 
 algo:
   ent_coeff_lr: 5e-6
