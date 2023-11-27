@@ -219,10 +219,16 @@ class FrameStackWrapper(gym.ObservationWrapper):
             point_cloud = observation["point_cloud"]
             point_cloud = self._add_column(point_cloud)
             self.frames.append(point_cloud)
-            return {
-                "point_cloud": self.observation(observation),
-                "state": observation["state"],
-            }
+            return (
+                {
+                    "point_cloud": self.observation(observation),
+                    "state": observation["state"],
+                },
+                reward,
+                terminated,
+                truncated,
+                info,
+            )
 
         observation = self._add_column(observation)
         self.frames.append(observation)
