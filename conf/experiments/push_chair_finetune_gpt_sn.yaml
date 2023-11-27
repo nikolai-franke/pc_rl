@@ -25,12 +25,12 @@ algo:
   discount: 0.99
   ent_coeff_lr: 2e-5
   ent_coeff: 0.05
+  replay_length: 500_000
 
-model_url: kirurc/MAE/model-rfdwhtbk:v0
+model_url: kirurc/MAE/model-x956bs03:v0 # radiant-rain-842
 
-freeze_encoder: False
 scheduler:
   zero_till_step: 5
   increase_over_steps: 10
 
-tags: [push_chair, finetune, sn, GPT]
+tags: [push_chair, finetune, sn, GPT, no_frame_stack]
