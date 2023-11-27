@@ -218,7 +218,7 @@ class FrameStackWrapper(gym.ObservationWrapper):
         if isinstance(observation, dict):
             point_cloud = observation["point_cloud"]
             point_cloud = self._add_column(point_cloud)
-            self.frames_append(point_cloud)
+            self.frames.append(point_cloud)
             return {
                 "point_cloud": self.observation(observation),
                 "state": observation["state"],
@@ -233,7 +233,7 @@ class FrameStackWrapper(gym.ObservationWrapper):
         if isinstance(observation, dict):
             point_cloud = observation["point_cloud"]
             point_cloud = self._add_column(point_cloud)
-            self.frames_append(point_cloud)
+            self.frames.append(point_cloud)
             return {
                 "point_cloud": self.observation(observation),
                 "state": observation["state"],
