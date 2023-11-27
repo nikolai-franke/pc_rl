@@ -90,5 +90,4 @@ def build(
     if num_frames > 1:
         env = FrameStackWrapper(env, num_frames=num_frames)
 
-    env = TimeLimit(env, max_episode_steps)
     return env
