@@ -2,7 +2,6 @@
 
 defaults:
   - override /env: open_cabinet_drawer
-  - override /model/tokenizer: color
   - _self_
 
 batch_B: 8
@@ -21,7 +20,6 @@ algo:
 hydra:
   sweeper:
     params:
-      algo.ent_coeff: 0.04, 0.08
-      algo.ent_coeff_lr: 5e-6, 1e-5
+      algo.ent_coeff: 0.04, 0.03, 0.02, 0.01
 
 tags: [open_cabinet_drawer]
