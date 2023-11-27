@@ -12,7 +12,7 @@ algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
 
-model_url: kirurc/MAE/model-7ixqao1k:v0 # iconic-serenity-772
+model_url: kirurc/MAE/model-6n6aziq7:v0 # stoic-wave-840
 
 scheduler:
   zero_till_step: 5
