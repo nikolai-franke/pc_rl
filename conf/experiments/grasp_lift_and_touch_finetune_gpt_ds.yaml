@@ -15,7 +15,7 @@ algo:
 
 env:
   phase_any_rewards:
-    successful_task: 20.0
+    successful_task: 30.0
 
 model_url: kirurc/MAE/model-6n6aziq7:v0 # stoic-wave-840
 
