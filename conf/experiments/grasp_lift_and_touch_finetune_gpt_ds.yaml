@@ -11,7 +11,11 @@ runner:
 algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
-  replay_length: 500_000
+  replay_length: 100_000
+
+env:
+  phase_any_rewards:
+    succesful_task: 20.0
 
 model_url: kirurc/MAE/model-6n6aziq7:v0 # stoic-wave-840
 
