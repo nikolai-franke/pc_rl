@@ -2,7 +2,6 @@
 
 defaults:
   - override /env: move_bucket
-  - override /model/tokenizer: color
   - _self_
 
 batch_B: 8

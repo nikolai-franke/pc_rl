@@ -9,7 +9,7 @@ observation_type: point_cloud
 filter_points_below_z: 1e-3
 voxel_grid_size: 0.03
 obs_frame: base
-num_frames: 3
+num_frames: 1
 continuous_task: False
 normalize: True
 fov: 1.5
