@@ -8,18 +8,13 @@ batch_B: 8
 batch_T: 320
 
 runner:
-  n_steps: 1e6
+  n_steps: 2e6
 
 eval:
   n_eval_envs: 1
 
 optimizer:
   lr: 5e-5
-
-env:
-  continuous_task: False
-  control_mode: base_pd_joint_vel_arm_pd_joint_delta_pos
-  num_frames: 1
 
 algo:
   discount: 0.99
