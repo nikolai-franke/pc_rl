@@ -13,4 +13,3 @@ num_frames: 3
 continuous_task: False
 normalize: True
 fov: 1.5
-add_seg: False
