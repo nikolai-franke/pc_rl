@@ -20,7 +20,7 @@ hydra:
   sweeper:
     params:
       algo.ent_coeff_lr: 1e-5, 5e-6
-      algo.ent_coeff: 0.1, 0.2
+      algo.ent_coeff: 0.05 0.025
       # env.convert_to_ee_frame: True, False
 #
 tags: [move_bucket]
