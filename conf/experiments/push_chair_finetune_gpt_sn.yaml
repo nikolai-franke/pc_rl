@@ -22,7 +22,8 @@ algo:
   ent_coeff: 0.05
   replay_length: 500_000
 
-model_url: kirurc/MAE/model-x956bs03:v0 # radiant-rain-842
+# model_url: kirurc/MAE/model-x956bs03:v0 # radiant-rain-842
+model_url: kirurc/MAE/model-e4j9d8vh:v0
 
 scheduler:
   zero_till_step: 5
