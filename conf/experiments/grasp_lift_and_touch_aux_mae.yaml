@@ -14,4 +14,9 @@ algo:
   aux_updates_per_agent_update: 1
   aux_until_step: 2e6
 
+env:
+  voxel_grid_size: 5.0
+  phase_any_rewards:
+    successful_task: 100.0
+
 tags: [grasp_lift_and_touch, color, AUX, MAE]
