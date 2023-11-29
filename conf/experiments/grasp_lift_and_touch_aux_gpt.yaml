@@ -17,6 +17,6 @@ algo:
 env:
   voxel_grid_size: 5.0
   phase_any_rewards:
-    successful_task: 100.0
+    successful_task: 50.0
 
 tags: [grasp_lift_and_touch, color, AUX, GPT]
