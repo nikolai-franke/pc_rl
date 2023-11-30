@@ -8,9 +8,15 @@ defaults:
 runner:
   n_steps: 2e6
 
+
+env:
+  phase_any_rewards:
+    successful_task: 50.0
+
 algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
-  replay_length: 500_000
+  replay_length: 100_000
+  clip_grad_norm: 10
 
 tags: [grasp_lift_and_touch, color]
