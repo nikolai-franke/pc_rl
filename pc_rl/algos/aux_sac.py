@@ -68,7 +68,7 @@ class AuxPcSAC(SAC):
         self.aux_updates_per_agent_update = aux_updates_per_agent_update
         # Normalize updtes per optimize
         # TODO: this currently interferes with only using AUX loss for a certain number of steps,
-        # since after that we don't want as many updates per optimizer if aux_updates_per_agent_update
+        # since after that we don't want as many updates per optimize if aux_updates_per_agent_update
         # is greater than 1
         self.updates_per_optimize = (
             self.updates_per_optimize * self.aux_updates_per_agent_update
