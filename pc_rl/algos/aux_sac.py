@@ -66,7 +66,7 @@ class AuxPcSAC(SAC):
         self.color_loss_coeff = color_loss_coeff
         self.detach_encoder = detach_encoder
         self.aux_updates_per_agent_update = aux_updates_per_agent_update
-        # Normalize updtes per optimize
+        # Normalize updates per optimize
         # TODO: this currently interferes with only using AUX loss for a certain number of steps,
         # since after that we don't want as many updates per optimize if aux_updates_per_agent_update
         # is greater than 1
