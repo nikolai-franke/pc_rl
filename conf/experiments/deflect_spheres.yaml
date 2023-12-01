@@ -16,6 +16,6 @@ algo:
   ent_coeff_lr: 2e-5
 
 optimizer:
-  lr: 1e-4
+  lr: 5e-5
 
 tags: [deflect_spheres, color, final]
