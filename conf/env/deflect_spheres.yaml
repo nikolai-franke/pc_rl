@@ -4,7 +4,7 @@ action_type: continuous
 max_episode_steps: 500
 settle_steps: 10
 render_mode: headless
-observation_type: point_cloud
+observation_type: color_point_cloud
 image_shape: [128, 128]
 frame_skip: 1
 time_step: 0.1
