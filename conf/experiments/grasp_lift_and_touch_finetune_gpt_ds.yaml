@@ -6,11 +6,11 @@ defaults:
   - _self_
 
 runner:
-  n_steps: 1.5e6
+  n_steps: 2e6
 
 algo:
   ent_coeff_lr: 1e-5
-  ent_coeff: 0.1
+  ent_coeff: 0.2
   clip_grad_norm: 10
 
 model_url: kirurc/MAE/model-6n6aziq7:v0 # stoic-wave-840
