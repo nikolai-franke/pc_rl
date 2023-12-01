@@ -123,7 +123,7 @@ class PointCloudWrapper(gym.ObservationWrapper):
                 np.random.uniform(
                     low=-1.0, high=1.0, size=(self.n_goal_points, 3)
                 ).astype(np.float32)
-                * 0.05
+                * 0.15
             )
             goal_points_pos = goal_points_pos + goal_pos
             point_cloud = np.concatenate([point_cloud, goal_points_pos])
