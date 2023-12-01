@@ -6,13 +6,14 @@ defaults:
   - _self_
 
 runner:
-  n_steps: 2e6
+  n_steps: 1.5e6
 
 algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
+  clip_grad_norm: 10
 
-model_url: kirurc/MAE/model-e0cz8gj0:v0 # crimson-rain-592
+model_url: kirurc/MAE/model-b8rup6df:v0 # vague-lake-856
 
 scheduler:
   zero_till_step: 5

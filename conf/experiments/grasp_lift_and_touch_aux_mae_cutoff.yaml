@@ -6,17 +6,13 @@ defaults:
   - _self_
 
 runner:
-  n_steps: 2e6
+  n_steps: 1.5e6
 
 algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
   aux_updates_per_agent_update: 1
-  aux_until_step: 666_666
-
-env:
-  voxel_grid_size: 5.0
-  phase_any_rewards:
-    successful_task: 50.0
+  aux_until_step: 500_000
+  clip_grad_norm: 10
 
 tags: [grasp_lift_and_touch, color, AUX, MAE, cutoff]
