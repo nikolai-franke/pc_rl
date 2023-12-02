@@ -2,6 +2,7 @@
 
 defaults:
   - override /dataset: thread_in_hole
+  - override /model/tokenizer: point_gpt
   - _self_
 
 tags: [thread_in_hole, GPT]

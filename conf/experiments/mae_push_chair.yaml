@@ -2,7 +2,6 @@
 
 defaults:
   - override /dataset: push_chair
-  - override /model/tokenizer: point_gpt
   - _self_
 
-tags: [push_chair, GPT]
+tags: [push_chair, MAE]
