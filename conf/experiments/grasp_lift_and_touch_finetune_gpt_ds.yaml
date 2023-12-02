@@ -9,18 +9,12 @@ runner:
   n_steps: 2e6
 
 algo:
-  ent_coeff_lr: 1e-5
-  ent_coeff: 0.1
+  ent_coeff_lr: 2e-5
+  ent_coeff: 0.4
 
 # model_url: kirurc/MAE/model-6n6aziq7:v0 # stoic-wave-840
 model_url: kirurc/MAE/model-i5gehc3t:v0 # grateful-capybara-907
 # model_url: kirurc/MAE/model-usj15yk4:v0 # worthy-jazz-825
-
-hydra:
-  sweeper:
-    params:
-      algo.ent_coeff: 0.1, 0.2
-      # env.convert_to_ee_frame: True, False
 
 scheduler:
   zero_till_step: 5
