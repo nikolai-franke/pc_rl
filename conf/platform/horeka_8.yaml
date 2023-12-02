@@ -11,6 +11,7 @@ hydra:
   launcher:
     timeout_min: 2880
     parallel_runs_per_node: 8
+    total_runs_per_node: 8
     wait_for_completion: False
     partition: accelerated
     gres: gpu:4
