@@ -15,6 +15,7 @@ goal_tolerance: 5.0
 start_in_phase: grasp
 end_in_phase: done
 collision_punish_mode: constant
+camera_reset_noise: [20.0, 20.0, 20.0, 20.0, 20.0, 20.0]
 phase_any_rewards:
   collision_cauter_gripper: -0.1
   collision_cauter_gallbladder: -0.1

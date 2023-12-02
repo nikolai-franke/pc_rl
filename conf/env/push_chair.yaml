@@ -7,7 +7,7 @@ control_mode: base_pd_joint_vel_arm_pd_joint_delta_pos
 reward_mode: normalized_dense
 observation_type: point_cloud
 filter_points_below_z: 1e-4
-voxel_grid_size: 0.05
+voxel_grid_size: 0.1
 obs_frame: base
 num_frames: 1
 normalize: True
