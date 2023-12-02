@@ -14,6 +14,7 @@ num_objects: 5
 num_deflect_to_win: 2
 min_deflection_distance: 3.0
 single_agent: False
+camera_reset_noise: [20.0, 20.0, 20.0, 20.0, 20.0, 20.0]
 
 reward_amount_dict:
   action_violated_cartesian_workspace: -0.0
