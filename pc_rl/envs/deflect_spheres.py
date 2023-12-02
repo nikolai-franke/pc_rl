@@ -26,10 +26,14 @@ def build(
     min_deflection_distance: float,
     voxel_grid_size: float | None,
     create_scene_kwargs: dict | None = None,
+    camera_reset_noise: list | None = None,
 ):
     image_shape = tuple(image_shape)  # type: ignore
     render_mode = RenderMode[render_mode.upper()]  # type: ignore
     action_type = ActionType[action_type.upper()]  # type: ignore
+
+    if camera_reset_noise is not None:
+        camera_reset_noise = np.asarray(camera_reset_noise)
 
     if observation_type in ("color_point_cloud", "rgbd_image"):
         obs_type = ObservationType.RGBD
@@ -55,6 +59,7 @@ def build(
         min_deflection_distance=min_deflection_distance,
         create_scene_kwargs=create_scene_kwargs,
         reward_amount_dict=reward_amount_dict,
+        camera_reset_noise=camera_reset_noise,
     )
     env = add_env_wrappers(
         env,
