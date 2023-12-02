@@ -13,11 +13,7 @@ runner:
 algo:
   ent_coeff: 0.4
   ent_coeff_lr: 2e-5
+  aux_updates_per_agent_update: 1
+  aux_until_step: 333_333
 
-model_url: kirurc/MAE/model-umh8yqi8:v0 # solar-eon-846
-
-scheduler:
-  zero_till_step: 5
-  increase_over_steps: 10
-
-tags: [thread_in_hole, finetune, dom_spec, GPT]
+tags: [thread_in_hole, aux, GPT, cutoff]
