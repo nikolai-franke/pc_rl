@@ -1,4 +1,5 @@
 from __future__ import annotations
+import numpy as np
 
 from typing import Literal
 
@@ -31,6 +32,7 @@ def build(
     voxel_grid_size: float | None,
     create_scene_kwargs: dict | None = None,
     max_depth: float | None = None,
+    camera_reset_noise: list | None = None,
 ):
     assert len(image_shape) == 2
     image_shape = tuple(image_shape)  # type: ignore
@@ -39,6 +41,8 @@ def build(
     collision_punish_mode = CollisionEffect[collision_punish_mode.upper()]  # type: ignore
     start_in_phase = Phase[start_in_phase.upper()]  # type: ignore
     end_in_phase = Phase[end_in_phase.upper()]  # type: ignore
+    if camera_reset_noise is not None:
+        camera_reset_noise = np.asarray(camera_reset_noise)
 
     if observation_type in ("point_cloud", "color_point_cloud", "rgbd_image"):
         obs_type = ObservationType.RGBD
@@ -67,6 +71,7 @@ def build(
         goal_tolerance=goal_tolerance,
         start_in_phase=start_in_phase,  # type: ignore
         end_in_phase=end_in_phase,  # type: ignore
+        camera_reset_noise=camera_reset_noise,
     )
 
     env = add_env_wrappers(
