@@ -9,7 +9,7 @@ frame_skip: 2
 time_step: 0.05
 image_shape: [128, 128]
 voxel_grid_size: 6.0
-max_depth: 300
+max_depth: 305
 
 goal_tolerance: 5.0
 start_in_phase: grasp
