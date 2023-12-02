@@ -12,10 +12,6 @@ algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.05
 
-env:
-  phase_any_rewards:
-    successful_task: 20.0
-
 model_url: kirurc/MAE/model-6n6aziq7:v0 # stoic-wave-840
 # model_url: kirurc/MAE/model-usj15yk4:v0 # worthy-jazz-825
 
