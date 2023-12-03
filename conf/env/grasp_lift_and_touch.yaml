@@ -11,7 +11,7 @@ image_shape: [128, 128]
 voxel_grid_size: 6.0
 max_depth: 305
 
-goal_tolerance: 5.0
+goal_tolerance: 6.0
 start_in_phase: grasp
 end_in_phase: done
 collision_punish_mode: constant
