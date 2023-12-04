@@ -12,7 +12,8 @@ algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
 
-model_url: kirurc/MAE/model-i5gehc3t:v0 # grateful-capybara-907
+# model_url: kirurc/MAE/model-i5gehc3t:v0 # grateful-capybara-907
+model_url: kirurc/MAE/model-a4mzjm1h:v0 # flowing-darkness-961 low_lr 200
 
 scheduler:
   zero_till_step: 5
