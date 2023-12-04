@@ -14,9 +14,8 @@ algo:
   ent_coeff: 0.4
   ent_coeff_lr: 2e-5
 
-# model_url: kirurc/MAE/model-hh0bt1cm:v0 # expert-capybara-909 200epochs
-# model_url: kirurc/MAE/model-isd3ow6k:v0 #  rosy-snow-852 400epochs
-model_url: kirurc/MAE/model-h3myp63t:v0 #olive-pyramid-951
+model_url: kirurc/MAE/model-h3myp63t:v0 # olive-pyramid-951
+model_url: kirurc/MAE/model-sz4j9fe7:v0 # dauntless-armadillo-971
 
 scheduler:
   zero_till_step: 5
