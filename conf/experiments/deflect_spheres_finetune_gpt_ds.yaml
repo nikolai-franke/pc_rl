@@ -12,4 +12,10 @@ algo:
   ent_coeff: 0.2
   ent_coeff_lr: 2e-5
 
-tags: [deflect_spheres, color, final]
+model_url: kirurc/MAE/model-cldc6bu7:v0 # iconic-sun-913
+
+scheduler:
+  zero_till_step: 5
+  increase_over_steps: 10
+
+tags: [deflect_spheres, finetune, GPT, dom_spec]
