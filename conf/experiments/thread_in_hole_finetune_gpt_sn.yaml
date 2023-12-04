@@ -11,7 +11,7 @@ algo:
   ent_coeff: 0.4
   ent_coeff_lr: 2e-5
 
-model_url: kirurc/MAE/model-x956bs03:v0 # radiant-rain-842
+model_url: kirurc/MAE/model-jv1gj5hc:v0 # serene-rain-783
 
 scheduler:
   zero_till_step: 5
