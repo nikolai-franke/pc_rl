@@ -14,7 +14,7 @@ algo:
   ent_coeff: 0.4
   ent_coeff_lr: 2e-5
 
-model_url: kirurc/MAE/model-umh8yqi8:v0 # solar-eon-846
+model_url: kirurc/MAE/model-hh0bt1cm:v0 # expert-capybara-909
 
 scheduler:
   zero_till_step: 5
