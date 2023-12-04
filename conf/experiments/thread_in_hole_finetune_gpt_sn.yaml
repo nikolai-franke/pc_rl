@@ -4,9 +4,6 @@ defaults:
   - override /env: thread_in_hole
   - _self_
 
-env:
-  observation_type: point_cloud
-
 runner:
   n_steps: 1e6
 
@@ -15,8 +12,6 @@ algo:
   ent_coeff_lr: 2e-5
 
 model_url: kirurc/MAE/model-x956bs03:v0 # radiant-rain-842
-
-freeze_encoder: False
 
 scheduler:
   zero_till_step: 5
