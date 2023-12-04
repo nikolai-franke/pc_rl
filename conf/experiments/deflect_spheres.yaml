@@ -12,4 +12,4 @@ algo:
   ent_coeff: 0.2
   ent_coeff_lr: 2e-5
 
-tags: [deflect_spheres, color, final]
+tags: [deflect_spheres]
