@@ -12,7 +12,7 @@ algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
 
-model_url: kirurc/MAE/model-b8rup6df:v0 # vague-lake-856
+model_url: kirurc/MAE/model-nftva4xp:v0 # amber-field-957
 
 scheduler:
   zero_till_step: 5
