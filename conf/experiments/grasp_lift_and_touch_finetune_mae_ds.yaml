@@ -12,7 +12,8 @@ algo:
   ent_coeff_lr: 1e-5
   ent_coeff: 0.1
 
-model_url: kirurc/MAE/model-cvvi7voh:v0 #vibrant-donkey-908
+# model_url: kirurc/MAE/model-cvvi7voh:v0 # vibrant-donkey-908
+model_url: kirurc/MAE/model-tp7dc9o9:v0 # fiery-salad-951
 
 scheduler:
   zero_till_step: 5
