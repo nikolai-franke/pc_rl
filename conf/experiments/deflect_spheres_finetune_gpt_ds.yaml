@@ -14,10 +14,6 @@ algo:
 
 model_url: kirurc/MAE/model-f0i6t4op:v0 # upbeat-glade-966
 
-env:
-  reward_amount_dict:
-    done_with_active_sphere: 50.0
-
 scheduler:
   zero_till_step: 5
   increase_over_steps: 10
