@@ -1,0 +1,17 @@
+# @package _global_
+
+defaults:
+  - override /env: grasp_lift_and_touch
+  - override /model/tokenizer: color
+  - override /model/pos_embedder: learned
+  - _self_
+
+runner:
+  n_steps: 2e6
+
+algo:
+  ent_coeff_lr: 1e-5
+  ent_coeff: 0.1
+
+
+tags: [grasp_lift_and_touch, color, learned_PE]
