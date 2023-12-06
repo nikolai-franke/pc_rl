@@ -19,10 +19,10 @@ algo:
   ent_coeff: 0.05
   replay_length: 500_000
 
-model_url: kirurc/MAE/model-puoh63aa:v0 # icy-water-936 400
+model_url: kirurc/MAE/model-hn9503po:v0 # revived-sea-976
 
 scheduler:
   zero_till_step: 5
   increase_over_steps: 10
 
-tags: [push_chair, finetune, shapenet, GPT]
+tags: [push_chair, finetune, dom_spec, GPT]
