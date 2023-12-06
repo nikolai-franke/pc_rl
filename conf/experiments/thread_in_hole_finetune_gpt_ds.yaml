@@ -15,7 +15,8 @@ algo:
   ent_coeff_lr: 2e-5
 
 # model_url: kirurc/MAE/model-h3myp63t:v0 # olive-pyramid-951
-model_url: kirurc/MAE/model-sz4j9fe7:v0 # dauntless-armadillo-971
+# model_url: kirurc/MAE/model-sz4j9fe7:v0 # dauntless-armadillo-971
+model_url: kirurc/MAE/model-yqwnqjb1:v0 # high-lr ablation
 
 scheduler:
   zero_till_step: 5
