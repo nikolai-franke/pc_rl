@@ -97,7 +97,7 @@ def build(config: DictConfig):
     wandb.config.update({"device": device}, allow_val_change=True)
     device = torch.device(device)
 
-    encoder = PointNet()
+    encoder = PointNet(config.point_dim)
 
     mlp_input_size = 384
 
@@ -353,5 +353,5 @@ def main(config: DictConfig) -> None:
 
 
 if __name__ == "__main__":
-    mp.set_start_method("forkserver")
+    mp.set_start_method("spawn")
     main()
