@@ -6,6 +6,7 @@ defaults:
 
 env:
   observation_type: point_cloud
+  camera_reset_noise: null
 
 runner:
   n_steps: 1e6
