@@ -8,7 +8,7 @@ batch_B: 8
 batch_T: 320
 
 runner:
-  n_steps: 2e6
+  n_steps: 1e6
 
 eval:
   n_eval_envs: 1
@@ -21,6 +21,6 @@ algo:
 
 model:
   tokenizer:
-    group_size: 2
+    group_size: 4
 
 tags: [push_chair, small_groups]

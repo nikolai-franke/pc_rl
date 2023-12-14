@@ -14,6 +14,6 @@ algo:
 
 model:
   tokenizer:
-    group_size: 2
+    group_size: 4
 
 tags: [grasp_lift_and_touch, color, small_groups]

@@ -16,6 +16,6 @@ algo:
 
 model:
   tokenizer:
-    group_size: 2
+    group_size: 4
 
 tags: [thread_in_hole, small_group]
