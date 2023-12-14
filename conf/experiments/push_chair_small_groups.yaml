@@ -1,0 +1,26 @@
+# @package _global_
+
+defaults:
+  - override /env: push_chair
+  - _self_
+
+batch_B: 8
+batch_T: 320
+
+runner:
+  n_steps: 2e6
+
+eval:
+  n_eval_envs: 1
+
+algo:
+  discount: 0.99
+  ent_coeff_lr: 2e-5
+  ent_coeff: 0.05
+  replay_length: 500_000
+
+model:
+  tokenizer:
+    group_size: 2
+
+tags: [push_chair, small_groups]

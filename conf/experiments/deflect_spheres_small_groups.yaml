@@ -1,0 +1,19 @@
+# @package _global_
+
+defaults:
+  - override /env: deflect_spheres
+  - override /model/tokenizer: color
+  - _self_
+
+runner:
+  n_steps: 2e6
+
+algo:
+  ent_coeff: 0.2
+  ent_coeff_lr: 2e-5
+
+model:
+  tokenizer:
+    group_size: 2
+
+tags: [deflect_spheres, small_groups]
